@@ -1,9 +1,25 @@
+import java.io.FileInputStream
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.ksp)
     alias(libs.plugins.kotlin.serialization)
 }
+
+// Kredensial signing dibaca dari keystore.properties (lokal) ATAU environment variable (CI).
+// Kalau dua-duanya nggak ada, release build fallback ke debug signing biar build lokal nggak error.
+val keystorePropertiesFile = rootProject.file("keystore.properties")
+val keystoreProperties = Properties().apply {
+    if (keystorePropertiesFile.exists()) {
+        FileInputStream(keystorePropertiesFile).use { load(it) }
+    }
+}
+
+// Ambil nilai dari keystore.properties dulu, baru fallback ke env var (dipakai di GitHub Actions).
+fun signingValue(propKey: String, envKey: String): String? =
+    keystoreProperties.getProperty(propKey) ?: System.getenv(envKey)
 
 android {
     namespace = "id.andreasmbngaol.agallery"
@@ -18,13 +34,33 @@ android {
         minSdk = 29
         targetSdk = 37
         versionCode = 1
-        versionName = "1.0"
+        versionName = "0.1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
+    signingConfigs {
+        create("release") {
+            // storeFile cuma di-set kalau path-nya tersedia (lokal atau CI).
+            val storeFilePath = signingValue("storeFile", "KEYSTORE_FILE")
+            if (storeFilePath != null) {
+                storeFile = rootProject.file(storeFilePath)
+                storePassword = signingValue("storePassword", "KEYSTORE_PASSWORD")
+                keyAlias = signingValue("keyAlias", "KEY_ALIAS")
+                keyPassword = signingValue("keyPassword", "KEY_PASSWORD")
+            }
+        }
+    }
+
     buildTypes {
         release {
+            // Pakai release signing kalau keystore tersedia; kalau nggak, fallback ke debug.
+            val releaseSigning = signingConfigs.getByName("release")
+            signingConfig = if (releaseSigning.storeFile != null) {
+                releaseSigning
+            } else {
+                signingConfigs.getByName("debug")
+            }
             optimization {
                 enable = false
             }

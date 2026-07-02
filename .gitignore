@@ -8,11 +8,16 @@
 /.idea/navEditor.xml
 /.idea/assetWizardSettings.xml
 .DS_Store
-/build
+build
+release
 /captures
 .externalNativeBuild
 .cxx
 local.properties
-keys/
-build
-release
+
+# Signing — JANGAN pernah commit keystore atau kredensialnya
+keystore.properties
+*.keystore
+*.jks
+keys
+*.tar.gz

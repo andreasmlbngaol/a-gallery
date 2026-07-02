@@ -15,7 +15,6 @@ import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.sizeIn
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -217,7 +216,6 @@ fun GalleryGridScreen(
     )
 
     val previewItem by viewModel.previewItem.collectAsState()
-    var pendingDeleteItem by remember { mutableStateOf<MediaItem?>(null) }
 
     // Launcher untuk konfirmasi hapus scoped-storage (dialog sistem, API 30+).
     val deleteLauncher = rememberLauncherForActivityResult(
@@ -227,7 +225,6 @@ fun GalleryGridScreen(
             items.refresh()
         }
         viewModel.dismissPreview()
-        pendingDeleteItem = null
     }
 
     LaunchedEffect(Unit) {
@@ -239,7 +236,6 @@ fun GalleryGridScreen(
         viewModel.mediaDeleted.collect {
             items.refresh()
             viewModel.dismissPreview()
-            pendingDeleteItem = null
         }
     }
 
@@ -322,20 +318,10 @@ fun GalleryGridScreen(
                 backdrop = topBarBackdrop,
                 liquidGlassSupported = liquidGlassSupported,
                 onDismiss = { viewModel.dismissPreview() },
-                onDeleteClick = { pendingDeleteItem = preview },
+                onDeleteClick = { viewModel.deletePhoto(preview.uri) },
             )
         }
 
-        pendingDeleteItem?.let { pending ->
-            DeleteConfirmDialog(
-                onConfirm = {
-                    viewModel.deletePhoto(pending.uri)
-                    pendingDeleteItem = null
-                    // previewItem ditutup setelah hasil delete diterima.
-                },
-                onDismiss = { pendingDeleteItem = null },
-            )
-        }
     } // tutup Box root
 }
 
@@ -958,88 +944,5 @@ private fun PhotoContextMenu(
             color = deleteColor,
             style = MaterialTheme.typography.bodyLarge,
         )
-    }
-}
-
-/**
- * Dialog konfirmasi sebelum menghapus — di-render IN-COMPOSITION (bukan window
- * Dialog terpisah) supaya kartunya duduk di ATAS galeri yang SUDAH di-blur oleh
- * preview. Kombinasi kartu semi-transparan + background blur = kesan FROSTED /
- * liquid glass tanpa perlu menembus window lain.
- *
- * Tombol Delete merah; setelah confirm, hapus asli lewat scoped storage
- * (VM -> IntentSender). Tap area gelap / back = batal.
- */
-@Composable
-private fun DeleteConfirmDialog(
-    onConfirm: () -> Unit,
-    onDismiss: () -> Unit,
-) {
-    val deleteColor = Color(0xFFFF453A)
-
-    BackHandler(enabled = true) { onDismiss() }
-
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Color.Black.copy(alpha = 0.35f))
-            .clickable(
-                interactionSource = remember { MutableInteractionSource() },
-                indication = null,
-            ) { onDismiss() },
-        contentAlignment = Alignment.Center,
-    ) {
-        Column(
-            modifier = Modifier
-                .padding(40.dp)
-                .clip(RoundedCornerShape(28.dp))
-                // Frosted glass: translucent surface di atas galeri yang sudah
-                // di-blur oleh overlay preview -> tembus pandang seperti kaca.
-                .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.72f))
-                // Konsumsi tap di kartu supaya tak ikut menutup dialog.
-                .clickable(
-                    interactionSource = remember { MutableInteractionSource() },
-                    indication = null,
-                ) { /* no-op */ }
-                .padding(horizontal = 24.dp, vertical = 24.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(12.dp),
-        ) {
-            Icon(
-                imageVector = PhosphorIcons.Regular.Trash,
-                contentDescription = null,
-                tint = deleteColor,
-                modifier = Modifier.size(28.dp),
-            )
-            Text(
-                text = "Delete photo?",
-                style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.onSurface,
-            )
-            Text(
-                text = "This item will be permanently deleted from your " +
-                    "device. This action can't be undone.",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                textAlign = TextAlign.Center,
-            )
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                TextButton(
-                    onClick = onDismiss,
-                    modifier = Modifier.weight(1f),
-                ) {
-                    Text("Cancel")
-                }
-                TextButton(
-                    onClick = onConfirm,
-                    modifier = Modifier.weight(1f),
-                ) {
-                    Text(text = "Delete", color = deleteColor)
-                }
-            }
-        }
     }
 }
