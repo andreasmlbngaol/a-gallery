@@ -14,7 +14,6 @@ import androidx.navigation3.runtime.rememberNavBackStack
 import androidx.navigation3.ui.NavDisplay
 import id.andreasmbngaol.agallery.presentation.animation.LocalSharedTransitionScope
 import id.andreasmbngaol.agallery.presentation.home.HomeTabsScreen
-import id.andreasmbngaol.agallery.presentation.settings.SettingsScreen
 import id.andreasmbngaol.agallery.presentation.viewer.PhotoViewerScreen
 
 /**
@@ -86,8 +85,6 @@ fun AGalleryNavDisplay() {
                                 onBack = { backStack.removeLastOrNull() },
                             )
                         }
-
-                        is Screen.Settings -> NavEntry(key) { SettingsScreen() }
 
                         else -> NavEntry(key) { }
                     }

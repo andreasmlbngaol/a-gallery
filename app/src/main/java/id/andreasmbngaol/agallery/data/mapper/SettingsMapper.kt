@@ -7,6 +7,7 @@ import id.andreasmbngaol.agallery.domain.model.EdgeEffectMode
 import id.andreasmbngaol.agallery.domain.model.GallerySortOrder
 import id.andreasmbngaol.agallery.domain.model.MAX_GRID_COLUMNS
 import id.andreasmbngaol.agallery.domain.model.MIN_GRID_COLUMNS
+import id.andreasmbngaol.agallery.domain.model.PerformanceMode
 
 fun AppSettingsDto.toDomain(): AppSettings =
     AppSettings(
@@ -18,6 +19,9 @@ fun AppSettingsDto.toDomain(): AppSettings =
         sortOrder = sortOrder
             ?.let { raw -> GallerySortOrder.entries.firstOrNull { it.name == raw } }
             ?: GallerySortOrder.DateDesc,
+        performanceMode = performanceMode
+            ?.let { raw -> PerformanceMode.entries.firstOrNull { it.name == raw } }
+            ?: PerformanceMode.BALANCED,
     )
 
 fun AppSettings.toDto(): AppSettingsDto =
@@ -25,4 +29,5 @@ fun AppSettings.toDto(): AppSettingsDto =
         edgeEffectMode = edgeEffectMode?.name,
         gridColumns = gridColumns,
         sortOrder = sortOrder.name,
+        performanceMode = performanceMode.name,
     )

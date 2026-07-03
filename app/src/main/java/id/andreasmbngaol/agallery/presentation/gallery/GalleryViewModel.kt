@@ -10,6 +10,7 @@ import id.andreasmbngaol.agallery.domain.model.DEFAULT_GRID_COLUMNS
 import id.andreasmbngaol.agallery.domain.model.EdgeEffectMode
 import id.andreasmbngaol.agallery.domain.model.GallerySortOrder
 import id.andreasmbngaol.agallery.domain.model.MediaItem
+import id.andreasmbngaol.agallery.domain.model.PerformanceMode
 import id.andreasmbngaol.agallery.domain.usecase.DeleteMediaUseCase
 import id.andreasmbngaol.agallery.domain.usecase.GetMediaPagingUseCase
 import id.andreasmbngaol.agallery.domain.usecase.GetSettingsUseCase
@@ -79,6 +80,15 @@ class GalleryViewModel(
             scope = viewModelScope,
             started = SharingStarted.WhileSubscribed(5_000),
             initialValue = DEFAULT_GRID_COLUMNS,
+        )
+
+    /** Mode performa: mengatur agresivitas prefetch thumbnail (RAM vs mulus). */
+    val performanceMode: StateFlow<PerformanceMode> = settings
+        .map { it.performanceMode }
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5_000),
+            initialValue = PerformanceMode.BALANCED,
         )
 
     @OptIn(ExperimentalCoroutinesApi::class)

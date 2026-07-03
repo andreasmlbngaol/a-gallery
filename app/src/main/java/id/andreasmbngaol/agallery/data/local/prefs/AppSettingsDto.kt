@@ -15,4 +15,5 @@ data class AppSettingsDto(
     val edgeEffectMode: String? = null,
     val gridColumns: Int? = null,
     val sortOrder: String? = null,
+    val performanceMode: String? = null,
 )

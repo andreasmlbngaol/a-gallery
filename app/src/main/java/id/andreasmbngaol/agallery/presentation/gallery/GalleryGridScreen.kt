@@ -69,6 +69,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -86,6 +87,14 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.paging.LoadState
 import androidx.paging.compose.LazyPagingItems
+import coil3.SingletonImageLoader
+import id.andreasmbngaol.agallery.core.image.MediaStoreThumbnail
+import id.andreasmbngaol.agallery.domain.model.PerformanceMode
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.withContext
 import androidx.paging.compose.collectAsLazyPagingItems
 import androidx.paging.compose.itemContentType
 import androidx.paging.compose.itemKey
@@ -93,12 +102,14 @@ import android.os.Build
 import androidx.compose.foundation.gestures.FlingBehavior
 import androidx.compose.foundation.gestures.ScrollScope
 import androidx.compose.foundation.gestures.ScrollableDefaults
-import androidx.compose.material3.LocalContentColor
-import androidx.compose.runtime.CompositionLocalProvider
-import androidx.compose.ui.semantics.Role
-import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.role
-import androidx.compose.ui.semantics.semantics
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.foundation.gestures.detectVerticalDragGestures
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.width
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.ui.input.pointer.pointerInput
+import kotlin.math.ceil
+import kotlinx.coroutines.launch
 import com.kyant.backdrop.Backdrop
 import com.kyant.backdrop.backdrops.layerBackdrop
 import com.kyant.backdrop.backdrops.rememberLayerBackdrop
@@ -115,7 +126,6 @@ import com.adamglin.PhosphorIcons
 import com.adamglin.phosphoricons.Fill
 import com.adamglin.phosphoricons.Regular
 import com.adamglin.phosphoricons.regular.ImageSquare
-import com.adamglin.phosphoricons.regular.MagnifyingGlass
 import com.adamglin.phosphoricons.fill.Play
 import com.adamglin.phosphoricons.regular.WarningCircle
 import id.andreasmbngaol.agallery.core.permission.MediaPermissionGate
@@ -143,8 +153,35 @@ private val PullContentMaxOffset = 80.dp
 // Diameter kontainer indikator pull-to-refresh.
 private val PullIndicatorSize = 40.dp
 
+// Ukuran (px) decode thumbnail grid — kecil & seragam biar ringan +
+// cache-friendly (satu cache key untuk semua cell).
+private const val GridThumbnailPx = 400
+// Jendela prefetch (dalam satuan BARIS) per mode performa. Angka lebih besar =
+// lebih banyak thumbnail dimuat lebih awal ke RAM sebelum masuk layar.
+// first = baris DI DEPAN viewport, second = baris DI ATAS (untuk scroll balik).
+private fun PerformanceMode.prefetchRows(): Pair<Int, Int> = when (this) {
+    PerformanceMode.LOW -> 2 to 0
+    PerformanceMode.BALANCED -> 6 to 2
+    PerformanceMode.HIGH -> 12 to 4
+}
+
 // Judul default saat grid di posisi paling atas.
 private const val DefaultTitle = "Gallery"
+
+// Fast-scroll scrollbar (grip di tepi kanan grid).
+// Lebar area sentuh drag (lebih lebar dari thumb biar gampang ditangkap jari).
+private val ScrollbarTouchWidth = 32.dp
+// Lebar visual thumb (pill) — lebih tebal biar gampang dilihat & ditarik.
+private val ScrollbarThumbWidth = 8.dp
+// Lebar thumb saat sedang ditekan/di-drag — membesar biar gampang dipegang.
+private val ScrollbarThumbDragWidth = 16.dp
+// Tinggi thumb tetap, gaya "grip handle" (bukan proporsional).
+private val ScrollbarThumbHeight = 52.dp
+// Jarak thumb dari tepi kanan area sentuh.
+private val ScrollbarEndPadding = 4.dp
+// Inset seluruh strip scrollbar dari tepi kanan layar, supaya thumb tidak
+// menempel ke edge (susah diraih + kadang memicu gesture "back" sistem).
+private val ScrollbarEdgeInset = 4.dp
 
 private val TitleDateFormatter: DateTimeFormatter =
     DateTimeFormatter.ofPattern("MMMM yyyy", Locale.getDefault())
@@ -171,12 +208,12 @@ private fun formatTitleDate(epochSeconds: Long): String =
 @Composable
 fun GalleryGridScreen(
     onMediaClick: (mediaId: Long, index: Int, sortOrder: GallerySortOrder) -> Unit,
-    onOpenSearch: () -> Unit = {},
     viewModel: GalleryViewModel = koinViewModel(),
 ) {
     // Semua preferensi bersumber dari DataStore lewat VM (reaktif & persisten).
     val sortOrder by viewModel.sortOrder.collectAsState()
     val gridColumns by viewModel.gridColumns.collectAsState()
+    val performanceMode by viewModel.performanceMode.collectAsState()
     val chosenMode by viewModel.edgeEffectMode.collectAsState()
     val effectiveMode = rememberEffectiveEdgeEffectMode(chosenMode)
 
@@ -197,6 +234,7 @@ fun GalleryGridScreen(
             } else {
                 items.peek(gridState.firstVisibleItemIndex)
                     ?.dateAddedEpochSeconds
+                    ?.takeIf { it > 0L }
                     ?.let(::formatTitleDate)
                     ?: DefaultTitle
             }
@@ -297,6 +335,7 @@ fun GalleryGridScreen(
                 contentPadding = gridContentPadding,
                 sourceModifier = sourceModifier,
                 gridColumns = gridColumns,
+                performanceMode = performanceMode,
                 onMediaClick = { id, index -> onMediaClick(id, index, sortOrder) },
                 onLongPress = { viewModel.showPreview(it) },
             )
@@ -324,6 +363,7 @@ private fun GalleryPagingContent(
     contentPadding: PaddingValues,
     sourceModifier: Modifier,
     gridColumns: Int,
+    performanceMode: PerformanceMode,
     onMediaClick: (Long, Int) -> Unit,
     onLongPress: (MediaItem) -> Unit,
 ) {
@@ -373,6 +413,7 @@ private fun GalleryPagingContent(
             contentPadding = contentPadding,
             sourceModifier = sourceModifier,
             gridColumns = gridColumns,
+            performanceMode = performanceMode,
             onMediaClick = onMediaClick,
             onLongPress = onLongPress,
         )
@@ -489,6 +530,7 @@ private fun GalleryGrid(
     contentPadding: PaddingValues,
     sourceModifier: Modifier,
     gridColumns: Int,
+    performanceMode: PerformanceMode,
     onMediaClick: (Long, Int) -> Unit,
     onLongPress: (MediaItem) -> Unit,
 ) {
@@ -498,13 +540,69 @@ private fun GalleryGrid(
         sourceModifier = sourceModifier,
     ) { contentOffset ->
         val context = LocalContext.current
+
+        // === Early loading (prefetch thumbnail) ===
+        // Muat thumbnail beberapa baris DI DEPAN viewport ke cache sebelum
+        // ke-scroll ke sana, supaya saat sampai gambar sudah siap dan tidak
+        // nge-decode mendadak di tengah scroll (sumber patah/teleport).
+        val imageLoader = SingletonImageLoader.get(context)
+        val (rowsAhead, rowsBack) = performanceMode.prefetchRows()
+        // Prefetch HANYA saat scroll berhenti (settle) & loop-nya di background
+        // thread. Pas fling, decoder dibiarkan fokus ke thumbnail yang DI LAYAR;
+        // jangan direbut kerjaan prefetch offscreen (itu yang dulu bikin mode
+        // agresif malah patah-patah + numpuk enqueue di main thread tiap frame).
+        LaunchedEffect(gridState, items, gridColumns, rowsAhead, rowsBack) {
+            snapshotFlow { gridState.isScrollInProgress }
+                .distinctUntilChanged()
+                .collectLatest { scrolling ->
+                    if (scrolling) return@collectLatest
+                    // Jeda kecil biar benar-benar diam. Kalau user scroll lagi,
+                    // collectLatest membatalkan blok ini (prefetch stale dibuang).
+                    delay(120)
+                    val info = gridState.layoutInfo.visibleItemsInfo
+                    val firstVisible = info.firstOrNull()?.index ?: return@collectLatest
+                    val lastVisible = info.lastOrNull()?.index ?: return@collectLatest
+                    val lastIndex = items.itemCount - 1
+                    if (lastIndex < 0) return@collectLatest
+                    // Enqueue di Default dispatcher -> lepas dari main thread biar
+                    // build request + peek tidak nyendat frame.
+                    withContext(Dispatchers.Default) {
+                        // Jendela prefetch: beberapa baris DI ATAS (scroll balik)
+                        // & DI DEPAN viewport. Makin agresif mode -> jendela makin
+                        // lebar -> makin banyak RAM dipakai. Karena cuma jalan pas
+                        // settle, ini tidak lagi ganggu kelancaran fling.
+                        val start = (firstVisible - gridColumns * rowsBack)
+                            .coerceAtLeast(0)
+                        val end = (lastVisible + gridColumns * rowsAhead)
+                            .coerceAtMost(lastIndex)
+                        for (i in start..end) {
+                            // Lewati item yang sedang di layar (sudah dirender).
+                            if (i in firstVisible..lastVisible) continue
+                            // peek(): baca item yang sudah ada tanpa trigger load
+                            // hint paging. Yang belum ke-load dilewati.
+                            val media = items.peek(i) ?: continue
+                            imageLoader.enqueue(
+                                ImageRequest.Builder(context)
+                                    .data(
+                                        MediaStoreThumbnail(
+                                            uri = media.uri,
+                                            isVideo = media.type == MediaType.VIDEO,
+                                        ),
+                                    )
+                                    .size(GridThumbnailPx, GridThumbnailPx)
+                                    .build(),
+                            )
+                        }
+                    }
+                }
+        }
+
+        Box(modifier = Modifier.fillMaxSize().then(contentOffset)) {
         LazyVerticalGrid(
             state = gridState,
             flingBehavior = rememberSensitiveFlingBehavior(),
             columns = GridCells.Fixed(gridColumns),
-            modifier = Modifier
-                .fillMaxSize()
-                .then(contentOffset),
+            modifier = Modifier.fillMaxSize(),
             contentPadding = contentPadding,
             horizontalArrangement = Arrangement.spacedBy(2.dp),
             verticalArrangement = Arrangement.spacedBy(2.dp),
@@ -514,7 +612,19 @@ private fun GalleryGrid(
                 key = items.itemKey { it.id },
                 contentType = items.itemContentType { it.type },
             ) { index ->
-                val item = items[index] ?: return@items
+                val item = items[index]
+                if (item == null) {
+                    // Slot placeholder saat halaman belum ter-load
+                    // (enablePlaceholders=true): pertahankan rasio 1:1 supaya
+                    // posisi grid & proporsi scrollbar tetap akurat.
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .aspectRatio(1f)
+                            .background(MaterialTheme.colorScheme.surfaceContainerHighest),
+                    )
+                    return@items
+                }
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -528,14 +638,20 @@ private fun GalleryGrid(
                     AsyncImage(
                         model = remember(item.uri, item.type) {
                             ImageRequest.Builder(context)
-                                .data(item.uri)
-                                .crossfade(true)
-                                .apply {
-                                    // Ambil frame di tengah video; frame detik 0 sering hitam.
-                                    if (item.type == MediaType.VIDEO) {
-                                        videoFramePercent(0.5)
-                                    }
-                                }
+                                // Ambil thumbnail bawaan MediaStore (bukan decode
+                                // file penuh) -> jauh lebih ringan & cepat.
+                                .data(
+                                    MediaStoreThumbnail(
+                                        uri = item.uri,
+                                        isVideo = item.type == MediaType.VIDEO,
+                                    ),
+                                )
+                                // Ukuran seragam -> cache key sama utk semua cell.
+                                .size(GridThumbnailPx, GridThumbnailPx)
+                                // Tanpa crossfade: hindari animasi fade tiap cell
+                                // muncul saat scroll cepat (salah satu sumber
+                                // patah-patah).
+                                .crossfade(false)
                                 .build()
                         },
                         contentDescription = item.displayName,
@@ -552,6 +668,19 @@ private fun GalleryGrid(
                     }
                 }
             }
+        }
+
+            GridFastScrollbar(
+                gridState = gridState,
+                columns = gridColumns,
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .padding(
+                        top = contentPadding.calculateTopPadding(),
+                        bottom = contentPadding.calculateBottomPadding(),
+                        end = ScrollbarEdgeInset,
+                    ),
+            )
         }
     }
 }
@@ -703,71 +832,6 @@ private fun ErrorState(
                 Button(onClick = onRetry) {
                     Text("Try again")
                 }
-            }
-        }
-    }
-}
-
-/**
- * Tombol Search di top bar dengan efek liquid glass (Kyant drawBackdrop) yang
- * membiaskan foto grid di belakangnya. API 33+; di bawah itu fallback ke
- * Surface tonal semi-transparan (frosted).
- */
-@Composable
-private fun SearchGlassButton(
-    onClick: () -> Unit,
-    backdrop: Backdrop,
-    liquidGlassSupported: Boolean,
-) {
-    val glassTint = MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.22f)
-    if (liquidGlassSupported) {
-        Box(
-            modifier = Modifier
-                .size(44.dp)
-                .drawBackdrop(
-                    backdrop = backdrop,
-                    shape = { Capsule() },
-                    effects = {
-                        vibrancy()
-                        blur(4.dp.toPx())
-                        lens(12.dp.toPx(), 16.dp.toPx())
-                    },
-                    onDrawSurface = { drawRect(glassTint) },
-                )
-                .clickable(onClick = onClick)
-                .semantics {
-                    this.contentDescription = "Search photos"
-                    role = Role.Button
-                },
-            contentAlignment = Alignment.Center,
-        ) {
-            CompositionLocalProvider(
-                LocalContentColor provides MaterialTheme.colorScheme.onSurface,
-            ) {
-                Icon(
-                    imageVector = PhosphorIcons.Regular.MagnifyingGlass,
-                    contentDescription = null,
-                    modifier = Modifier.size(22.dp),
-                )
-            }
-        }
-    } else {
-        Surface(
-            onClick = onClick,
-            shape = CircleShape,
-            color = MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.85f),
-            contentColor = MaterialTheme.colorScheme.onSurface,
-            shadowElevation = 6.dp,
-            modifier = Modifier
-                .size(44.dp)
-                .semantics { this.contentDescription = "Search photos" },
-        ) {
-            Box(contentAlignment = Alignment.Center) {
-                Icon(
-                    imageVector = PhosphorIcons.Regular.MagnifyingGlass,
-                    contentDescription = null,
-                    modifier = Modifier.size(22.dp),
-                )
             }
         }
     }
@@ -935,6 +999,105 @@ private fun PhotoContextMenu(
             text = "Delete",
             color = deleteColor,
             style = MaterialTheme.typography.bodyLarge,
+        )
+    }
+}
+
+/**
+ * Scrollbar fast-scroll utk grid galeri: grip pill di tepi kanan yg muncul saat
+ * scrolling / di-drag, lalu fade-out. Bisa DITARIK utk loncat cepat ke posisi
+ * mana pun (mis. langsung ke paling bawah).
+ *
+ * Posisi thumb dihitung dari proporsi baris pertama yg tampak terhadap total
+ * baris (`firstVisibleItemIndex / kolom`). `translationY` + `alpha` dibaca di
+ * dalam `graphicsLayer` (draw phase) supaya update tiap frame TANPA recompose.
+ */
+@Composable
+private fun GridFastScrollbar(
+    gridState: LazyGridState,
+    columns: Int,
+    modifier: Modifier = Modifier,
+) {
+    val scope = rememberCoroutineScope()
+    val density = LocalDensity.current
+    val columnsSafe = columns.coerceAtLeast(1)
+    var dragging by remember { mutableStateOf(false) }
+
+    // Cukup di-scroll kalau total item lebih banyak dari yang tampak.
+    val scrollable by remember {
+        derivedStateOf {
+            val info = gridState.layoutInfo
+            info.visibleItemsInfo.isNotEmpty() &&
+                info.totalItemsCount > info.visibleItemsInfo.size
+        }
+    }
+
+    // Progres 0..1 = baris pertama tampak / (total baris - baris tampak).
+    val progress by remember(columnsSafe) {
+        derivedStateOf {
+            val info = gridState.layoutInfo
+            val visibleRows = ceil(info.visibleItemsInfo.size / columnsSafe.toFloat())
+            val totalRows = ceil(info.totalItemsCount / columnsSafe.toFloat())
+            val maxRow = (totalRows - visibleRows).coerceAtLeast(1f)
+            (gridState.firstVisibleItemIndex / columnsSafe.toFloat() / maxRow)
+                .coerceIn(0f, 1f)
+        }
+    }
+
+    val active = (gridState.isScrollInProgress || dragging) && scrollable
+    val thumbAlpha by animateFloatAsState(
+        targetValue = if (active) 1f else 0f,
+        animationSpec = tween(durationMillis = if (active) 150 else 600),
+        label = "scrollbar-alpha",
+    )
+
+    val thumbColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.45f)
+
+    BoxWithConstraints(
+        modifier = modifier
+            .fillMaxHeight()
+            .width(ScrollbarTouchWidth)
+            .pointerInput(columnsSafe) {
+                val trackPx = size.height.toFloat()
+                val thumbPx = ScrollbarThumbHeight.toPx()
+                detectVerticalDragGestures(
+                    onDragStart = { dragging = true },
+                    onDragEnd = { dragging = false },
+                    onDragCancel = { dragging = false },
+                ) { change, _ ->
+                    change.consume()
+                    val denom = (trackPx - thumbPx).coerceAtLeast(1f)
+                    val fraction =
+                        ((change.position.y - thumbPx / 2f) / denom).coerceIn(0f, 1f)
+                    val info = gridState.layoutInfo
+                    val totalRows = ceil(info.totalItemsCount / columnsSafe.toFloat())
+                    val targetRow = (fraction * (totalRows - 1f)).toInt().coerceAtLeast(0)
+                    val targetIndex = (targetRow * columnsSafe)
+                        .coerceIn(0, (info.totalItemsCount - 1).coerceAtLeast(0))
+                    scope.launch { gridState.scrollToItem(targetIndex) }
+                }
+            },
+        contentAlignment = Alignment.TopEnd,
+    ) {
+        val trackHeightPx = with(density) { maxHeight.toPx() }
+        val thumbHeightPx = with(density) { ScrollbarThumbHeight.toPx() }
+        // Thumb melebar saat ditekan/di-drag supaya gampang dipegang.
+        val thumbWidth by animateDpAsState(
+            targetValue = if (dragging) ScrollbarThumbDragWidth else ScrollbarThumbWidth,
+            animationSpec = tween(durationMillis = 150),
+            label = "scrollbar-thumb-width",
+        )
+        Box(
+            modifier = Modifier
+                .padding(end = ScrollbarEndPadding)
+                .width(thumbWidth)
+                .height(ScrollbarThumbHeight)
+                .graphicsLayer {
+                    translationY = progress * (trackHeightPx - thumbHeightPx)
+                    alpha = thumbAlpha
+                }
+                .clip(CircleShape)
+                .background(thumbColor),
         )
     }
 }

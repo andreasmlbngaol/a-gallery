@@ -7,6 +7,7 @@ import id.andreasmbngaol.agallery.domain.model.AppSettings
 import id.andreasmbngaol.agallery.domain.model.EdgeEffectMode
 import id.andreasmbngaol.agallery.domain.model.GallerySortOrder
 import id.andreasmbngaol.agallery.domain.model.MAX_GRID_COLUMNS
+import id.andreasmbngaol.agallery.domain.model.PerformanceMode
 import id.andreasmbngaol.agallery.domain.model.MIN_GRID_COLUMNS
 import id.andreasmbngaol.agallery.domain.repository.SettingsRepository
 import kotlinx.coroutines.flow.Flow
@@ -35,6 +36,12 @@ class SettingsRepositoryImpl(
     override suspend fun setSortOrder(order: GallerySortOrder) {
         dataStore.updateData { current ->
             current.copy(sortOrder = order.name)
+        }
+    }
+
+    override suspend fun setPerformanceMode(mode: PerformanceMode) {
+        dataStore.updateData { current ->
+            current.copy(performanceMode = mode.name)
         }
     }
 }

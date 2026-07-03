@@ -14,9 +14,11 @@ const val DEFAULT_GRID_COLUMNS = 3
  *
  * [gridColumns] jumlah kolom grid galeri (3..5, default 3).
  * [sortOrder] urutan sortir media; dipersist supaya TETAP walau app ditutup.
+ * [performanceMode] trade-off RAM vs kelancaran scroll (prefetch + cache).
  */
 data class AppSettings(
     val edgeEffectMode: EdgeEffectMode? = null,
     val gridColumns: Int = DEFAULT_GRID_COLUMNS,
     val sortOrder: GallerySortOrder = GallerySortOrder.DateDesc,
+    val performanceMode: PerformanceMode = PerformanceMode.BALANCED,
 )

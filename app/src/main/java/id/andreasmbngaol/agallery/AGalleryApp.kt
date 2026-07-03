@@ -8,8 +8,15 @@ import coil3.memory.MemoryCache
 import coil3.request.CachePolicy
 import coil3.request.crossfade
 import coil3.video.VideoFrameDecoder
+import id.andreasmbngaol.agallery.core.image.MediaStoreThumbnailFetcher
+import id.andreasmbngaol.agallery.core.image.MediaStoreThumbnailKeyer
 import id.andreasmbngaol.agallery.core.di.appModules
+import id.andreasmbngaol.agallery.domain.model.PerformanceMode
+import id.andreasmbngaol.agallery.domain.repository.SettingsRepository
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.runBlocking
 import org.koin.android.ext.koin.androidContext
+import org.koin.core.context.GlobalContext
 import org.koin.core.context.startKoin
 
 /**
@@ -43,16 +50,49 @@ class AGalleryApp : Application(), SingletonImageLoader.Factory {
     override fun newImageLoader(context: PlatformContext): ImageLoader {
         return ImageLoader.Builder(context)
             .components {
+                // Fetcher kustom: thumbnail GRID diambil dari thumbnail bawaan
+                // MediaStore (loadThumbnail, API 29+) -> jauh lebih ringan &
+                // cepat daripada decode file foto penuh. Keyer WAJIB supaya
+                // hasilnya masuk cache (memory + disk).
+                add(MediaStoreThumbnailFetcher.Factory(context.contentResolver))
+                add(MediaStoreThumbnailKeyer())
+                // Tetap perlu untuk uri video biasa (mis. cover album) yang
+                // TIDAK lewat MediaStoreThumbnail.
                 add(VideoFrameDecoder.Factory())
             }
             .memoryCachePolicy(CachePolicy.ENABLED)
             .memoryCache {
                 MemoryCache.Builder()
-                    .maxSizePercent(context, 0.25)
+                    // Ukuran cache mengikuti PerformanceMode pilihan user: makin
+                    // agresif = makin banyak thumbnail ditahan di RAM supaya scroll
+                    // balik tidak decode ulang. Dibaca SEKALI saat ImageLoader
+                    // dibuat; perubahan mode berlaku penuh setelah app di-restart.
+                    .maxSizePercent(context, resolveMemoryCachePercent())
                     .build()
             }
             .diskCachePolicy(CachePolicy.ENABLED)
             .crossfade(150)
             .build()
+    }
+
+    /**
+     * Baca [PerformanceMode] tersimpan (sekali, saat ImageLoader dibuat) lalu
+     * petakan ke persentase RAM untuk memory cache. Dibungkus try/catch supaya
+     * kegagalan baca preferensi TIDAK pernah bikin app crash — jatuh ke default
+     * seimbang. Perubahan mode saat runtime baru berlaku penuh setelah restart
+     * (ukuran memory cache Coil di-set saat build, tidak bisa di-resize).
+     */
+    private fun resolveMemoryCachePercent(): Double {
+        val mode = try {
+            val repository = GlobalContext.get().get<SettingsRepository>()
+            runBlocking { repository.settings.first().performanceMode }
+        } catch (_: Throwable) {
+            PerformanceMode.BALANCED
+        }
+        return when (mode) {
+            PerformanceMode.LOW -> 0.20
+            PerformanceMode.BALANCED -> 0.30
+            PerformanceMode.HIGH -> 0.50
+        }
     }
 }

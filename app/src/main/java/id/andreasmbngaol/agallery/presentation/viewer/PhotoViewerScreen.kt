@@ -14,6 +14,7 @@ import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.LaunchedEffect
@@ -28,7 +29,6 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
-import androidx.paging.compose.collectAsLazyPagingItems
 import id.andreasmbngaol.agallery.domain.model.GallerySortOrder
 import id.andreasmbngaol.agallery.domain.model.MediaDetails
 import id.andreasmbngaol.agallery.domain.model.MediaItem
@@ -80,7 +80,7 @@ fun PhotoViewerScreen(
         viewModel.setSortOrder(sortOrder)
     }
 
-    val items = viewModel.media.collectAsLazyPagingItems()
+    val media by viewModel.media.collectAsState()
 
     // Drag state di-hoist ke level screen supaya latar viewer (ikut theme:
     // putih di light mode, gelap di dark) juga memudar seiring drag — hint
@@ -101,17 +101,23 @@ fun PhotoViewerScreen(
                     .copy(alpha = 1f - dismissFraction * 0.6f),
             ),
     ) {
-        val count = items.itemCount
-        if (count == 0) {
+        val items = media
+        // null = daftar masih dimuat (metadata ringan, dimuat sekali di awal
+        // jadi cepat). Setelah siap, tiap index dijamin ada -> tidak ada lagi
+        // "loading terus" saat buka/geser.
+        if (items == null) {
             CircularProgressIndicator(
                 modifier = Modifier.align(Alignment.Center),
             )
             return@Box
         }
+        if (items.isEmpty()) {
+            return@Box
+        }
 
         val pagerState = rememberPagerState(
-            initialPage = initialIndex.coerceIn(0, count - 1),
-            pageCount = { items.itemCount },
+            initialPage = initialIndex.coerceIn(0, items.size - 1),
+            pageCount = { items.size },
         )
 
         HorizontalPager(
@@ -119,26 +125,17 @@ fun PhotoViewerScreen(
             modifier = Modifier.fillMaxSize(),
         ) { page ->
             val item = items[page]
-            if (item == null) {
-                Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    CircularProgressIndicator()
-                }
-            } else {
-                // key() memastikan tiap media punya ZoomableImageState sendiri,
-                // sehingga zoom di halaman lain tidak "bocor" saat pager reuse slot.
-                key(item.id) {
-                    PhotoViewerPage(
-                        item = item,
-                        isActive = page == pagerState.currentPage,
-                        dragOffsetY = dragOffsetY,
-                        dismissThresholdPx = dismissThresholdPx,
-                        onDismiss = onBack,
-                        loadDetails = viewModel::loadDetails,
-                    )
-                }
+            // key() memastikan tiap media punya ZoomableImageState sendiri,
+            // sehingga zoom di halaman lain tidak "bocor" saat pager reuse slot.
+            key(item.id) {
+                PhotoViewerPage(
+                    item = item,
+                    isActive = page == pagerState.currentPage,
+                    dragOffsetY = dragOffsetY,
+                    dismissThresholdPx = dismissThresholdPx,
+                    onDismiss = onBack,
+                    loadDetails = viewModel::loadDetails,
+                )
             }
         }
     }

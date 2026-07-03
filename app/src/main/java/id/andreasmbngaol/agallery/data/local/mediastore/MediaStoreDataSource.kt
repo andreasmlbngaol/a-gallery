@@ -9,6 +9,7 @@ import android.app.RecoverableSecurityException
 import android.os.Build
 import android.os.Bundle
 import android.provider.MediaStore
+import id.andreasmbngaol.agallery.domain.model.Album
 import id.andreasmbngaol.agallery.domain.model.GallerySortOrder
 import id.andreasmbngaol.agallery.domain.model.MediaDetails
 import id.andreasmbngaol.agallery.domain.model.MediaItem
@@ -50,6 +51,10 @@ class MediaStoreDataSource(
     private val collectionUri: Uri =
         MediaStore.Files.getContentUri(MediaStore.VOLUME_EXTERNAL)
 
+    // Filter path folder kamera utk galeri utama. Pola LIKE '%' cocok dgn
+    // "DCIM/Camera/" (trailing slash) maupun subfolder di bawahnya.
+    private val cameraPathFilter = "DCIM/Camera/%"
+
     private val projection = arrayOf(
         MediaStore.Files.FileColumns._ID,
         MediaStore.Files.FileColumns.DISPLAY_NAME,
@@ -66,10 +71,15 @@ class MediaStoreDataSource(
         offset: Int,
         sortOrder: GallerySortOrder,
     ): List<MediaItem> = withContext(Dispatchers.IO) {
-        val selection = "${MediaStore.Files.FileColumns.MEDIA_TYPE} IN (?, ?)"
+        // Batasi galeri utama HANYA ke folder kamera (DCIM/Camera), bukan
+        // semua media di device (Screenshots, Download, WhatsApp, dst).
+        val selection =
+            "${MediaStore.Files.FileColumns.MEDIA_TYPE} IN (?, ?) AND " +
+                "${MediaStore.Files.FileColumns.RELATIVE_PATH} LIKE ?"
         val selectionArgs = arrayOf(
             MediaStore.Files.FileColumns.MEDIA_TYPE_IMAGE.toString(),
             MediaStore.Files.FileColumns.MEDIA_TYPE_VIDEO.toString(),
+            cameraPathFilter,
         )
         val direction = when (sortOrder) {
             GallerySortOrder.DateDesc -> "DESC"
@@ -143,6 +153,41 @@ class MediaStoreDataSource(
     }
 
     /**
+     * Ambil SELURUH media kamera (tanpa paging) dalam urutan [sortOrder].
+     * Delegasi ke [queryMedia] dengan limit maksimum — dipakai viewer supaya
+     * bisa buka index mana pun secara instan tanpa jumping paging yang flaky.
+     * MediaItem ringan (metadata saja); bitmap tetap di-load lazy oleh Coil.
+     */
+    suspend fun queryAllMedia(sortOrder: GallerySortOrder): List<MediaItem> =
+        queryMedia(limit = Int.MAX_VALUE, offset = 0, sortOrder = sortOrder)
+
+    /**
+     * Hitung total media kamera (DCIM/Camera). Dipakai [MediaPagingSource]
+     * untuk mengisi `itemsBefore`/`itemsAfter` (placeholder) sehingga tiap
+     * index bersifat absolut & bisa dibuka langsung di viewer.
+     */
+    suspend fun countMedia(): Int = withContext(Dispatchers.IO) {
+        val selection =
+            "${MediaStore.Files.FileColumns.MEDIA_TYPE} IN (?, ?) AND " +
+                "${MediaStore.Files.FileColumns.RELATIVE_PATH} LIKE ?"
+        val selectionArgs = arrayOf(
+            MediaStore.Files.FileColumns.MEDIA_TYPE_IMAGE.toString(),
+            MediaStore.Files.FileColumns.MEDIA_TYPE_VIDEO.toString(),
+            cameraPathFilter,
+        )
+        val queryArgs = Bundle().apply {
+            putString(ContentResolver.QUERY_ARG_SQL_SELECTION, selection)
+            putStringArray(ContentResolver.QUERY_ARG_SQL_SELECTION_ARGS, selectionArgs)
+        }
+        contentResolver.query(
+            collectionUri,
+            arrayOf(MediaStore.Files.FileColumns._ID),
+            queryArgs,
+            null,
+        )?.use { it.count } ?: 0
+    }
+
+    /**
      * Bangun permintaan hapus untuk [uris].
      *
      * - API 30+ (R): pakai [MediaStore.createDeleteRequest]. Sistem yang
@@ -204,9 +249,81 @@ class MediaStoreDataSource(
             }
         }
 
-    suspend fun queryAlbums(): List<MediaItem> {
-        // TODO: SELECT dengan GROUP BY BUCKET_ID / BUCKET_DISPLAY_NAME +
-        //  agregasi COUNT(*) & first-item URI utk cover album.
-        return emptyList()
+    /**
+     * Daftar album (folder) di device: satu entri per BUCKET_ID, berisi nama
+     * folder, jumlah item, dan URI item TERBARU sebagai sampul.
+     *
+     * Berbeda dgn [queryMedia] yg dibatasi ke DCIM/Camera, album menampilkan
+     * SEMUA folder (Camera, Screenshots, Download, WhatsApp, dst) supaya user
+     * bisa menjelajah semuanya.
+     *
+     * Diurutkan DATE_ADDED DESC lalu dikelompokkan pakai LinkedHashMap, jadi
+     * album dgn item terbaru muncul lebih dulu & item pertama tiap bucket =
+     * cover-nya.
+     */
+    suspend fun queryAlbums(): List<Album> = withContext(Dispatchers.IO) {
+        val selection = "${MediaStore.Files.FileColumns.MEDIA_TYPE} IN (?, ?)"
+        val selectionArgs = arrayOf(
+            MediaStore.Files.FileColumns.MEDIA_TYPE_IMAGE.toString(),
+            MediaStore.Files.FileColumns.MEDIA_TYPE_VIDEO.toString(),
+        )
+        val sortSql =
+            "${MediaStore.Files.FileColumns.DATE_ADDED} DESC, " +
+                "${MediaStore.Files.FileColumns._ID} DESC"
+        val queryArgs = Bundle().apply {
+            putString(ContentResolver.QUERY_ARG_SQL_SELECTION, selection)
+            putStringArray(ContentResolver.QUERY_ARG_SQL_SELECTION_ARGS, selectionArgs)
+            putString(ContentResolver.QUERY_ARG_SQL_SORT_ORDER, sortSql)
+        }
+
+        contentResolver.query(collectionUri, projection, queryArgs, null)?.use { c ->
+            val idCol = c.getColumnIndexOrThrow(MediaStore.Files.FileColumns._ID)
+            val typeCol = c.getColumnIndexOrThrow(MediaStore.Files.FileColumns.MEDIA_TYPE)
+            val bucketIdCol = c.getColumnIndex(MediaStore.Files.FileColumns.BUCKET_ID)
+            val bucketNameCol = c.getColumnIndex(MediaStore.Files.FileColumns.BUCKET_DISPLAY_NAME)
+
+            // Urutan insert dipertahankan: bucket dgn item terbaru duluan.
+            val buckets = LinkedHashMap<Long, AlbumAccumulator>()
+            while (c.moveToNext()) {
+                if (bucketIdCol < 0 || c.isNull(bucketIdCol)) continue
+                val bucketId = c.getLong(bucketIdCol)
+                val existing = buckets[bucketId]
+                if (existing == null) {
+                    val id = c.getLong(idCol)
+                    val isVideo =
+                        c.getInt(typeCol) == MediaStore.Files.FileColumns.MEDIA_TYPE_VIDEO
+                    val baseUri = if (isVideo) {
+                        MediaStore.Video.Media.EXTERNAL_CONTENT_URI
+                    } else {
+                        MediaStore.Images.Media.EXTERNAL_CONTENT_URI
+                    }
+                    val coverUri = ContentUris.withAppendedId(baseUri, id).toString()
+                    val name = if (bucketNameCol >= 0) {
+                        c.getString(bucketNameCol).orEmpty()
+                    } else {
+                        ""
+                    }
+                    buckets[bucketId] = AlbumAccumulator(name = name, coverUri = coverUri)
+                } else {
+                    existing.itemCount += 1
+                }
+            }
+
+            buckets.map { (bucketId, acc) ->
+                Album(
+                    id = bucketId,
+                    name = acc.name.ifEmpty { "Unknown" },
+                    coverUri = acc.coverUri,
+                    itemCount = acc.itemCount,
+                )
+            }
+        } ?: emptyList()
     }
 }
+
+/** Penampung mutable sementara saat mengagregasi album dari cursor. */
+private class AlbumAccumulator(
+    val name: String,
+    val coverUri: String,
+    var itemCount: Int = 1,
+)

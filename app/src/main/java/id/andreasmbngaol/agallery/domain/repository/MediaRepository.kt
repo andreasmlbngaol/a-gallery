@@ -24,6 +24,14 @@ interface MediaRepository {
      */
     fun getMediaPaging(sortOrder: GallerySortOrder): Flow<PagingData<MediaItem>>
 
+    /**
+     * Ambil SELURUH media kamera (metadata ringan) dalam urutan [sortOrder],
+     * sama persis dengan grid. Dipakai viewer supaya bisa buka index mana pun
+     * secara instan & geser mulus tanpa bergantung paging (yang bisa "loading
+     * terus" saat lompat jauh). Bitmap tetap di-load lazy per halaman.
+     */
+    suspend fun getAllMedia(sortOrder: GallerySortOrder): List<MediaItem>
+
     suspend fun getAlbums(): List<Album>
     suspend fun setFavorite(mediaId: Long, isFavorite: Boolean)
 

@@ -23,14 +23,26 @@ class MediaRepositoryImpl(
 
     override fun getMediaPaging(sortOrder: GallerySortOrder): Flow<PagingData<MediaItem>> =
         Pager(
-            config = PagingConfig(pageSize = 60, enablePlaceholders = false),
+            // Placeholders ON: itemCount == total sebenarnya, jadi index absolut
+            // (posisi tap di grid) valid & bisa langsung dibuka di viewer.
+            // initialLoadSize = pageSize: wajib supaya offset (page * PAGE_SIZE)
+            // konsisten di semua load, tanpa overlap antar halaman. Viewer tidak
+            // lagi pakai jumping paging (diganti daftar penuh via getAllMedia).
+            config = PagingConfig(
+                pageSize = MediaPagingSource.PAGE_SIZE,
+                initialLoadSize = MediaPagingSource.PAGE_SIZE,
+                // Muat 2 halaman di depan (bukan default 1 halaman) supaya saat
+                // scroll cepat lebih jarang ketemu placeholder kosong.
+                prefetchDistance = MediaPagingSource.PAGE_SIZE * 2,
+                enablePlaceholders = true,
+            ),
             pagingSourceFactory = { MediaPagingSource(mediaStore, sortOrder) },
         ).flow
 
-    override suspend fun getAlbums(): List<Album> {
-        // TODO: map dari mediaStore.queryAlbums()
-        return emptyList()
-    }
+    override suspend fun getAllMedia(sortOrder: GallerySortOrder): List<MediaItem> =
+        mediaStore.queryAllMedia(sortOrder)
+
+    override suspend fun getAlbums(): List<Album> = mediaStore.queryAlbums()
 
     override suspend fun setFavorite(mediaId: Long, isFavorite: Boolean) {
         if (isFavorite) {

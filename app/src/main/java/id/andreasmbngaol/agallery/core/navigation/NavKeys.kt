@@ -31,7 +31,4 @@ sealed interface Screen : NavKey {
         val initialIndex: Int,
         val sortOrder: GallerySortOrder,
     ) : Screen
-
-    @Serializable
-    data object Settings : Screen
 }

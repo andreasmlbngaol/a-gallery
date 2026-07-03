@@ -40,6 +40,7 @@ import id.andreasmbngaol.agallery.core.ui.isFrostedSupported
 import id.andreasmbngaol.agallery.core.ui.resolveEdgeEffectMode
 import id.andreasmbngaol.agallery.domain.model.EdgeEffectMode
 import id.andreasmbngaol.agallery.domain.model.MAX_GRID_COLUMNS
+import id.andreasmbngaol.agallery.domain.model.PerformanceMode
 import id.andreasmbngaol.agallery.domain.model.MIN_GRID_COLUMNS
 import org.koin.androidx.compose.koinViewModel
 
@@ -72,6 +73,8 @@ fun SettingsScreen(
         onSelectMode = viewModel::onSelectEdgeEffect,
         gridColumns = settings.gridColumns,
         onSelectGridColumns = viewModel::onSelectGridColumns,
+        performanceMode = settings.performanceMode,
+        onSelectPerformanceMode = viewModel::onSelectPerformanceMode,
     )
 }
 
@@ -84,10 +87,12 @@ private data class EdgeEffectChoice(
     val label: String,
 )
 
+// Urutan sengaja ringan -> berat (kiri -> kanan), konsisten dengan
+// PerformanceMode (Low -> High): makin ke kanan = makin "berat"/intens.
 private val EdgeEffectChoices = listOf(
-    EdgeEffectChoice(EdgeEffectMode.FROSTED, "Frosted"),
-    EdgeEffectChoice(EdgeEffectMode.GRADIENT, "Gradient"),
     EdgeEffectChoice(EdgeEffectMode.OFF, "Off"),
+    EdgeEffectChoice(EdgeEffectMode.GRADIENT, "Gradient"),
+    EdgeEffectChoice(EdgeEffectMode.FROSTED, "Frosted"),
 )
 
 @Composable
@@ -96,6 +101,8 @@ private fun SettingsContent(
     onSelectMode: (EdgeEffectMode) -> Unit,
     gridColumns: Int,
     onSelectGridColumns: (Int) -> Unit,
+    performanceMode: PerformanceMode,
+    onSelectPerformanceMode: (PerformanceMode) -> Unit,
 ) {
     val defaultMode = remember { resolveEdgeEffectMode(null, Build.VERSION.SDK_INT) }
     val shownSelection = chosenMode ?: defaultMode
@@ -128,6 +135,23 @@ private fun SettingsContent(
                 GridColumnsSegmentedControl(
                     selected = gridColumns,
                     onSelect = onSelectGridColumns,
+                )
+            }
+        }
+
+        Spacer(Modifier.height(SettingsSectionGap))
+
+        // ===== Section: Performance =====
+        SettingsSectionHeader(title = "Performance")
+        SettingsCard {
+            SettingsItem(
+                title = "Loading behavior",
+                description = "How aggressively thumbnails are preloaded while scrolling.",
+                helperText = performanceModeDescription(performanceMode),
+            ) {
+                PerformanceModeSegmentedControl(
+                    selected = performanceMode,
+                    onSelect = onSelectPerformanceMode,
                 )
             }
         }
@@ -255,6 +279,48 @@ private fun GridColumnsSegmentedControl(
             )
         }
     }
+}
+
+/**
+ * Satu pilihan mode performa. [label] = teks pendek di segmen; penjelasan
+ * panjang ada di [performanceModeDescription] (helper text di bawah kontrol).
+ */
+private data class PerformanceChoice(
+    val mode: PerformanceMode,
+    val label: String,
+)
+
+private val PerformanceChoices = listOf(
+    PerformanceChoice(PerformanceMode.LOW, "Low"),
+    PerformanceChoice(PerformanceMode.BALANCED, "Balanced"),
+    PerformanceChoice(PerformanceMode.HIGH, "High"),
+)
+
+/** Segmented control untuk mode performa (Low/Balanced/High), gaya frosted glass. */
+@Composable
+private fun PerformanceModeSegmentedControl(
+    selected: PerformanceMode,
+    onSelect: (PerformanceMode) -> Unit,
+) {
+    SegmentedGlassTrack {
+        PerformanceChoices.forEach { choice ->
+            SegmentedGlassItem(
+                label = choice.label,
+                selected = selected == choice.mode,
+                onClick = { onSelect(choice.mode) },
+                modifier = Modifier.weight(1f),
+            )
+        }
+    }
+}
+
+private fun performanceModeDescription(mode: PerformanceMode): String = when (mode) {
+    PerformanceMode.LOW ->
+        "Lightest on RAM. Thumbnails load as you reach them."
+    PerformanceMode.BALANCED ->
+        "Balanced. Preloads a few rows ahead for smooth scrolling."
+    PerformanceMode.HIGH ->
+        "Uses more RAM to preload many rows ahead (and above) so scrolling rarely waits. Cache size changes apply after restart."
 }
 
 /** Track kaca yang membungkus segmen-segmen (dipakai ulang beberapa kontrol). */
