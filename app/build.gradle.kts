@@ -33,8 +33,8 @@ android {
         applicationId = "id.andreasmbngaol.agallery"
         minSdk = 29
         targetSdk = 37
-        versionCode = 1
-        versionName = "0.1.0"
+        versionCode = 2
+        versionName = "0.1.1"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -61,9 +61,15 @@ android {
             } else {
                 signingConfigs.getByName("debug")
             }
-            optimization {
-                enable = false
-            }
+
+            // R8: shrink + obfuscate kode yang nggak kepakai, plus buang resource
+            // yang nggak dipakai. Ini yang bikin APK jauh lebih kecil & enteng.
+            isMinifyEnabled = true
+            isShrinkResources = true
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                "proguard-rules.pro",
+            )
         }
     }
     compileOptions {
@@ -129,8 +135,11 @@ dependencies {
     implementation(libs.haze)
     implementation(libs.androidx.datastore)
     implementation(libs.kotlinx.serialization.json)
-    implementation(libs.androidx.material.icons.extended)
     implementation(libs.phosphor.icon)
+
+    // Baseline Profile installer — masang baseline profile (kalau ada) pas app
+    // dipasang, biar startup & scroll lebih ngebut (ART AOT-compile jalur panas).
+    implementation(libs.androidx.profileinstaller)
 
 
     testImplementation(libs.junit)

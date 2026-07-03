@@ -10,6 +10,8 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import id.andreasmbngaol.agallery.core.ui.GalleryTab
 import id.andreasmbngaol.agallery.core.ui.GalleryTabScaffold
+import id.andreasmbngaol.agallery.core.ui.rememberEffectiveEdgeEffectMode
+import id.andreasmbngaol.agallery.domain.model.EdgeEffectMode
 import id.andreasmbngaol.agallery.domain.model.GallerySortOrder
 import id.andreasmbngaol.agallery.presentation.albums.AlbumsScreen
 import id.andreasmbngaol.agallery.presentation.gallery.GalleryGridScreen
@@ -62,6 +64,12 @@ fun HomeTabsScreen(
     val previewItem by galleryViewModel.previewItem.collectAsState()
     val previewActive = previewItem != null
 
+    // "Mode hemat": kalau user set Edge Effect = OFF di Settings, matikan juga
+    // liquid glass di floating nav bar (blur real-time = paling berat di GPU).
+    val edgeEffectMode by galleryViewModel.edgeEffectMode.collectAsState()
+    val glassEnabled =
+        rememberEffectiveEdgeEffectMode(edgeEffectMode) != EdgeEffectMode.OFF
+
     val pagerState = rememberPagerState(pageCount = { HomePageCount })
     val scope = rememberCoroutineScope()
 
@@ -82,6 +90,7 @@ fun HomeTabsScreen(
         sortOrder = sortOrder,
         onToggleSort = toggleSort,
         barVisible = !previewActive,
+        glassEnabled = glassEnabled,
     ) {
         HorizontalPager(
             state = pagerState,

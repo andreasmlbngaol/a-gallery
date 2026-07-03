@@ -27,6 +27,7 @@ kyantBackdrop = "2.0.0"          # Kyant liquid glass (backdrop). Efek lens = AP
 kyantShapes = "1.2.0"             # Kyant shapes (Capsule dll), versi terpisah dari backdrop
 datastore = "1.2.1"
 phosphor = "1.0.0"
+profileinstaller = "1.4.1"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -88,6 +89,7 @@ kyant-shapes = { group = "io.github.kyant0", name = "shapes", version.ref = "kya
 androidx-datastore = { group = "androidx.datastore", name = "datastore", version.ref = "datastore" }
 androidx-material-icons-extended = { group = "androidx.compose.material", name = "material-icons-extended" }
 phosphor-icon = { group = "com.adamglin", name = "phosphor-icon", version.ref = "phosphor" }
+androidx-profileinstaller = { group = "androidx.profileinstaller", name = "profileinstaller", version.ref = "profileinstaller" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

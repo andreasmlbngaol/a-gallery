@@ -114,9 +114,14 @@ fun GalleryTabScaffold(
     onToggleSort: () -> Unit,
     modifier: Modifier = Modifier,
     barVisible: Boolean = true,
+    glassEnabled: Boolean = true,
     content: @Composable () -> Unit,
 ) {
-    val liquidGlassSupported = Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU
+    // Liquid glass butuh RuntimeShader (API 33+) DAN diizinkan user. Kalau user
+    // pilih "mode hemat" (Edge Effect = OFF), glassEnabled=false -> semua komponen
+    // otomatis pakai fallback solid (tanpa blur real-time yang berat di GPU).
+    val liquidGlassSupported =
+        glassEnabled && Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU
     val backdrop = rememberLayerBackdrop()
 
     Box(modifier = modifier.fillMaxSize()) {
