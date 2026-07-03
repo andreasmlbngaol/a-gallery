@@ -11,6 +11,7 @@ import id.andreasmbngaol.agallery.data.local.room.entity.FavoriteEntity
 import id.andreasmbngaol.agallery.data.paging.MediaPagingSource
 import id.andreasmbngaol.agallery.domain.model.Album
 import id.andreasmbngaol.agallery.domain.model.GallerySortOrder
+import id.andreasmbngaol.agallery.domain.model.MediaDetails
 import id.andreasmbngaol.agallery.domain.model.MediaItem
 import id.andreasmbngaol.agallery.domain.repository.MediaRepository
 import kotlinx.coroutines.flow.Flow
@@ -41,4 +42,7 @@ class MediaRepositoryImpl(
 
     override suspend fun createDeleteRequest(uris: List<String>): IntentSender? =
         mediaStore.buildDeleteRequest(uris.map { Uri.parse(it) })
+
+    override suspend fun getMediaDetails(uri: String): MediaDetails? =
+        mediaStore.queryDetails(uri)
 }

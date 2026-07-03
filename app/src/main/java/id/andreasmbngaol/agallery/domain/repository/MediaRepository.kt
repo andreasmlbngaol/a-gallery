@@ -4,6 +4,7 @@ import android.content.IntentSender
 import androidx.paging.PagingData
 import id.andreasmbngaol.agallery.domain.model.Album
 import id.andreasmbngaol.agallery.domain.model.GallerySortOrder
+import id.andreasmbngaol.agallery.domain.model.MediaDetails
 import id.andreasmbngaol.agallery.domain.model.MediaItem
 import kotlinx.coroutines.flow.Flow
 
@@ -25,6 +26,12 @@ interface MediaRepository {
 
     suspend fun getAlbums(): List<Album>
     suspend fun setFavorite(mediaId: Long, isFavorite: Boolean)
+
+    /**
+     * Ambil metadata detail (ukuran, dimensi, folder) untuk satu media by
+     * [uri]. Return null kalau item tak ditemukan. Dipakai panel detail viewer.
+     */
+    suspend fun getMediaDetails(uri: String): MediaDetails?
 
     /**
      * Bangun permintaan hapus untuk daftar [uris] (string URI MediaStore).

@@ -16,13 +16,16 @@ import id.andreasmbngaol.agallery.domain.model.GallerySortOrder
 import id.andreasmbngaol.agallery.presentation.albums.AlbumsScreen
 import id.andreasmbngaol.agallery.presentation.gallery.GalleryGridScreen
 import id.andreasmbngaol.agallery.presentation.gallery.GalleryViewModel
+import id.andreasmbngaol.agallery.presentation.settings.SettingsScreen
 import org.koin.androidx.compose.koinViewModel
 import kotlinx.coroutines.launch
 
-// Urutan halaman pager. Gallery di kiri (0), Albums di kanan (1).
-private const val PageGallery = 0
-private const val PageAlbums = 1
-private const val HomePageCount = 2
+// Urutan halaman pager: Settings (0) | Gallery (1) | Albums (2). Gallery jadi
+// halaman awal (tengah) supaya swipe kanan -> Settings, swipe kiri -> Albums.
+private const val PageSettings = 0
+private const val PageGallery = 1
+private const val PageAlbums = 2
+private const val HomePageCount = 3
 
 /**
  * Root berisi dua tab (Gallery / Albums) yang bisa DI-SWIPE horizontal.
@@ -50,7 +53,6 @@ private const val HomePageCount = 2
 @Composable
 fun HomeTabsScreen(
     onMediaClick: (mediaId: Long, index: Int, sortOrder: GallerySortOrder) -> Unit,
-    onOpenSettings: () -> Unit,
     onOpenSearch: () -> Unit = {},
 ) {
     // Satu instance GalleryViewModel dipakai bareng oleh bar (di sini) & grid
@@ -70,23 +72,27 @@ fun HomeTabsScreen(
     val glassEnabled =
         rememberEffectiveEdgeEffectMode(edgeEffectMode) != EdgeEffectMode.OFF
 
-    val pagerState = rememberPagerState(pageCount = { HomePageCount })
+    val pagerState = rememberPagerState(initialPage = PageGallery, pageCount = { HomePageCount })
     val scope = rememberCoroutineScope()
 
     // Tab ter-highlight ngikutin halaman pager yang lagi aktif.
-    val selectedTab = if (pagerState.currentPage == PageAlbums) {
-        GalleryTab.Albums
-    } else {
-        GalleryTab.Gallery
+    val selectedTab = when (pagerState.currentPage) {
+        PageSettings -> GalleryTab.Settings
+        PageAlbums -> GalleryTab.Albums
+        else -> GalleryTab.Gallery
     }
 
     GalleryTabScaffold(
         selectedTab = selectedTab,
         onSelectTab = { tab ->
-            val target = if (tab == GalleryTab.Albums) PageAlbums else PageGallery
+            val target = when (tab) {
+                GalleryTab.Settings -> PageSettings
+                GalleryTab.Albums -> PageAlbums
+                else -> PageGallery
+            }
             scope.launch { pagerState.animateScrollToPage(target) }
         },
-        onOpenSettings = onOpenSettings,
+        onOpenSearch = onOpenSearch,
         sortOrder = sortOrder,
         onToggleSort = toggleSort,
         barVisible = !previewActive,
@@ -102,10 +108,10 @@ fun HomeTabsScreen(
             beyondViewportPageCount = 1,
         ) { page ->
             when (page) {
+                PageSettings -> SettingsScreen()
                 PageAlbums -> AlbumsScreen()
                 else -> GalleryGridScreen(
                     onMediaClick = onMediaClick,
-                    onOpenSearch = onOpenSearch,
                     viewModel = galleryViewModel,
                 )
             }

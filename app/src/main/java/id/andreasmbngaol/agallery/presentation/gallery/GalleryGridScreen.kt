@@ -277,14 +277,6 @@ fun GalleryGridScreen(
                         )
                     }
                 },
-                actions = {
-                    SearchGlassButton(
-                        onClick = onOpenSearch,
-                        backdrop = topBarBackdrop,
-                        liquidGlassSupported = liquidGlassSupported,
-                    )
-                    Spacer(Modifier.size(4.dp))
-                },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = Color.Transparent,
                     scrolledContainerColor = Color.Transparent,

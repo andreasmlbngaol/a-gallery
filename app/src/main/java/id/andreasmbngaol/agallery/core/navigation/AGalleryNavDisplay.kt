@@ -43,15 +43,6 @@ import id.andreasmbngaol.agallery.presentation.viewer.PhotoViewerScreen
 fun AGalleryNavDisplay() {
     val backStack = rememberNavBackStack(Screen.Home)
 
-    // Catatan tipe: `backStack.add(...)` mengembalikan Boolean
-    // (SnapshotStateList.add), sedangkan `onOpenSettings` adalah `() -> Unit`.
-    // Deklarasi eksplisit `() -> Unit` + baris `Unit` di akhir menghindari
-    // inferensi `() -> Boolean` yang tak kompatibel.
-    val openSettings: () -> Unit = {
-        backStack.add(Screen.Settings)
-        Unit
-    }
-
     SharedTransitionLayout {
         CompositionLocalProvider(LocalSharedTransitionScope provides this) {
             NavDisplay(
@@ -81,7 +72,6 @@ fun AGalleryNavDisplay() {
                                         ),
                                     )
                                 },
-                                onOpenSettings = openSettings,
                                 onOpenSearch = {
                                     // TODO: tambahkan Screen.Search + rute-nya.
                                 },

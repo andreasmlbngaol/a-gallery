@@ -10,6 +10,7 @@ import android.os.Build
 import android.os.Bundle
 import android.provider.MediaStore
 import id.andreasmbngaol.agallery.domain.model.GallerySortOrder
+import id.andreasmbngaol.agallery.domain.model.MediaDetails
 import id.andreasmbngaol.agallery.domain.model.MediaItem
 import id.andreasmbngaol.agallery.domain.model.MediaType
 import kotlinx.coroutines.Dispatchers
@@ -166,6 +167,40 @@ class MediaStoreDataSource(
                 } catch (e: RecoverableSecurityException) {
                     e.userAction.actionIntent.intentSender
                 }
+            }
+        }
+
+    /**
+     * Ambil metadata detail (ukuran, dimensi, folder) untuk satu [uriString].
+     * Kolom ini di-query terpisah dari [queryMedia] biar list grid tetap ringan
+     * (cukup dipanggil saat user buka panel detail). Return null kalau item tak
+     * ada / cursor kosong.
+     */
+    suspend fun queryDetails(uriString: String): MediaDetails? =
+        withContext(Dispatchers.IO) {
+            val uri = Uri.parse(uriString)
+            val detailProjection = arrayOf(
+                MediaStore.Files.FileColumns.SIZE,
+                MediaStore.Files.FileColumns.WIDTH,
+                MediaStore.Files.FileColumns.HEIGHT,
+                MediaStore.Files.FileColumns.RELATIVE_PATH,
+            )
+            contentResolver.query(uri, detailProjection, null, null, null)?.use { c ->
+                if (!c.moveToFirst()) return@use null
+                val sizeCol = c.getColumnIndex(MediaStore.Files.FileColumns.SIZE)
+                val widthCol = c.getColumnIndex(MediaStore.Files.FileColumns.WIDTH)
+                val heightCol = c.getColumnIndex(MediaStore.Files.FileColumns.HEIGHT)
+                val pathCol = c.getColumnIndex(MediaStore.Files.FileColumns.RELATIVE_PATH)
+                MediaDetails(
+                    sizeBytes = if (sizeCol >= 0 && !c.isNull(sizeCol)) c.getLong(sizeCol) else 0L,
+                    width = if (widthCol >= 0 && !c.isNull(widthCol)) c.getInt(widthCol) else 0,
+                    height = if (heightCol >= 0 && !c.isNull(heightCol)) c.getInt(heightCol) else 0,
+                    relativePath = if (pathCol >= 0 && !c.isNull(pathCol)) {
+                        c.getString(pathCol).orEmpty()
+                    } else {
+                        ""
+                    },
+                )
             }
         }
 

@@ -35,6 +35,7 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
+import id.andreasmbngaol.agallery.core.ui.FloatingTabBarHeight
 import id.andreasmbngaol.agallery.core.ui.isFrostedSupported
 import id.andreasmbngaol.agallery.core.ui.resolveEdgeEffectMode
 import id.andreasmbngaol.agallery.domain.model.EdgeEffectMode
@@ -52,6 +53,11 @@ private const val SelectedChipAlpha = 0.9f
 private val SegmentedControlHeight = 48.dp
 private val SegmentedTrackRadius = 24.dp
 private val SegmentedChipRadius = 20.dp
+
+// ---- Kartu section bergaya system settings (biar pemisahan jelas) ----
+private val SettingsCardRadius = 20.dp
+private val SettingsCardPadding = 16.dp
+private val SettingsSectionGap = 24.dp
 
 // Opsi jumlah kolom grid = [MIN_GRID_COLUMNS..MAX_GRID_COLUMNS] (3..5).
 private val GridColumnChoices: List<Int> = (MIN_GRID_COLUMNS..MAX_GRID_COLUMNS).toList()
@@ -100,46 +106,114 @@ private fun SettingsContent(
             .fillMaxSize()
             .padding(WindowInsets.safeDrawing.asPaddingValues())
             .verticalScroll(rememberScrollState())
-            .padding(horizontal = 16.dp, vertical = 12.dp),
+            .padding(
+                start = 16.dp,
+                end = 16.dp,
+                top = 12.dp,
+                // Ruang ekstra di bawah supaya item terakhir tak ketutup floating
+                // nav bar (Settings kini jadi salah satu tab di dalam scaffold).
+                bottom = 12.dp + FloatingTabBarHeight,
+            ),
     ) {
         Text(text = "Settings", style = MaterialTheme.typography.headlineSmall)
-        Spacer(Modifier.height(20.dp))
+        Spacer(Modifier.height(24.dp))
 
-        // --- Grid columns ---
-        Text(text = "Grid columns", style = MaterialTheme.typography.titleMedium)
+        // ===== Section: Gallery =====
+        SettingsSectionHeader(title = "Gallery")
+        SettingsCard {
+            SettingsItem(
+                title = "Grid columns",
+                description = "How many photos per row in the gallery grid.",
+            ) {
+                GridColumnsSegmentedControl(
+                    selected = gridColumns,
+                    onSelect = onSelectGridColumns,
+                )
+            }
+        }
+
+        Spacer(Modifier.height(SettingsSectionGap))
+
+        // ===== Section: Appearance =====
+        SettingsSectionHeader(title = "Appearance")
+        SettingsCard {
+            SettingsItem(
+                title = "Screen edge effect",
+                description = "Effect over the status bar & navigation bar when photos scroll behind them.",
+                helperText = edgeEffectDescription(shownSelection, frostedSupported),
+            ) {
+                EdgeEffectSegmentedControl(
+                    selected = shownSelection,
+                    onSelect = onSelectMode,
+                )
+            }
+        }
+    }
+}
+
+// ---- Building block section bergaya system settings ----
+
+/**
+ * Label kategori kecil di atas tiap kartu. Pakai warna aksen + typography label
+ * biar kebaca sebagai pemisah kelompok, mirip header di system settings.
+ */
+@Composable
+private fun SettingsSectionHeader(title: String) {
+    Text(
+        text = title,
+        style = MaterialTheme.typography.labelLarge,
+        color = MaterialTheme.colorScheme.primary,
+        modifier = Modifier.padding(start = 4.dp, bottom = 8.dp),
+    )
+}
+
+/**
+ * Kartu pembungkus satu section: rounded container solid (bukan kaca) supaya
+ * batas antar kelompok setting tegas, seperti kartu di system settings.
+ */
+@Composable
+private fun SettingsCard(
+    content: @Composable androidx.compose.foundation.layout.ColumnScope.() -> Unit,
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(SettingsCardRadius))
+            .background(MaterialTheme.colorScheme.surfaceContainer)
+            .padding(SettingsCardPadding),
+        content = content,
+    )
+}
+
+/**
+ * Satu baris setting di dalam kartu: judul, deskripsi, kontrol, lalu helper
+ * text opsional ([helperText]).
+ */
+@Composable
+private fun SettingsItem(
+    title: String,
+    description: String,
+    helperText: String? = null,
+    control: @Composable () -> Unit,
+) {
+    Column(modifier = Modifier.fillMaxWidth()) {
+        Text(text = title, style = MaterialTheme.typography.titleMedium)
         Spacer(Modifier.height(2.dp))
         Text(
-            text = "How many photos per row in the gallery grid.",
+            text = description,
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
         Spacer(Modifier.height(12.dp))
-        GridColumnsSegmentedControl(
-            selected = gridColumns,
-            onSelect = onSelectGridColumns,
-        )
-
-        Spacer(Modifier.height(28.dp))
-
-        // --- Screen edge effect ---
-        Text(text = "Screen edge effect", style = MaterialTheme.typography.titleMedium)
-        Spacer(Modifier.height(2.dp))
-        Text(
-            text = "Effect over the status bar & navigation bar when photos scroll behind them.",
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-        Spacer(Modifier.height(12.dp))
-        EdgeEffectSegmentedControl(
-            selected = shownSelection,
-            onSelect = onSelectMode,
-        )
-        Spacer(Modifier.height(10.dp))
-        Text(
-            text = edgeEffectDescription(shownSelection, frostedSupported),
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
+        control()
+        if (helperText != null) {
+            Spacer(Modifier.height(10.dp))
+            Text(
+                text = helperText,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
     }
 }
 

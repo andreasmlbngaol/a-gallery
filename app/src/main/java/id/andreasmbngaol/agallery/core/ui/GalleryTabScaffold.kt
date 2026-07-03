@@ -13,9 +13,11 @@ import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
@@ -24,7 +26,9 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LocalContentColor
@@ -33,11 +37,21 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.blur
+import androidx.compose.ui.draw.BlurredEdgeTreatment
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Shadow
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.role
@@ -45,7 +59,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import com.adamglin.PhosphorIcons
 import com.adamglin.phosphoricons.Regular
-import com.adamglin.phosphoricons.regular.Gear
+import com.adamglin.phosphoricons.regular.MagnifyingGlass
 import com.adamglin.phosphoricons.regular.SortAscending
 import com.adamglin.phosphoricons.regular.SortDescending
 import com.kyant.backdrop.Backdrop
@@ -61,7 +75,7 @@ import id.andreasmbngaol.agallery.domain.model.GallerySortOrder
 /**
  * Dua tab utama root screen di AGallery.
  */
-enum class GalleryTab { Gallery, Albums }
+enum class GalleryTab { Settings, Gallery, Albums }
 
 /**
  * Tinggi total footprint bar mengambang dari BAWAH area content, di luar
@@ -74,6 +88,18 @@ enum class GalleryTab { Gallery, Albums }
 val FloatingTabBarHeight = 76.dp
 
 private val FloatingButtonSize = 52.dp
+
+// Lebar TETAP pill tab. Sengaja lebih sempit dari total 3 tab supaya tab
+// tetangga "ke-peek" (terpotong) simetris di kiri/kanan tab terpilih.
+private val PillWidth = 176.dp
+
+// Gap antar chip di dalam pill.
+private val TabGap = 2.dp
+
+// Outline/halo tipis supaya text & icon tetap terbaca di atas liquid glass
+// walau warna konten di belakang mirip. Blur teks dalam px, icon dalam dp.
+private const val TextHaloBlur = 4f
+private val IconHaloBlur = 3.dp
 
 // ---- Tuning liquid glass (Kyant backdrop, hanya API 33+) ----
 // Radius blur kaca.
@@ -92,8 +118,9 @@ private const val FrostedFallbackAlpha = 0.7f
 private const val SelectedFrostedAlpha = 0.85f
 
 /**
- * Scaffold screen root (Gallery/Albums): konten full-screen + bar mengambang
- * di bawah berisi (Settings) [ Gallery | Albums ] (Sort), dibagi SpaceEvenly.
+ * Scaffold screen root: konten full-screen + bar mengambang di bawah berisi
+ * pill tab [ Settings | Gallery | Albums ]. Tombol action (Sort kiri, Search
+ * kanan) hanya muncul di tab Gallery.
  *
  * ## Liquid glass
  *
@@ -109,7 +136,7 @@ private const val SelectedFrostedAlpha = 0.85f
 fun GalleryTabScaffold(
     selectedTab: GalleryTab,
     onSelectTab: (GalleryTab) -> Unit,
-    onOpenSettings: () -> Unit,
+    onOpenSearch: () -> Unit,
     sortOrder: GallerySortOrder,
     onToggleSort: () -> Unit,
     modifier: Modifier = Modifier,
@@ -147,7 +174,7 @@ fun GalleryTabScaffold(
             FloatingTabBar(
                 selectedTab = selectedTab,
                 onSelectTab = onSelectTab,
-                onOpenSettings = onOpenSettings,
+                onOpenSearch = onOpenSearch,
                 sortOrder = sortOrder,
                 onToggleSort = onToggleSort,
                 backdrop = backdrop,
@@ -161,7 +188,7 @@ fun GalleryTabScaffold(
 private fun FloatingTabBar(
     selectedTab: GalleryTab,
     onSelectTab: (GalleryTab) -> Unit,
-    onOpenSettings: () -> Unit,
+    onOpenSearch: () -> Unit,
     sortOrder: GallerySortOrder,
     onToggleSort: () -> Unit,
     backdrop: Backdrop,
@@ -169,28 +196,60 @@ private fun FloatingTabBar(
     modifier: Modifier = Modifier,
 ) {
     val glassTint = MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = GlassTintAlpha)
+    // SpaceEvenly: jarak antar "island" (tombol<->pill) SAMA dengan margin
+    // kiri/kanan bar. Pill lebar TETAP & selalu ter-center (Sort/Search
+    // simetris), jadi saat tombol hilang di tab lain pill tak geser/berubah.
     Row(
         modifier = modifier
             .fillMaxWidth()
             .windowInsetsPadding(WindowInsets.navigationBars)
-            .padding(horizontal = 16.dp, vertical = 12.dp),
+            .padding(vertical = 12.dp),
         horizontalArrangement = Arrangement.SpaceEvenly,
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        CircularFloatingButton(
-            onClick = onOpenSettings,
-            contentDescription = "Settings",
-            backdrop = backdrop,
-            liquidGlassSupported = liquidGlassSupported,
-            glassTint = glassTint,
-        ) {
-            Icon(
-                imageVector = PhosphorIcons.Regular.Gear,
-                contentDescription = null,
-                modifier = Modifier.size(24.dp),
-            )
+        // Kiri: action khusus tab. Saat ini hanya tab Gallery yang punya
+        // action (Sort). Tab Settings/Albums tidak menampilkan tombol apa pun.
+        if (selectedTab == GalleryTab.Gallery) {
+            CircularFloatingButton(
+                onClick = onToggleSort,
+                contentDescription = "Change sort order",
+                backdrop = backdrop,
+                liquidGlassSupported = liquidGlassSupported,
+                glassTint = glassTint,
+            ) {
+                // AnimatedContent supaya icon fade+slide saat ganti order. Arah
+                // slide dibalik antar transisi supaya kesan panah "membalik".
+                AnimatedContent(
+                    targetState = sortOrder,
+                    transitionSpec = {
+                        val goingToAsc = targetState == GallerySortOrder.DateAsc
+                        ContentTransform(
+                            targetContentEnter = fadeIn(tween(220)) +
+                                slideInVertically(tween(260)) { h ->
+                                    if (goingToAsc) -h / 2 else h / 2
+                                },
+                            initialContentExit = fadeOut(tween(160)) +
+                                slideOutVertically(tween(200)) { h ->
+                                    if (goingToAsc) h / 2 else -h / 2
+                                },
+                            sizeTransform = SizeTransform(clip = false),
+                        )
+                    },
+                    label = "sort-icon",
+                ) { order ->
+                    HaloIcon(
+                        imageVector = when (order) {
+                            GallerySortOrder.DateDesc -> PhosphorIcons.Regular.SortDescending
+                            GallerySortOrder.DateAsc -> PhosphorIcons.Regular.SortAscending
+                        },
+                        modifier = Modifier.size(24.dp),
+                    )
+                }
+            }
         }
 
+        // Tengah: pill tab (Settings | Gallery | Albums), lebar tetap & selalu
+        // di tengah bar. Tab terpilih ditengahkan -> peek kiri/kanan simetris.
         TabSwitcher(
             selectedTab = selectedTab,
             onSelectTab = onSelectTab,
@@ -199,39 +258,17 @@ private fun FloatingTabBar(
             glassTint = glassTint,
         )
 
-        CircularFloatingButton(
-            onClick = onToggleSort,
-            contentDescription = "Change sort order",
-            backdrop = backdrop,
-            liquidGlassSupported = liquidGlassSupported,
-            glassTint = glassTint,
-        ) {
-            // AnimatedContent supaya icon fade+slide saat ganti order. Arah
-            // slide dibalik antar transisi supaya kesan panah "membalik".
-            AnimatedContent(
-                targetState = sortOrder,
-                transitionSpec = {
-                    val goingToAsc = targetState == GallerySortOrder.DateAsc
-                    ContentTransform(
-                        targetContentEnter = fadeIn(tween(220)) +
-                            slideInVertically(tween(260)) { h ->
-                                if (goingToAsc) -h / 2 else h / 2
-                            },
-                        initialContentExit = fadeOut(tween(160)) +
-                            slideOutVertically(tween(200)) { h ->
-                                if (goingToAsc) h / 2 else -h / 2
-                            },
-                        sizeTransform = SizeTransform(clip = false),
-                    )
-                },
-                label = "sort-icon",
-            ) { order ->
-                Icon(
-                    imageVector = when (order) {
-                        GallerySortOrder.DateDesc -> PhosphorIcons.Regular.SortDescending
-                        GallerySortOrder.DateAsc -> PhosphorIcons.Regular.SortAscending
-                    },
-                    contentDescription = null,
+        // Kanan: tombol Search (khusus tab Gallery).
+        if (selectedTab == GalleryTab.Gallery) {
+            CircularFloatingButton(
+                onClick = onOpenSearch,
+                contentDescription = "Search photos",
+                backdrop = backdrop,
+                liquidGlassSupported = liquidGlassSupported,
+                glassTint = glassTint,
+            ) {
+                HaloIcon(
+                    imageVector = PhosphorIcons.Regular.MagnifyingGlass,
                     modifier = Modifier.size(24.dp),
                 )
             }
@@ -240,9 +277,13 @@ private fun FloatingTabBar(
 }
 
 /**
- * Switcher tab: pill segmented custom (Gallery | Albums) dengan background
- * liquid glass. Segmen terpilih adalah "chip" kaca yang lebih pekat di atas
+ * Switcher tab: pill segmented custom (Settings | Gallery | Albums) dengan
+ * background liquid glass. Segmen terpilih = "chip" kaca lebih pekat di atas
  * track kaca (bukan warna primary).
+ *
+ * Segmen wrap-content dengan gap kecil (2dp). Pill lebar TETAP; tab terpilih
+ * di-scroll ke tengah -> tab tengah (Gallery) memberi peek simetris kiri/kanan
+ * ("Settings" kepotong depan & "Albums" kepotong belakang sama besar).
  */
 @Composable
 private fun TabSwitcher(
@@ -253,40 +294,79 @@ private fun TabSwitcher(
     glassTint: Color,
     modifier: Modifier = Modifier,
 ) {
-    if (liquidGlassSupported) {
+    val entries = listOf(
+        GalleryTab.Settings to "Settings",
+        GalleryTab.Gallery to "Gallery",
+        GalleryTab.Albums to "Albums",
+    )
+    val selectedIndex = entries.indexOfFirst { it.first == selectedTab }.coerceAtLeast(0)
+    val scrollState = rememberScrollState()
+    val density = LocalDensity.current
+
+    // Lebar px tiap tab (wrap content, jadi beda-beda) buat menghitung offset
+    // scroll yang MENENGAHKAN tab terpilih di dalam pill.
+    val tabWidths = remember { mutableStateListOf(0, 0, 0) }
+
+    // Track kaca (API 33+) / frosted solid (fallback). Lebar TETAP = PillWidth.
+    val baseTrackModifier = modifier
+        .width(PillWidth)
+        .height(FloatingButtonSize)
+        .clip(CircleShape)
+    val trackModifier = if (liquidGlassSupported) {
+        baseTrackModifier.drawBackdrop(
+            backdrop = backdrop,
+            shape = { Capsule() },
+            effects = {
+                vibrancy()
+                blur(GlassBlurRadius.toPx())
+                lens(GlassRefractionHeight.toPx(), GlassRefractionAmount.toPx())
+            },
+            onDrawSurface = { drawRect(glassTint) },
+        )
+    } else {
+        baseTrackModifier.background(
+            MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = FrostedFallbackAlpha),
+        )
+    }
+
+    // Geser konten supaya PUSAT tab terpilih pas di tengah pill. Untuk tab
+    // tengah (Gallery) otomatis simetris; ScrollState clamp ke [0, maxScroll].
+    LaunchedEffect(selectedIndex, tabWidths.toList()) {
+        if (tabWidths.all { it > 0 }) {
+            val viewportPx = with(density) { PillWidth.toPx() }
+            val gapPx = with(density) { TabGap.toPx() }
+            // Pusat X tab terpilih (konten mulai dari 0, TANPA spacer tepi).
+            var center = 0f
+            for (j in 0 until selectedIndex) center += tabWidths[j] + gapPx
+            center += tabWidths[selectedIndex] / 2f
+            // Geser supaya pusat tab di tengah pill. ScrollState clamp ke
+            // [0, maxScroll] -> tab 1 mentok kiri, tab 3 mentok kanan.
+            val target = (center - viewportPx / 2f).toInt().coerceAtLeast(0)
+            scrollState.animateScrollTo(target)
+        }
+    }
+
+    Box(modifier = trackModifier) {
         Row(
-            modifier = modifier
-                .height(FloatingButtonSize)
-                .drawBackdrop(
-                    backdrop = backdrop,
-                    shape = { Capsule() },
-                    effects = {
-                        vibrancy()
-                        blur(GlassBlurRadius.toPx())
-                        lens(GlassRefractionHeight.toPx(), GlassRefractionAmount.toPx())
-                    },
-                    onDrawSurface = { drawRect(glassTint) },
-                )
-                .padding(4.dp),
+            modifier = Modifier
+                .fillMaxHeight()
+                .horizontalScroll(scrollState, enabled = false),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            PillSegment("Gallery", selectedTab == GalleryTab.Gallery, backdrop, true) { onSelectTab(GalleryTab.Gallery) }
-            PillSegment("Albums", selectedTab == GalleryTab.Albums, backdrop, true) { onSelectTab(GalleryTab.Albums) }
-        }
-    } else {
-        Surface(
-            shape = CircleShape,
-            color = MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = FrostedFallbackAlpha),
-            contentColor = MaterialTheme.colorScheme.onSurface,
-            shadowElevation = 6.dp,
-            modifier = modifier.height(FloatingButtonSize),
-        ) {
-            Row(
-                modifier = Modifier.padding(4.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                PillSegment("Gallery", selectedTab == GalleryTab.Gallery, backdrop, false) { onSelectTab(GalleryTab.Gallery) }
-                PillSegment("Albums", selectedTab == GalleryTab.Albums, backdrop, false) { onSelectTab(GalleryTab.Albums) }
+            entries.forEachIndexed { index, (tab, label) ->
+                if (index > 0) Spacer(Modifier.width(TabGap))
+                PillSegment(
+                    label = label,
+                    selected = selectedTab == tab,
+                    backdrop = backdrop,
+                    liquidGlassSupported = liquidGlassSupported,
+                    // padding(4.dp): inset chip selected simetris di semua sisi
+                    // (dulu cuma vertikal 4dp, samping rapat). onSizeChanged di
+                    // LUAR padding -> ukur lebar penuh biar math center akurat.
+                    modifier = Modifier
+                        .onSizeChanged { tabWidths[index] = it.width }
+                        .padding(4.dp),
+                ) { onSelectTab(tab) }
             }
         }
     }
@@ -308,6 +388,7 @@ private fun PillSegment(
     selected: Boolean,
     backdrop: Backdrop,
     liquidGlassSupported: Boolean,
+    modifier: Modifier = Modifier,
     onClick: () -> Unit,
 ) {
     val contentColor by animateColorAsState(
@@ -343,23 +424,62 @@ private fun PillSegment(
         }
 
     Box(
-        modifier = Modifier
-            // fillMaxHeight -> chip mengisi tinggi area konten track (52 - 8
-            // padding = 44dp). Inset 4dp jadi seragam di semua sisi, dan radius
-            // capsule chip (22) = radius track (26) - inset (4) => corner
-            // konsentris & gap simetris.
+        modifier = modifier
+            // Chip wrap-content (selebar teks + padding). fillMaxHeight + inset
+            // 4dp vertikal (dari pemanggil) -> chip konsentris di track.
             .fillMaxHeight()
             .clip(CircleShape)
             .then(selectionModifier)
             .clickable(onClick = onClick)
-            .padding(horizontal = 20.dp)
+            .padding(horizontal = 18.dp)
             .semantics { role = Role.RadioButton },
         contentAlignment = Alignment.Center,
     ) {
         Text(
             text = label,
             color = contentColor,
-            style = MaterialTheme.typography.labelLarge,
+            // Halo tipis (Shadow blur, offset 0) = "outline" lembut supaya teks
+            // tetap kebaca walau konten di belakang glass warnanya mirip.
+            style = MaterialTheme.typography.labelLarge.copy(
+                shadow = Shadow(
+                    color = MaterialTheme.colorScheme.surface.copy(alpha = 0.9f),
+                    offset = Offset.Zero,
+                    blurRadius = TextHaloBlur,
+                ),
+            ),
+            maxLines = 1,
+        )
+    }
+}
+
+/**
+ * Icon dengan halo/outline tipis di belakangnya (duplikat icon di-blur, warna
+ * surface) supaya tetap terbaca di atas liquid glass walau warna konten di
+ * belakang mirip. Blur = no-op di bawah API 31 (fallback tombol lebih pekat).
+ */
+@Composable
+private fun HaloIcon(
+    imageVector: ImageVector,
+    modifier: Modifier = Modifier,
+) {
+    Box(contentAlignment = Alignment.Center) {
+        // Lapisan halo: icon sama, warna surface, di-blur & boleh meluber
+        // keluar batas (Unbounded) biar bikin "garis tepi" lembut.
+        Icon(
+            imageVector = imageVector,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.surface.copy(alpha = 0.9f),
+            modifier = modifier.blur(
+                radius = IconHaloBlur,
+                edgeTreatment = BlurredEdgeTreatment.Unbounded,
+            ),
+        )
+        // Lapisan utama: icon asli dengan warna konten tombol.
+        Icon(
+            imageVector = imageVector,
+            contentDescription = null,
+            tint = LocalContentColor.current,
+            modifier = modifier,
         )
     }
 }

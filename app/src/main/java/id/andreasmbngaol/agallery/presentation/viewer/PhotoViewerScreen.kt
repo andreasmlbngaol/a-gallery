@@ -3,6 +3,8 @@ package id.andreasmbngaol.agallery.presentation.viewer
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.AnimationVector1D
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.layout.Box
@@ -16,8 +18,10 @@ import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.key
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.graphicsLayer
@@ -26,7 +30,9 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 import androidx.paging.compose.collectAsLazyPagingItems
 import id.andreasmbngaol.agallery.domain.model.GallerySortOrder
+import id.andreasmbngaol.agallery.domain.model.MediaDetails
 import id.andreasmbngaol.agallery.domain.model.MediaItem
+import id.andreasmbngaol.agallery.domain.model.MediaType
 import id.andreasmbngaol.agallery.presentation.animation.sharedPhotoElement
 import kotlinx.coroutines.launch
 import me.saket.telephoto.zoomable.coil3.ZoomableAsyncImage
@@ -130,6 +136,7 @@ fun PhotoViewerScreen(
                         dragOffsetY = dragOffsetY,
                         dismissThresholdPx = dismissThresholdPx,
                         onDismiss = onBack,
+                        loadDetails = viewModel::loadDetails,
                     )
                 }
             }
@@ -144,13 +151,30 @@ private fun PhotoViewerPage(
     dragOffsetY: Animatable<Float, AnimationVector1D>,
     dismissThresholdPx: Float,
     onDismiss: () -> Unit,
+    loadDetails: suspend (String) -> MediaDetails?,
 ) {
     val imageState = rememberZoomableImageState()
-    // Swipe-down hanya aktif pada halaman yang sedang tampak DAN saat foto
-    // belum di-zoom, supaya gestur pan di zoomable tidak bentrok.
-    val canDismiss by remember(imageState, isActive) {
+    val isVideo = item.type == MediaType.VIDEO
+    // Ambang jarak swipe ke ATAS (net) untuk membuka panel detail metadata.
+    val detailsThresholdPx = with(LocalDensity.current) { 80.dp.toPx() }
+    // true saat panel detail (bottom sheet) sedang tampil.
+    var showDetails by remember { mutableStateOf(false) }
+    // Saat panel detail terbuka, konten (foto/video) digeser ke atas + sedikit
+    // mengecil biar tetap kelihatan penuh di atas sheet. Dianimasikan halus
+    // (0f tertutup -> 1f terbuka).
+    val detailsShiftPx = with(LocalDensity.current) { 200.dp.toPx() }
+    val detailsProgress by animateFloatAsState(
+        targetValue = if (showDetails) 1f else 0f,
+        animationSpec = tween(durationMillis = 300),
+        label = "details-shift",
+    )
+    // Swipe-down hanya aktif pada halaman yang sedang tampak DAN (khusus foto)
+    // saat belum di-zoom, supaya gestur pan di zoomable tidak bentrok. Video
+    // tidak punya zoom, jadi cukup cek halaman aktif.
+    val canDismiss by remember(imageState, isActive, isVideo) {
         derivedStateOf {
-            isActive && (imageState.zoomableState.zoomFraction ?: 0f) < 0.01f
+            isActive &&
+                (isVideo || (imageState.zoomableState.zoomFraction ?: 0f) < 0.01f)
         }
     }
     val scope = rememberCoroutineScope()
@@ -167,26 +191,43 @@ private fun PhotoViewerPage(
         modifier = Modifier
             .fillMaxSize()
             .graphicsLayer {
-                translationY = dragOffsetY.value
+                // Geser: gabungan drag ke bawah (dismiss) + geser ke atas (detail).
+                translationY = dragOffsetY.value - detailsShiftPx * detailsProgress
+                // Sedikit mengecil saat detail terbuka.
+                val detailsScale = 1f - 0.1f * detailsProgress
+                scaleX = detailsScale
+                scaleY = detailsScale
                 alpha = 1f - (dragOffsetY.value / dismissThresholdPx)
                     .coerceIn(0f, 1f) * 0.4f
             }
             .pointerInput(canDismiss) {
                 if (!canDismiss) return@pointerInput
+                // Akumulasi jarak drag vertikal per-gesture: + ke bawah, - ke atas.
+                var totalDy = 0f
                 detectVerticalDragGestures(
+                    onDragStart = { totalDy = 0f },
                     onVerticalDrag = { change, delta ->
-                        // Hanya proses drag ke bawah, atau drag balik ke 0.
+                        totalDy += delta
                         if (delta > 0f || dragOffsetY.value > 0f) {
+                            // Drag ke bawah -> geser konten (hint akan menutup).
                             val next = (dragOffsetY.value + delta).coerceAtLeast(0f)
                             change.consume()
                             scope.launch { dragOffsetY.snapTo(next) }
+                        } else {
+                            // Drag ke atas -> konsumsi; aksinya diputuskan di onDragEnd.
+                            change.consume()
                         }
                     },
                     onDragEnd = {
-                        if (dragOffsetY.value >= dismissThresholdPx) {
-                            onDismiss()
-                        } else {
-                            scope.launch { dragOffsetY.animateTo(0f) }
+                        when {
+                            // Cukup jauh ke bawah -> tutup viewer.
+                            dragOffsetY.value >= dismissThresholdPx -> onDismiss()
+                            // Cukup jauh ke atas -> buka panel detail metadata.
+                            totalDy <= -detailsThresholdPx -> {
+                                showDetails = true
+                                scope.launch { dragOffsetY.animateTo(0f) }
+                            }
+                            else -> scope.launch { dragOffsetY.animateTo(0f) }
                         }
                     },
                     onDragCancel = {
@@ -200,12 +241,32 @@ private fun PhotoViewerPage(
                 .fillMaxSize()
                 .then(sharedModifier),
         ) {
-            ZoomableAsyncImage(
-                modifier = Modifier.fillMaxSize(),
-                model = item.uri,
-                contentDescription = item.displayName,
-                state = imageState,
-            )
+            if (isVideo) {
+                VideoPlayerContent(
+                    uri = item.uri,
+                    // Autoplay hanya di halaman aktif; halaman preload (kiri/
+                    // kanan) tetap pause biar hemat & tak ada audio dobel.
+                    // Panel detail terbuka -> pause; ditutup -> lanjut autoplay.
+                    isActive = isActive && !showDetails,
+                    modifier = Modifier.fillMaxSize(),
+                )
+            } else {
+                ZoomableAsyncImage(
+                    modifier = Modifier.fillMaxSize(),
+                    model = item.uri,
+                    contentDescription = item.displayName,
+                    state = imageState,
+                )
+            }
         }
+    }
+
+    // Panel detail metadata (foto & video), dibuka lewat swipe ke atas.
+    if (showDetails) {
+        MediaDetailsSheet(
+            item = item,
+            loadDetails = loadDetails,
+            onDismiss = { showDetails = false },
+        )
     }
 }

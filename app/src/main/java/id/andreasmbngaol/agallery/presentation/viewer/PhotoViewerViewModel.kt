@@ -5,7 +5,9 @@ import androidx.lifecycle.viewModelScope
 import androidx.paging.PagingData
 import androidx.paging.cachedIn
 import id.andreasmbngaol.agallery.domain.model.GallerySortOrder
+import id.andreasmbngaol.agallery.domain.model.MediaDetails
 import id.andreasmbngaol.agallery.domain.model.MediaItem
+import id.andreasmbngaol.agallery.domain.usecase.GetMediaDetailsUseCase
 import id.andreasmbngaol.agallery.domain.usecase.GetMediaPagingUseCase
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
@@ -25,6 +27,7 @@ import kotlinx.coroutines.flow.flatMapLatest
  */
 class PhotoViewerViewModel(
     getMediaPaging: GetMediaPagingUseCase,
+    private val getMediaDetails: GetMediaDetailsUseCase,
 ) : ViewModel() {
 
     private val _sortOrder = MutableStateFlow(GallerySortOrder.DateDesc)
@@ -37,4 +40,7 @@ class PhotoViewerViewModel(
     fun setSortOrder(order: GallerySortOrder) {
         if (_sortOrder.value != order) _sortOrder.value = order
     }
+
+    /** Muat metadata detail (ukuran, dimensi, folder) satu media by URI. */
+    suspend fun loadDetails(uri: String): MediaDetails? = getMediaDetails(uri)
 }

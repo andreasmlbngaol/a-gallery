@@ -33,8 +33,8 @@ android {
         applicationId = "id.andreasmbngaol.agallery"
         minSdk = 29
         targetSdk = 37
-        versionCode = 2
-        versionName = "0.1.1"
+        versionCode = 3
+        versionName = "0.2.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -93,6 +93,10 @@ dependencies {
     // Coil
     implementation(libs.coil.compose)
     implementation(libs.coil.video)
+
+    // Media3 ExoPlayer — pemutar video di viewer (autoplay + kontrol custom).
+    implementation(libs.androidx.media3.exoplayer)
+    implementation(libs.androidx.media3.ui)
 
     // Liquid glass (Kyant backdrop) untuk floating nav bar. Efek lens butuh API 33+.
     implementation(libs.kyant.backdrop)
