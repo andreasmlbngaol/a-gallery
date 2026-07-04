@@ -32,6 +32,7 @@ fun AppSettingsDto.toDomain(): AppSettings =
         performanceMode = performanceMode
             ?.let { raw -> PerformanceMode.entries.firstOrNull { it.name == raw } }
             ?: PerformanceMode.BALANCED,
+        pinnedAlbumKeys = pinnedAlbumKeys,
     )
 
 fun AppSettings.toDto(): AppSettingsDto =
@@ -41,4 +42,5 @@ fun AppSettings.toDto(): AppSettingsDto =
         gridColumns = gridColumns,
         sortOrder = sortOrder.name,
         performanceMode = performanceMode.name,
+        pinnedAlbumKeys = pinnedAlbumKeys,
     )

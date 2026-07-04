@@ -14,9 +14,11 @@ import id.andreasmbngaol.agallery.domain.model.Album
 import id.andreasmbngaol.agallery.domain.model.GallerySortOrder
 import id.andreasmbngaol.agallery.domain.model.MediaDetails
 import id.andreasmbngaol.agallery.domain.model.MediaItem
+import id.andreasmbngaol.agallery.domain.model.MediaScope
 import id.andreasmbngaol.agallery.domain.repository.MediaRepository
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
@@ -27,40 +29,80 @@ class MediaRepositoryImpl(
     private val mediaDao: MediaDao,
 ) : MediaRepository {
 
-    @OptIn(ExperimentalCoroutinesApi::class)
-    override fun getMediaPaging(sortOrder: GallerySortOrder): Flow<PagingData<MediaItem>> =
-        // Sembunyikan media yg ada di Trash. Filter di level SOURCE (bukan
-        // PagingData.filter) supaya count/offset placeholder tetap konsisten
-        // dgn viewer (getAllMedia). Tiap perubahan isi Trash → PagingSource
-        // dibuat ulang (flatMapLatest) sehingga item ter-trash langsung hilang.
-        mediaDao.observeTrashedIds()
-            .map { it.toHashSet() }
-            .distinctUntilChanged()
-            .flatMapLatest { excluded ->
-                Pager(
-                    // Placeholders ON: itemCount == total sebenarnya, jadi index
-                    // absolut (tap di grid) valid & langsung dibuka di viewer.
-                    // initialLoadSize = pageSize: wajib supaya offset
-                    // (page * PAGE_SIZE) konsisten di semua load, tanpa overlap.
-                    config = PagingConfig(
-                        pageSize = MediaPagingSource.PAGE_SIZE,
-                        initialLoadSize = MediaPagingSource.PAGE_SIZE,
-                        prefetchDistance = MediaPagingSource.PAGE_SIZE * 2,
-                        enablePlaceholders = true,
-                    ),
-                    pagingSourceFactory = {
-                        MediaPagingSource(mediaStore, sortOrder, excluded)
-                    },
-                ).flow
-            }
+    // Config paging tunggal -> dipakai bareng galeri utama, album, & favorit.
+    private val pagingConfig = PagingConfig(
+        pageSize = MediaPagingSource.PAGE_SIZE,
+        initialLoadSize = MediaPagingSource.PAGE_SIZE,
+        prefetchDistance = MediaPagingSource.PAGE_SIZE * 2,
+        enablePlaceholders = true,
+    )
 
-    override suspend fun getAllMedia(sortOrder: GallerySortOrder): List<MediaItem> {
-        // Viewer juga harus melewati item yg ada di Trash agar sinkron dgn grid.
+    @OptIn(ExperimentalCoroutinesApi::class)
+    override fun getMediaPaging(
+        sortOrder: GallerySortOrder,
+        scope: MediaScope,
+    ): Flow<PagingData<MediaItem>> =
+        if (scope == MediaScope.Favorites) {
+            // Favorit hidup di Room -> gabungkan dgn trash-list (excludeIds)
+            // + favorite-list (includeIds). Scope MediaStore = semua media.
+            combine(
+                mediaDao.observeTrashedIds().map { it.toHashSet() }.distinctUntilChanged(),
+                mediaDao.observeFavoriteIds().map { it.toHashSet() }.distinctUntilChanged(),
+            ) { excluded, favs -> excluded to favs }
+                .flatMapLatest { (excluded, favs) ->
+                    Pager(
+                        config = pagingConfig,
+                        pagingSourceFactory = {
+                            MediaPagingSource(
+                                dataSource = mediaStore,
+                                sortOrder = sortOrder,
+                                excludeIds = excluded,
+                                scope = MediaScope.AllMedia,
+                                includeIds = favs,
+                            )
+                        },
+                    ).flow
+                }
+        } else {
+            // Scope biasa (kamera/allMedia/videos/screenshots/recordings/bucket).
+            // Trash tetap disaring di level SOURCE agar count & offset konsisten.
+            mediaDao.observeTrashedIds()
+                .map { it.toHashSet() }
+                .distinctUntilChanged()
+                .flatMapLatest { excluded ->
+                    Pager(
+                        config = pagingConfig,
+                        pagingSourceFactory = {
+                            MediaPagingSource(
+                                dataSource = mediaStore,
+                                sortOrder = sortOrder,
+                                excludeIds = excluded,
+                                scope = scope,
+                                includeIds = null,
+                            )
+                        },
+                    ).flow
+                }
+        }
+
+    override suspend fun getAllMedia(
+        sortOrder: GallerySortOrder,
+        scope: MediaScope,
+    ): List<MediaItem> {
         val excluded = mediaDao.observeTrashedIds().first().toHashSet()
-        return mediaStore.queryAllMedia(sortOrder, excluded)
+        return if (scope == MediaScope.Favorites) {
+            val favs = mediaDao.observeFavoriteIds().first().toHashSet()
+            mediaStore.queryAllMedia(sortOrder, excluded, MediaScope.AllMedia, favs)
+        } else {
+            mediaStore.queryAllMedia(sortOrder, excluded, scope, null)
+        }
     }
 
-    override suspend fun getAlbums(): List<Album> = mediaStore.queryAlbums()
+    override suspend fun getAlbums(): List<Album> {
+        // Sekali baca daftar favorit -> ikut jadi salah satu album cerdas.
+        val favs = mediaDao.observeFavoriteIds().first().toHashSet()
+        return mediaStore.queryAlbums(favs)
+    }
 
     override suspend fun setFavorite(mediaId: Long, isFavorite: Boolean) {
         if (isFavorite) {
@@ -80,6 +122,30 @@ class MediaRepositoryImpl(
                 trashedAt = System.currentTimeMillis(),
             ),
         )
+    }
+
+    override fun observeTrashItems(): Flow<List<id.andreasmbngaol.agallery.domain.model.TrashItem>> =
+        mediaDao.observeTrashed().map { rows ->
+            rows.map { e ->
+                id.andreasmbngaol.agallery.domain.model.TrashItem(
+                    id = e.mediaId,
+                    uri = e.uri,
+                    trashedAt = e.trashedAt,
+                )
+            }
+        }
+
+    override suspend fun restoreFromTrash(mediaId: Long) {
+        // Cukup lepas marker; MediaStore row-nya tidak pernah dihapus di
+        // soft-delete, jadi item otomatis muncul lagi di grid setelah stream
+        // observeTrashedIds emit tanpa id ini.
+        mediaDao.removeTrashed(mediaId)
+    }
+
+    override suspend fun finalizePermanentDelete(mediaId: Long) {
+        // Dipanggil TrashScreen setelah SAF delete-request user-approved.
+        // Row Room ikut dihapus supaya tidak jadi ghost record.
+        mediaDao.removeTrashed(mediaId)
     }
 
     override suspend fun createDeleteRequest(uris: List<String>): IntentSender? =

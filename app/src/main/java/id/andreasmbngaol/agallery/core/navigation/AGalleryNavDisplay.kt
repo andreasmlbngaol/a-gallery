@@ -13,29 +13,14 @@ import androidx.navigation3.runtime.NavEntry
 import androidx.navigation3.runtime.rememberNavBackStack
 import androidx.navigation3.ui.NavDisplay
 import id.andreasmbngaol.agallery.presentation.animation.LocalSharedTransitionScope
+import id.andreasmbngaol.agallery.presentation.albums.AlbumDetailScreen
 import id.andreasmbngaol.agallery.presentation.home.HomeTabsScreen
+import id.andreasmbngaol.agallery.presentation.trash.TrashScreen
 import id.andreasmbngaol.agallery.presentation.viewer.PhotoViewerScreen
 
 /**
- * Host navigasi Nav3 untuk AGallery.
- *
- * ## Root tunggal + tab swipeable
- *
- * [Screen.Home] adalah satu-satunya root, berisi HorizontalPager dua tab
- * (Gallery / Albums) di [HomeTabsScreen]. Dulu Gallery & Albums adalah dua
- * NavEntry terpisah yang saling replace; sekarang keduanya jadi halaman pager
- * dalam SATU entry — supaya bisa di-swipe kiri/kanan sementara floating bar
- * tetap diam. Sort state ikut pindah ke [HomeTabsScreen].
- *
- * ## Transisi & predictive back
- *
- * [NavDisplay] diberi transition spec eksplisit:
- * - `transitionSpec` (push): cross-fade halus.
- * - `popTransitionSpec` & `predictivePopTransitionSpec` (pop / predictive
- *   back, mis. kembali dari PhotoViewer): layar yang KELUAR mengecil sedikit
- *   (`scaleOut`) + fade, sementara layar sebelumnya fade-in. Dikombinasikan
- *   dengan shared element (foto mengecil balik ke thumbnail), gesture
- *   predictive-back terasa mengikuti jari & mulus — bukan lagi potong kaku.
+ * Host navigasi Nav3 untuk AGallery. Lihat commit sebelumnya untuk detail
+ * pager tab + shared element + predictive back.
  */
 @OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
@@ -74,6 +59,15 @@ fun AGalleryNavDisplay() {
                                 onOpenSearch = {
                                     // TODO: tambahkan Screen.Search + rute-nya.
                                 },
+                                onOpenAlbum = { albumKey, name ->
+                                    backStack.add(
+                                        Screen.AlbumDetail(
+                                            albumKey = albumKey,
+                                            albumName = name,
+                                        ),
+                                    )
+                                },
+                                onOpenTrash = { backStack.add(Screen.Trash) },
                             )
                         }
 
@@ -82,6 +76,35 @@ fun AGalleryNavDisplay() {
                                 mediaId = key.mediaId,
                                 initialIndex = key.initialIndex,
                                 sortOrder = key.sortOrder,
+                                albumKey = key.albumKey,
+                                onBack = { backStack.removeLastOrNull() },
+                            )
+                        }
+
+                        is Screen.AlbumDetail -> NavEntry(key) {
+                            AlbumDetailScreen(
+                                albumKey = key.albumKey,
+                                albumName = key.albumName,
+                                onBack = { backStack.removeLastOrNull() },
+                                onMediaClick = { id, index, sort ->
+                                    backStack.add(
+                                        Screen.PhotoViewer(
+                                            mediaId = id,
+                                            initialIndex = index,
+                                            sortOrder = sort,
+                                            albumKey = key.albumKey,
+                                        ),
+                                    )
+                                },
+                            )
+                        }
+
+                        is Screen.Trash -> NavEntry(key) {
+                            // Trash tidak butuh edge-effect scrim; teruskan null
+                            // (fallback default). Kalau nanti mau ikut setting
+                            // user, tinggal ambil dari GalleryViewModel.
+                            TrashScreen(
+                                edgeEffectMode = null,
                                 onBack = { backStack.removeLastOrNull() },
                             )
                         }

@@ -17,4 +17,5 @@ data class AppSettingsDto(
     val gridColumns: Int? = null,
     val sortOrder: String? = null,
     val performanceMode: String? = null,
+    val pinnedAlbumKeys: List<String>? = null,
 )

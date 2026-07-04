@@ -5,6 +5,7 @@ import androidx.paging.PagingState
 import id.andreasmbngaol.agallery.data.local.mediastore.MediaStoreDataSource
 import id.andreasmbngaol.agallery.domain.model.GallerySortOrder
 import id.andreasmbngaol.agallery.domain.model.MediaItem
+import id.andreasmbngaol.agallery.domain.model.MediaScope
 
 /**
  * PagingSource offset-based di atas [MediaStoreDataSource].
@@ -21,34 +22,36 @@ import id.andreasmbngaol.agallery.domain.model.MediaItem
  *
  * `key` = nomor halaman; `offset = page * PAGE_SIZE`. Ini hanya benar kalau
  * SEMUA load berukuran sama, makanya di [PagingConfig] `initialLoadSize`
- * disetel = `pageSize` (= [PAGE_SIZE]). Kalau beda (mis. default 3x), offset
- * awal akan tumpang-tindih dengan halaman berikutnya.
+ * disetel = `pageSize` (= [PAGE_SIZE]).
  */
 class MediaPagingSource(
     private val dataSource: MediaStoreDataSource,
     private val sortOrder: GallerySortOrder,
-    // ID media yg disembunyikan (mis. ada di Trash). Diteruskan ke query agar
-    // count & offset tetap akurat.
     private val excludeIds: Set<Long> = emptySet(),
+    private val scope: MediaScope = MediaScope.Camera,
+    // Kalau non-null, HANYA ID yang ada di set ini yang dimuat (dipakai
+    // scope Favorites di repository). includeIds kosong -> hasil kosong.
+    private val includeIds: Set<Long>? = null,
 ) : PagingSource<Int, MediaItem>() {
 
     override suspend fun load(params: LoadParams<Int>): LoadResult<Int, MediaItem> {
         val page = params.key ?: 0
         val offset = page * PAGE_SIZE
         return try {
-            val total = dataSource.countMedia(excludeIds)
+            val total = dataSource.countMedia(excludeIds, scope, includeIds)
             val items = dataSource.queryMedia(
                 limit = params.loadSize,
                 offset = offset,
                 sortOrder = sortOrder,
                 excludeIds = excludeIds,
+                scope = scope,
+                includeIds = includeIds,
             )
             val loadedEnd = offset + items.size
             LoadResult.Page(
                 data = items,
                 prevKey = if (page == 0) null else page - 1,
                 nextKey = if (items.isEmpty() || loadedEnd >= total) null else page + 1,
-                // Posisi absolut halaman ini di dalam total (untuk placeholders).
                 itemsBefore = offset.coerceIn(0, total),
                 itemsAfter = (total - loadedEnd).coerceAtLeast(0),
             )
@@ -57,11 +60,6 @@ class MediaPagingSource(
         }
     }
 
-    /**
-     * Saat refresh/invalidate (jump, pull-to-refresh, atau setelah delete),
-     * mulai dari halaman yang memuat posisi terakhir dilihat user — bukan dari
-     * 0 — supaya posisi scroll & halaman viewer tetap sinkron.
-     */
     override fun getRefreshKey(state: PagingState<Int, MediaItem>): Int? {
         val anchor = state.anchorPosition ?: return null
         return anchor / PAGE_SIZE

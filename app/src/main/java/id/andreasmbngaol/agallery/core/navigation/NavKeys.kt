@@ -11,24 +11,35 @@ import kotlinx.serialization.Serializable
  * process death) lewat rememberNavBackStack.
  */
 sealed interface Screen : NavKey {
-    /**
-     * Root tunggal berisi dua tab Gallery/Albums yang bisa di-swipe horizontal.
-     * Tab mana yang aktif dikelola INTERNAL oleh HorizontalPager di
-     * HomeTabsScreen, jadi cukup satu key tanpa parameter. Dulu Gallery &
-     * Albums adalah dua key terpisah yang saling replace.
-     */
+    /** Root tunggal (tab pager Settings/Gallery/Albums). */
     @Serializable
     data object Home : Screen
 
     /**
-     * [initialIndex] = posisi item saat di-tap di grid, dipakai sebagai halaman
-     * awal HorizontalPager di PhotoViewer. Nilai ini bertahan lewat process
-     * death karena @Serializable.
+     * [initialIndex] = posisi item saat di-tap di grid.
+     * [albumKey] = kunci album sumber (mis. "camera", "recent", "favorites",
+     * atau "bucket:12345"). null = tab Gallery utama (folder kamera).
      */
     @Serializable
     data class PhotoViewer(
         val mediaId: Long,
         val initialIndex: Int,
         val sortOrder: GallerySortOrder,
+        val albumKey: String? = null,
     ) : Screen
+
+    /** Isi satu album (folder atau cerdas), ditampilkan sebagai grid ter-scope. */
+    @Serializable
+    data class AlbumDetail(
+        val albumKey: String,
+        val albumName: String,
+    ) : Screen
+
+    /**
+     * Layar app-level Trash. Item-nya di-observe dari tabel Room `trashed`;
+     * bukan bagian dari AlbumDetail karena punya aksi khusus (Restore &
+     * Delete forever) dan bukan MediaStore scope biasa.
+     */
+    @Serializable
+    data object Trash : Screen
 }

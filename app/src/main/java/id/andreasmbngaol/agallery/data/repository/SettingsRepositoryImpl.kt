@@ -51,4 +51,10 @@ class SettingsRepositoryImpl(
             current.copy(performanceMode = mode.name)
         }
     }
+
+    override suspend fun setPinnedAlbumKeys(keys: List<String>) {
+        dataStore.updateData { current ->
+            current.copy(pinnedAlbumKeys = keys)
+        }
+    }
 }

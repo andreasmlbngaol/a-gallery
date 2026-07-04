@@ -25,6 +25,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -54,7 +55,9 @@ import id.andreasmbngaol.agallery.core.ui.usesLiveBackdrop
 import id.andreasmbngaol.agallery.domain.model.ComponentStyle
 import id.andreasmbngaol.agallery.domain.model.GallerySortOrder
 import id.andreasmbngaol.agallery.domain.model.MediaItem
+import id.andreasmbngaol.agallery.domain.model.MediaScope
 import id.andreasmbngaol.agallery.domain.model.MediaType
+import id.andreasmbngaol.agallery.domain.model.mediaScopeFromKey
 import id.andreasmbngaol.agallery.presentation.animation.sharedPhotoElement
 import kotlinx.coroutines.launch
 import me.saket.telephoto.zoomable.coil3.ZoomableAsyncImage
@@ -83,12 +86,14 @@ fun PhotoViewerScreen(
     initialIndex: Int,
     sortOrder: GallerySortOrder,
     onBack: () -> Unit,
+    albumKey: String? = null,
     viewModel: PhotoViewerViewModel = koinViewModel(),
 ) {
     BackHandler(onBack = onBack)
     val context = LocalContext.current
 
-    LaunchedEffect(sortOrder) { viewModel.setSortOrder(sortOrder) }
+    val scope = remember(albumKey) { albumKey?.let { mediaScopeFromKey(it) } ?: MediaScope.Camera }
+    LaunchedEffect(sortOrder, albumKey) { viewModel.setParams(sortOrder, scope) }
 
     val media by viewModel.media.collectAsState()
     val favoriteIds by viewModel.favoriteIds.collectAsState()
@@ -147,6 +152,10 @@ fun PhotoViewerScreen(
     // True saat halaman aktif sedang di-zoom -> matikan capture backdrop.
     var currentPageZoomed by remember { mutableStateOf(false) }
 
+    // Latar viewer mengikuti tema (bukan hard-coded hitam). Di light-mode
+    // akan terang, di dark-mode gelap. Saat user swipe-down utk dismiss,
+    // opacity turun bertahap supaya konten di belakang mulai terlihat.
+    val viewerBackground = MaterialTheme.colorScheme.background
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -154,7 +163,7 @@ fun PhotoViewerScreen(
             // supaya swipe-down tak memicu recompose seluruh screen tiap frame.
             .drawBehind {
                 val a = 1f - (dragOffsetY.value / dismissThresholdPx).coerceIn(0f, 1f) * 0.6f
-                drawRect(color = Color.Black, alpha = a)
+                drawRect(color = viewerBackground, alpha = a)
             },
     ) {
         val items = media

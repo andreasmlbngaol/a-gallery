@@ -11,6 +11,7 @@ import id.andreasmbngaol.agallery.domain.model.DEFAULT_GRID_COLUMNS
 import id.andreasmbngaol.agallery.domain.model.EdgeEffectMode
 import id.andreasmbngaol.agallery.domain.model.GallerySortOrder
 import id.andreasmbngaol.agallery.domain.model.MediaItem
+import id.andreasmbngaol.agallery.domain.model.MediaScope
 import id.andreasmbngaol.agallery.domain.model.PerformanceMode
 import id.andreasmbngaol.agallery.domain.usecase.DeleteMediaUseCase
 import id.andreasmbngaol.agallery.domain.usecase.GetMediaPagingUseCase
@@ -28,6 +29,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.map
@@ -35,15 +37,8 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
 /**
- * State galeri. Semua preferensi (sort, edge effect, jumlah kolom) sekarang
- * bersumber dari DataStore lewat [GetSettingsUseCase] sebagai SATU sumber
- * kebenaran, sehingga:
- * - Pilihan di layar Settings langsung berpengaruh ke galeri (reaktif).
- * - Sort order TETAP tersimpan walau aplikasi ditutup (bukan cuma
- *   rememberSaveable yang hilang saat proses di-kill).
- *
- * Ganti [sortOrder] akan re-trigger paging lewat `flatMapLatest`; PagingSource
- * lama otomatis di-cancel.
+ * State galeri (dipakai tab Gallery utama + detail album via key VM terpisah).
+ * Sumber preferensi: DataStore lewat [GetSettingsUseCase].
  */
 class GalleryViewModel(
     getSettings: GetSettingsUseCase,
@@ -70,7 +65,6 @@ class GalleryViewModel(
             initialValue = GallerySortOrder.DateDesc,
         )
 
-    /** Pilihan mentah user (nullable = default cerdas, di-resolve di UI). */
     val edgeEffectMode: StateFlow<EdgeEffectMode?> = settings
         .map { it.edgeEffectMode }
         .stateIn(
@@ -79,7 +73,6 @@ class GalleryViewModel(
             initialValue = null,
         )
 
-    /** Gaya komponen UI (Solid/Frosted/Glass). null = default cerdas (di UI). */
     val componentStyle: StateFlow<ComponentStyle?> = settings
         .map { it.componentStyle }
         .stateIn(
@@ -96,7 +89,6 @@ class GalleryViewModel(
             initialValue = DEFAULT_GRID_COLUMNS,
         )
 
-    /** Mode performa: mengatur agresivitas prefetch thumbnail (RAM vs mulus). */
     val performanceMode: StateFlow<PerformanceMode> = settings
         .map { it.performanceMode }
         .stateIn(
@@ -105,11 +97,6 @@ class GalleryViewModel(
             initialValue = PerformanceMode.BALANCED,
         )
 
-    /**
-     * Set ID media favorit (dari Room). Dipakai overlay long-press utk
-     * menampilkan status hati terisi/kosong TANPA men-join ke stream paging,
-     * jadi toggle favorit tidak memicu reload grid.
-     */
     val favoriteIds: StateFlow<Set<Long>> = observeFavoriteIds()
         .map { it.toSet() }
         .stateIn(
@@ -118,12 +105,25 @@ class GalleryViewModel(
             initialValue = emptySet(),
         )
 
+    /**
+     * Scope media yang ditampilkan. Default [MediaScope.Camera] = tab Gallery
+     * utama; layar detail album memakai instance VM terpisah lalu memanggil
+     * [setScope].
+     */
+    private val _scope = MutableStateFlow<MediaScope>(MediaScope.Camera)
+
     @OptIn(ExperimentalCoroutinesApi::class)
-    val media: Flow<PagingData<MediaItem>> = settings
-        .map { it.sortOrder }
-        .distinctUntilChanged()
-        .flatMapLatest { order -> getMediaPaging(order) }
-        .cachedIn(viewModelScope)
+    val media: Flow<PagingData<MediaItem>> =
+        combine(
+            settings.map { it.sortOrder }.distinctUntilChanged(),
+            _scope,
+        ) { order, scope -> order to scope }
+            .flatMapLatest { (order, scope) -> getMediaPaging(order, scope) }
+            .cachedIn(viewModelScope)
+
+    fun setScope(scope: MediaScope) {
+        if (_scope.value != scope) _scope.value = scope
+    }
 
     fun setSortOrder(order: GallerySortOrder) {
         if (sortOrder.value == order) return
@@ -138,11 +138,6 @@ class GalleryViewModel(
         viewModelScope.launch { setSortOrderPref(next) }
     }
 
-    /**
-     * Foto yang sedang di-preview (long-press). Di-hoist ke VM (bukan state
-     * lokal screen) supaya HomeTabsScreen ikut tahu preview aktif → untuk
-     * mengunci swipe antar-tab & menutup floating nav bar.
-     */
     private val _previewItem = MutableStateFlow<MediaItem?>(null)
     val previewItem: StateFlow<MediaItem?> = _previewItem.asStateFlow()
 
@@ -154,14 +149,9 @@ class GalleryViewModel(
         _previewItem.value = null
     }
 
-    /**
-     * Permintaan hapus yang butuh konfirmasi sistem (scoped storage, API 30+).
-     * UI meng-collect ini lalu meluncurkannya lewat ActivityResult IntentSender.
-     */
     private val _deleteRequests = MutableSharedFlow<IntentSender>(extraBufferCapacity = 1)
     val deleteRequests: SharedFlow<IntentSender> = _deleteRequests.asSharedFlow()
 
-    /** Sinyal media sudah langsung terhapus (API 29 tanpa dialog) → UI refresh. */
     private val _mediaDeleted = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
     val mediaDeleted: SharedFlow<Unit> = _mediaDeleted.asSharedFlow()
 
@@ -182,11 +172,6 @@ class GalleryViewModel(
         }
     }
 
-    /**
-     * Pindahkan foto ke Trash (soft-delete 30 hari). Grid otomatis refresh
-     * karena [getMediaPaging] mengamati daftar Trash & membuat ulang
-     * PagingSource, jadi cukup tutup preview di sini.
-     */
     fun moveToTrash(item: MediaItem) {
         viewModelScope.launch {
             moveToTrashUseCase(item)

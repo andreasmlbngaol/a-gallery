@@ -57,6 +57,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -129,6 +130,7 @@ import com.adamglin.phosphoricons.Regular
 import com.adamglin.phosphoricons.fill.Heart
 import com.adamglin.phosphoricons.fill.Play
 import com.adamglin.phosphoricons.fill.Trash
+import com.adamglin.phosphoricons.regular.ArrowLeft
 import com.adamglin.phosphoricons.regular.Heart
 import com.adamglin.phosphoricons.regular.ImageSquare
 import com.adamglin.phosphoricons.regular.WarningCircle
@@ -218,6 +220,10 @@ private fun formatTitleDate(epochSeconds: Long): String =
 fun GalleryGridScreen(
     onMediaClick: (mediaId: Long, index: Int, sortOrder: GallerySortOrder) -> Unit,
     onScrollStateChange: (Boolean) -> Unit = {},
+    // Mode album: kalau di-set, top bar memakai judul statis ([staticTitle]) +
+    // tombol Back ([onBack]) dan ruang bawah tak lagi menyisakan floating bar.
+    staticTitle: String? = null,
+    onBack: (() -> Unit)? = null,
     viewModel: GalleryViewModel = koinViewModel(),
 ) {
     // Semua preferensi bersumber dari DataStore lewat VM (reaktif & persisten).
@@ -245,18 +251,22 @@ fun GalleryGridScreen(
             .collectLatest { onScrollStateChange(it) }
     }
 
-    val topBarTitle by remember(items) {
+    val topBarTitle by remember(items, staticTitle) {
         derivedStateOf {
-            val isAtTop = gridState.firstVisibleItemIndex == 0 &&
-                    gridState.firstVisibleItemScrollOffset == 0
-            if (isAtTop || items.itemCount == 0) {
-                DefaultTitle
+            if (staticTitle != null) {
+                staticTitle
             } else {
-                items.peek(gridState.firstVisibleItemIndex)
-                    ?.dateAddedEpochSeconds
-                    ?.takeIf { it > 0L }
-                    ?.let(::formatTitleDate)
-                    ?: DefaultTitle
+                val isAtTop = gridState.firstVisibleItemIndex == 0 &&
+                        gridState.firstVisibleItemScrollOffset == 0
+                if (isAtTop || items.itemCount == 0) {
+                    DefaultTitle
+                } else {
+                    items.peek(gridState.firstVisibleItemIndex)
+                        ?.dateAddedEpochSeconds
+                        ?.takeIf { it > 0L }
+                        ?.let(::formatTitleDate)
+                        ?: DefaultTitle
+                }
             }
         }
     }
@@ -268,7 +278,10 @@ fun GalleryGridScreen(
     // pill segmented bar.
     val gridContentPadding = PaddingValues(
         top = safeDrawingPadding.calculateTopPadding() + GalleryTopAppBarHeight,
-        bottom = safeDrawingPadding.calculateBottomPadding() + FloatingTabBarHeight,
+        // Mode album (onBack != null) tak punya floating tab bar → cukup safe
+        // area; mode galeri sisakan tinggi floating bar juga.
+        bottom = safeDrawingPadding.calculateBottomPadding() +
+            (if (onBack != null) 0.dp else FloatingTabBarHeight),
         start = safeDrawingPadding.calculateStartPadding(layoutDirection),
         end = safeDrawingPadding.calculateEndPadding(layoutDirection),
     )
@@ -333,7 +346,28 @@ fun GalleryGridScreen(
                                     blurRadius = 4f,
                                 ),
                             ),
+                            // Beri jarak dari tombol back ketika mode album (onBack != null);
+                            // di mode gallery utama padding kiri ekstra tidak diperlukan
+                            // karena tak ada navigationIcon.
+                            modifier = if (onBack != null) {
+                                Modifier.padding(start = 12.dp)
+                            } else {
+                                Modifier
+                            },
                         )
+                    }
+                },
+                navigationIcon = {
+                    if (onBack != null) {
+                        // Extra kiri (16.dp) supaya tombol back TIDAK menempel
+                        // ke tepi layar dan ada nafas dgn safe-area.
+                        Box(modifier = Modifier.padding(start = 16.dp)) {
+                            StyledCircleBackButton(
+                                style = componentStyle,
+                                backdrop = topBarBackdrop,
+                                onClick = onBack,
+                            )
+                        }
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -344,7 +378,7 @@ fun GalleryGridScreen(
             )
         },
     ) { sourceModifier ->
-        val gridBackdropModifier = if (componentStyle.drawsBackdrop() && previewItem != null) {
+        val gridBackdropModifier = if (componentStyle.drawsBackdrop() && (previewItem != null || onBack != null)) {
             // Capture backdrop HANYA saat overlay preview aktif (grid diam) supaya
             // scroll biasa tak kena render layer. GLASS & FROSTED sama-sama kaca;
             // SOLID / < API 33 tak pernah nempel modifier ini (drawsBackdrop=false).
@@ -981,6 +1015,77 @@ private fun PhotoPreviewOverlay(
                 )
             }
         }
+    }
+}
+
+/**
+ * Tombol "Back" bulat 40dp yang gaya-nya mengikuti [ComponentStyle] aktif:
+ *  - SOLID   : lingkaran hitam semi-transparan (drawsBackdrop=false).
+ *  - FROSTED : haze putih tebal (drawBackdrop tanpa blur/lens).
+ *  - GLASS   : blur + lens Kyant untuk efek kaca cair.
+ *
+ * Dipakai di TopBar Gallery HANYA saat [onBack] non-null (mode album-detail).
+ */
+@Composable
+private fun StyledCircleBackButton(
+    style: ComponentStyle,
+    backdrop: Backdrop,
+    onClick: () -> Unit,
+) {
+    val size = 40.dp
+    // Untuk mode SOLID (tanpa backdrop) di light-theme, lingkaran hitam +
+    // ikon putih tetap kontras. Untuk FROSTED/GLASS, backdrop-nya diwarnai
+    // dgn `Color.White.copy(...)` yg cocok utk dark tapi tak terlihat di
+    // light mode -> pakai onBackground.copy supaya kontras di kedua tema.
+    val onBg = MaterialTheme.colorScheme.onBackground
+    val circleModifier = if (style.drawsBackdrop()) {
+        Modifier
+            .size(size)
+            .clip(CircleShape)
+            .drawBackdrop(
+                backdrop = backdrop,
+                shape = { Capsule() },
+                effects = {
+                    vibrancy()
+                    if (style.usesBlur()) {
+                        blur(4.dp.toPx())
+                    }
+                    if (style.usesLens()) {
+                        lens(12.dp.toPx(), 16.dp.toPx())
+                    }
+                },
+                onDrawSurface = {
+                    // Pakai onBackground.copy alpha rendah supaya di light-mode
+                    // lingkaran ini gelap-tembus, di dark-mode terang-tembus
+                    // -> tetap terbaca di kedua tema.
+                    drawRect(
+                        onBg.copy(
+                            alpha = if (style == ComponentStyle.FROSTED) 0.18f else 0.14f,
+                        ),
+                    )
+                },
+            )
+    } else {
+        Modifier
+            .size(size)
+            .clip(CircleShape)
+            // SOLID: kontras kuat pakai onBackground.copy alpha rendah
+            // (bukan Color.Black hard-coded) supaya adaptif thd tema.
+            .background(onBg.copy(alpha = 0.16f))
+    }
+
+    Box(
+        modifier = circleModifier.clickable(onClick = onClick),
+        contentAlignment = Alignment.Center,
+    ) {
+        Icon(
+            imageVector = PhosphorIcons.Regular.ArrowLeft,
+            contentDescription = "Back",
+            // Ikon ikut theme (onBackground): di light-mode gelap, di dark-mode
+            // terang -- tidak lagi "selalu putih" (yg invisible di light mode).
+            tint = onBg,
+            modifier = Modifier.size(20.dp),
+        )
     }
 }
 

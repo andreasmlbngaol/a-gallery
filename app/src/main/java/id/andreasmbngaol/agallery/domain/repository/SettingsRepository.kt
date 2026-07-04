@@ -17,4 +17,5 @@ interface SettingsRepository {
     suspend fun setGridColumns(columns: Int)
     suspend fun setSortOrder(order: GallerySortOrder)
     suspend fun setPerformanceMode(mode: PerformanceMode)
+    suspend fun setPinnedAlbumKeys(keys: List<String>)
 }

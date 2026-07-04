@@ -9,6 +9,7 @@ import id.andreasmbngaol.agallery.domain.model.EdgeEffectMode
 import id.andreasmbngaol.agallery.domain.model.GallerySortOrder
 import id.andreasmbngaol.agallery.domain.model.MediaDetails
 import id.andreasmbngaol.agallery.domain.model.MediaItem
+import id.andreasmbngaol.agallery.domain.model.MediaScope
 import id.andreasmbngaol.agallery.domain.usecase.CopyMediaToAlbumUseCase
 import id.andreasmbngaol.agallery.domain.usecase.DeleteMediaUseCase
 import id.andreasmbngaol.agallery.domain.usecase.GetAlbumsUseCase
@@ -29,6 +30,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.map
@@ -36,16 +38,9 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
 /**
- * ViewModel untuk [PhotoViewerScreen]. Selain memuat daftar media & detail,
- * kini juga menghandle semua aksi standar viewer: favorite, trash, delete,
- * rename, move/copy ke album.
- *
- * Alur izin scoped-storage:
- * - Delete non-owned -> [deleteRequests] (system delete dialog). Setelah
- *   RESULT_OK, UI memanggil [refresh].
- * - Rename/Move non-owned -> [writeRequests] (system write dialog). Setelah
- *   RESULT_OK, UI memanggil [onWriteConsentGranted], yang menjalankan ulang
- *   aksi tertunda (update kini sukses).
+ * ViewModel untuk [PhotoViewerScreen]. Sekarang scope berupa [MediaScope]
+ * supaya viewer bisa dibuka dari album cerdas apapun (Recent, Videos,
+ * Screenshots, Favorites) selain dari folder biasa.
  */
 class PhotoViewerViewModel(
     getAllMedia: GetAllMediaUseCase,
@@ -61,15 +56,20 @@ class PhotoViewerViewModel(
     private val copyToAlbumUseCase: CopyMediaToAlbumUseCase,
 ) : ViewModel() {
 
-    private val _sortOrder = MutableStateFlow(GallerySortOrder.DateDesc)
-    // Dinaikkan setiap kali daftar perlu dimuat ulang (setelah trash/delete/
-    // rename/move) supaya viewer tetap sinkron dgn kondisi terbaru MediaStore.
+    private data class ViewerParams(
+        val sortOrder: GallerySortOrder,
+        val scope: MediaScope,
+    )
+
+    private val _params = MutableStateFlow<ViewerParams?>(null)
     private val _refresh = MutableStateFlow(0)
 
     @OptIn(ExperimentalCoroutinesApi::class)
     val media: StateFlow<List<MediaItem>?> =
-        combine(_sortOrder, _refresh) { order, _ -> order }
-            .flatMapLatest { order -> flow { emit(getAllMedia(order)) } }
+        combine(_params.filterNotNull(), _refresh) { params, _ -> params }
+            .flatMapLatest { params ->
+                flow { emit(getAllMedia(params.sortOrder, params.scope)) }
+            }
             .stateIn(
                 scope = viewModelScope,
                 started = SharingStarted.WhileSubscribed(5_000L),
@@ -84,7 +84,6 @@ class PhotoViewerViewModel(
             initialValue = emptySet(),
         )
 
-    /** Mode edge-effect (setting) -> viewer pakai utk on/off liquid glass. */
     val edgeEffectMode: StateFlow<EdgeEffectMode?> = getSettings()
         .map { it.edgeEffectMode }
         .stateIn(
@@ -93,7 +92,6 @@ class PhotoViewerViewModel(
             initialValue = null,
         )
 
-    /** Gaya komponen UI (Solid/Frosted/Glass). null = default cerdas (di UI). */
     val componentStyle: StateFlow<ComponentStyle?> = getSettings()
         .map { it.componentStyle }
         .stateIn(
@@ -114,11 +112,11 @@ class PhotoViewerViewModel(
     private val _messages = MutableSharedFlow<String>(extraBufferCapacity = 1)
     val messages: SharedFlow<String> = _messages.asSharedFlow()
 
-    // Aksi yg dijalankan ulang setelah user memberi izin tulis (rename/move).
     private var pendingWriteAction: (suspend () -> Unit)? = null
 
-    fun setSortOrder(order: GallerySortOrder) {
-        if (_sortOrder.value != order) _sortOrder.value = order
+    fun setParams(sortOrder: GallerySortOrder, scope: MediaScope) {
+        val next = ViewerParams(sortOrder, scope)
+        if (_params.value != next) _params.value = next
     }
 
     fun refresh() {
@@ -128,7 +126,11 @@ class PhotoViewerViewModel(
     suspend fun loadDetails(uri: String): MediaDetails? = getMediaDetails(uri)
 
     fun loadAlbums() {
-        viewModelScope.launch { _albums.value = getAlbums() }
+        // Picker Move/Copy hanya perlu folder nyata; album cerdas disaring
+        // supaya user tak keliru "pindahkan foto ke Recent" (nonsens).
+        viewModelScope.launch {
+            _albums.value = getAlbums().filter { !it.isSmart }
+        }
     }
 
     fun onToggleFavorite(mediaId: Long, isFavorite: Boolean) {
