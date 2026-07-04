@@ -6,6 +6,9 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.ContentTransform
 import androidx.compose.animation.SizeTransform
 import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.animateIntAsState
+import androidx.compose.animation.core.snap
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -13,6 +16,7 @@ import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -24,6 +28,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBars
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -40,7 +45,9 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.blur
@@ -50,12 +57,14 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import com.adamglin.PhosphorIcons
 import com.adamglin.phosphoricons.Regular
@@ -97,6 +106,9 @@ private val PillWidth = 176.dp
 // Gap antar chip di dalam pill.
 private val TabGap = 2.dp
 
+// Inset chip terpilih dari tepi tiap segmen (semua sisi).
+private val SelectionInset = 4.dp
+
 // Outline/halo tipis supaya text & icon tetap terbaca di atas liquid glass
 // walau warna konten di belakang mirip. Blur teks dalam px, icon dalam dp.
 private const val TextHaloBlur = 4f
@@ -108,17 +120,22 @@ private val GlassBlurRadius = 4.dp
 // lens(height, amount): tinggi & besar pembiasan tepi "liquid glass".
 private val GlassRefractionHeight = 12.dp
 private val GlassRefractionAmount = 16.dp
-// Tint tipis di atas kaca (track pill & tombol) supaya tetap tembus pandang.
+// Tint tipis di atas kaca GLASS (track pill & tombol) supaya tetap tembus pandang.
 private const val GlassTintAlpha = 0.22f
-// Tint segmen TERPILIH: sengaja lebih opaque/pekat -> kaca lebih "padat",
-// jadi penanda selected tanpa keluar dari bahasa liquid glass.
+// Tint segmen TERPILIH (GLASS): lebih pekat -> kaca lebih "padat" sbg penanda.
 private const val SelectedGlassTintAlpha = 0.55f
-// Non-glass: FROSTED lebih translusen (masih berkesan kaca), SOLID hampir opaque.
+// Veil "haze" FROSTED di atas backdrop (drawBackdrop TANPA blur & lens). Sedikit
+// lebih pekat dari GlassTintAlpha karena tak ada blur -> veil pembawa kesan kabut.
+private const val FrostedHazeAlpha = 0.33f
+private const val SelectedFrostedHazeAlpha = 0.6f
+// Non-glass fill:
+// - FROSTED: tint translusen (kaca buram statis; konten di belakang tembus).
+// - SOLID  : pakai KONTRAS TONAL (surfaceContainerLow utk track, surfaceContainerHighest
+//   utk terpilih), BUKAN alpha. Alpha pada warna sama di atas track opaque sewarna
+//   nyaris tak kelihatan -> itu sebabnya dulu "selected" SOLID hampir tak nampak.
 private const val FrostedFallbackAlpha = 0.55f
-private const val SolidFallbackAlpha = 0.95f
-// Segmen terpilih untuk masing-masing gaya non-glass.
+// Segmen terpilih gaya FROSTED (lebih pekat dari track frosted).
 private const val SelectedFrostedAlpha = 0.8f
-private const val SelectedSolidAlpha = 0.98f
 
 /**
  * Scaffold screen root: konten full-screen + bar mengambang di bawah berisi
@@ -148,14 +165,20 @@ fun GalleryTabScaffold(
     // True saat konten (grid) lagi di-scroll -> nav bar FROSTED membekukan capture
     // backdrop biar hemat GPU. Tak berpengaruh untuk GLASS (selalu live) & SOLID.
     contentInteracting: Boolean = false,
+    // GESER pada pill bar -> gerakkan konten pager KONTINU. Host memetakan delta
+    // px ke fraksi halaman (onNavBarDrag) & meng-SNAP ke tab terdekat saat
+    // gesture berakhir (onNavBarDragEnd); onNavBarDragStart membatalkan settle.
+    onNavBarDrag: (dragPx: Float) -> Unit = {},
+    onNavBarDragStart: () -> Unit = {},
+    onNavBarDragEnd: () -> Unit = {},
     content: @Composable () -> Unit,
 ) {
     // Kapan konten (grid) di-CAPTURE sebagai sumber backdrop:
     // - GLASS  : selalu live (refraction ngikut gerakan).
-    // - FROSTED: dibekukan saat konten di-scroll (contentInteracting) -> hemat
-    //   GPU; snapshot terakhir tetap dipakai jadi tetap berkesan kaca.
-    // - SOLID / < API 33: TIDAK pernah capture (drawsBackdrop=false) -> grid tak
-    //   di-render ulang ke layer (nol overhead, tak render background).
+    // - FROSTED / SOLID / < API 33: TIDAK pernah capture (drawsBackdrop=false) ->
+    //   FROSTED pakai fill translusen statis, SOLID pakai fill opaque; grid tak
+    //   di-render ulang ke layer. `contentInteracting` kini tak berpengaruh lagi
+    //   (FROSTED tak lagi capture), dibiarkan demi kompatibilitas pemanggil.
     val captureBackdrop =
         componentStyle.drawsBackdrop() &&
             (componentStyle.usesLiveBackdrop() || !contentInteracting)
@@ -189,6 +212,9 @@ fun GalleryTabScaffold(
                 onToggleSort = onToggleSort,
                 backdrop = backdrop,
                 componentStyle = componentStyle,
+                onNavBarDrag = onNavBarDrag,
+                onNavBarDragStart = onNavBarDragStart,
+                onNavBarDragEnd = onNavBarDragEnd,
             )
         }
     }
@@ -203,9 +229,15 @@ private fun FloatingTabBar(
     onToggleSort: () -> Unit,
     backdrop: Backdrop,
     componentStyle: ComponentStyle,
+    onNavBarDrag: (dragPx: Float) -> Unit = {},
+    onNavBarDragStart: () -> Unit = {},
+    onNavBarDragEnd: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
-    val glassTint = MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = GlassTintAlpha)
+    // Veil di atas backdrop: FROSTED pakai haze (lebih pekat, TANPA blur), GLASS tipis.
+    val glassTint = MaterialTheme.colorScheme.surfaceContainerHighest.copy(
+        alpha = if (componentStyle == ComponentStyle.FROSTED) FrostedHazeAlpha else GlassTintAlpha,
+    )
     // SpaceEvenly: jarak antar "island" (tombol<->pill) SAMA dengan margin
     // kiri/kanan bar. Pill lebar TETAP & selalu ter-center (Sort/Search
     // simetris), jadi saat tombol hilang di tab lain pill tak geser/berubah.
@@ -266,6 +298,9 @@ private fun FloatingTabBar(
             backdrop = backdrop,
             componentStyle = componentStyle,
             glassTint = glassTint,
+            onNavBarDrag = onNavBarDrag,
+            onNavBarDragStart = onNavBarDragStart,
+            onNavBarDragEnd = onNavBarDragEnd,
         )
 
         // Kanan: tombol Search (khusus tab Gallery).
@@ -302,6 +337,9 @@ private fun TabSwitcher(
     backdrop: Backdrop,
     componentStyle: ComponentStyle,
     glassTint: Color,
+    onNavBarDrag: (dragPx: Float) -> Unit = {},
+    onNavBarDragStart: () -> Unit = {},
+    onNavBarDragEnd: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     val entries = listOf(
@@ -328,9 +366,11 @@ private fun TabSwitcher(
             shape = { Capsule() },
             effects = {
                 vibrancy()
-                blur(GlassBlurRadius.toPx())
-                // Lens (refraction) HANYA GLASS. FROSTED = blur saja = kaca buram,
-                // lebih ringan & tanpa artefak pembiasan.
+                // GLASS = blur + lens (liquid glass). FROSTED = KEDUANYA off ->
+                // hanya vibrancy + veil haze (kabut), tanpa distorsi & tanpa artefak.
+                if (componentStyle.usesBlur()) {
+                    blur(GlassBlurRadius.toPx())
+                }
                 if (componentStyle.usesLens()) {
                     lens(GlassRefractionHeight.toPx(), GlassRefractionAmount.toPx())
                 }
@@ -338,11 +378,14 @@ private fun TabSwitcher(
             onDrawSurface = { drawRect(glassTint) },
         )
     } else {
-        baseTrackModifier.background(
-            MaterialTheme.colorScheme.surfaceContainerHighest.copy(
-                alpha = if (componentStyle == ComponentStyle.FROSTED) FrostedFallbackAlpha else SolidFallbackAlpha,
-            ),
-        )
+        // FROSTED: tint translusen. SOLID: track tone rendah (opaque) supaya chip
+        // terpilih (surfaceContainerHighest) menonjol tegas di atasnya.
+        val trackFill = if (componentStyle == ComponentStyle.FROSTED) {
+            MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = FrostedFallbackAlpha)
+        } else {
+            MaterialTheme.colorScheme.surfaceContainerLow
+        }
+        baseTrackModifier.background(trackFill)
     }
 
     // Geser konten supaya PUSAT tab terpilih pas di tengah pill. Untuk tab
@@ -362,48 +405,96 @@ private fun TabSwitcher(
         }
     }
 
-    Box(modifier = trackModifier) {
-        Row(
+    // Chip terpilih yang MELUNCUR (slide) dari tab A -> B, bukan muncul/hilang.
+    // Posisi X & lebarnya beranimasi mengikuti tab terpilih, dalam koordinat
+    // konten pill yang SAMA dgn baris teks (jadi tetap presisi walau pill scroll).
+    val measured = tabWidths.all { it > 0 }
+    val insetPx = with(density) { SelectionInset.toPx() }
+    val gapPx2 = with(density) { TabGap.toPx() }
+    var chipLeftPx = 0f
+    for (j in 0 until selectedIndex) chipLeftPx += tabWidths[j] + gapPx2
+    val targetChipX = (chipLeftPx + insetPx).toInt()
+    val targetChipWidth = (tabWidths[selectedIndex] - insetPx * 2f).toInt().coerceAtLeast(0)
+
+    // Snap ke posisi awal (biar chip tak "tumbuh" dari kiri saat pertama tampil),
+    // baru animasikan perpindahan-perpindahan berikutnya.
+    val chipReady = remember { mutableStateOf(false) }
+    LaunchedEffect(measured) { if (measured) chipReady.value = true }
+    val chipSpec = if (chipReady.value) tween<Int>(340, easing = FastOutSlowInEasing) else snap<Int>()
+    val chipX by animateIntAsState(targetChipX, chipSpec, label = "tab-chip-x")
+    val chipWidth by animateIntAsState(targetChipWidth, chipSpec, label = "tab-chip-w")
+
+    // GESER (drag) horizontal pada bar menu -> gerakkan pager KONTINU (0 -> 0,4
+    // dst) lewat callback ke host. Delta mentah diteruskan apa adanya; host yang
+    // memetakan ke fraksi halaman & meng-SNAP ke tab terdekat saat jari dilepas.
+    // Callback di-snapshot via rememberUpdatedState biar tak stale di pointerInput.
+    val onNavBarDragState = rememberUpdatedState(onNavBarDrag)
+    val onNavBarDragStartState = rememberUpdatedState(onNavBarDragStart)
+    val onNavBarDragEndState = rememberUpdatedState(onNavBarDragEnd)
+
+    Box(
+        modifier = trackModifier.pointerInput(Unit) {
+            detectHorizontalDragGestures(
+                onDragStart = { onNavBarDragStartState.value() },
+                onDragEnd = { onNavBarDragEndState.value() },
+                onDragCancel = { onNavBarDragEndState.value() },
+            ) { change, dragAmount ->
+                onNavBarDragState.value(dragAmount)
+                change.consume()
+            }
+        },
+    ) {
+        Box(
             modifier = Modifier
                 .fillMaxHeight()
                 .horizontalScroll(scrollState, enabled = false),
-            verticalAlignment = Alignment.CenterVertically,
         ) {
-            entries.forEachIndexed { index, (tab, label) ->
-                if (index > 0) Spacer(Modifier.width(TabGap))
-                PillSegment(
-                    label = label,
-                    selected = selectedTab == tab,
-                    backdrop = backdrop,
-                    componentStyle = componentStyle,
-                    // padding(4.dp): inset chip selected simetris di semua sisi
-                    // (dulu cuma vertikal 4dp, samping rapat). onSizeChanged di
-                    // LUAR padding -> ukur lebar penuh biar math center akurat.
+            // Lapisan 1: chip terpilih yang meluncur, DI BELAKANG teks.
+            if (measured) {
+                Box(
                     modifier = Modifier
-                        .onSizeChanged { tabWidths[index] = it.width }
-                        .padding(4.dp),
-                ) { onSelectTab(tab) }
+                        .align(Alignment.CenterStart)
+                        .offset { IntOffset(chipX, 0) }
+                        .padding(vertical = SelectionInset)
+                        .width(with(density) { chipWidth.toDp() })
+                        .fillMaxHeight()
+                        .then(selectedChipModifier(backdrop, componentStyle)),
+                )
+            }
+            // Lapisan 2: baris teks tab (klik + pengukuran lebar).
+            Row(
+                modifier = Modifier
+                    .align(Alignment.CenterStart)
+                    .fillMaxHeight(),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                entries.forEachIndexed { index, (tab, label) ->
+                    if (index > 0) Spacer(Modifier.width(TabGap))
+                    PillSegment(
+                        label = label,
+                        selected = selectedTab == tab,
+                        // onSizeChanged di LUAR padding -> ukur lebar penuh segmen
+                        // (termasuk inset) biar perhitungan posisi chip akurat.
+                        modifier = Modifier
+                            .onSizeChanged { tabWidths[index] = it.width }
+                            .padding(SelectionInset),
+                    ) { onSelectTab(tab) }
+                }
             }
         }
     }
 }
 
 /**
- * Satu segmen di dalam pill tab.
- *
- * - Terpilih + API 33+ : "chip" liquid glass yang lebih pekat
- *   ([SelectedGlassTintAlpha]) di atas track.
- * - Terpilih + API < 33: fallback fill frosted hampir solid.
- * - Tidak terpilih     : transparan (menyatu dengan track).
- *
- * Warna teks beranimasi antara `onSurface` (terpilih) dan `onSurfaceVariant`.
+ * Satu segmen (teks) di dalam pill tab. Penanda "selected" TIDAK lagi digambar
+ * di sini \u2014 kini dipegang oleh satu chip meluncur (lihat [TabSwitcher]) supaya
+ * perpindahan A->B terlihat sebagai GERAKAN, bukan muncul/hilang. Segmen ini
+ * hanya mengurus teks (warna beranimasi), area klik, & pengukuran lebar.
  */
 @Composable
 private fun PillSegment(
     label: String,
     selected: Boolean,
-    backdrop: Backdrop,
-    componentStyle: ComponentStyle,
     modifier: Modifier = Modifier,
     onClick: () -> Unit,
 ) {
@@ -417,41 +508,10 @@ private fun PillSegment(
         label = "segment-fg",
     )
 
-    val selectedGlassTint =
-        MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = SelectedGlassTintAlpha)
-    val selectedFrosted =
-        MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = SelectedFrostedAlpha)
-    val selectedSolid =
-        MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = SelectedSolidAlpha)
-
-    // Modifier penanda selected: liquid glass (GLASS) atau fill frosted/solid.
-    val selectionModifier =
-        when {
-            !selected -> Modifier
-            componentStyle.drawsBackdrop() -> Modifier.drawBackdrop(
-                backdrop = backdrop,
-                shape = { Capsule() },
-                effects = {
-                    vibrancy()
-                    blur(GlassBlurRadius.toPx())
-                    if (componentStyle.usesLens()) {
-                        lens(GlassRefractionHeight.toPx(), GlassRefractionAmount.toPx())
-                    }
-                },
-                onDrawSurface = { drawRect(selectedGlassTint) },
-            )
-            else -> Modifier.clip(CircleShape).background(
-                if (componentStyle == ComponentStyle.FROSTED) selectedFrosted else selectedSolid,
-            )
-        }
-
     Box(
         modifier = modifier
-            // Chip wrap-content (selebar teks + padding). fillMaxHeight + inset
-            // 4dp vertikal (dari pemanggil) -> chip konsentris di track.
             .fillMaxHeight()
             .clip(CircleShape)
-            .then(selectionModifier)
             .clickable(onClick = onClick)
             .padding(horizontal = 18.dp)
             .semantics { role = Role.RadioButton },
@@ -470,6 +530,49 @@ private fun PillSegment(
                 ),
             ),
             maxLines = 1,
+        )
+    }
+}
+
+/**
+ * Modifier penanda chip terpilih (liquid glass GLASS / frosted / solid) yang
+ * dipakai oleh chip meluncur di [TabSwitcher].
+ */
+@Composable
+private fun selectedChipModifier(
+    backdrop: Backdrop,
+    componentStyle: ComponentStyle,
+): Modifier {
+    val selectedGlassTint =
+        MaterialTheme.colorScheme.surfaceContainerHighest.copy(
+            alpha = if (componentStyle == ComponentStyle.FROSTED) {
+                SelectedFrostedHazeAlpha
+            } else {
+                SelectedGlassTintAlpha
+            },
+        )
+    val selectedFrosted =
+        MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = SelectedFrostedAlpha)
+    // SOLID terpilih: tone paling terang & OPAQUE -> kontras tegas di atas track.
+    val selectedSolid = MaterialTheme.colorScheme.surfaceContainerHighest
+
+    return when {
+        componentStyle.drawsBackdrop() -> Modifier.drawBackdrop(
+            backdrop = backdrop,
+            shape = { Capsule() },
+            effects = {
+                vibrancy()
+                if (componentStyle.usesBlur()) {
+                    blur(GlassBlurRadius.toPx())
+                }
+                if (componentStyle.usesLens()) {
+                    lens(GlassRefractionHeight.toPx(), GlassRefractionAmount.toPx())
+                }
+            },
+            onDrawSurface = { drawRect(selectedGlassTint) },
+        )
+        else -> Modifier.clip(CircleShape).background(
+            if (componentStyle == ComponentStyle.FROSTED) selectedFrosted else selectedSolid,
         )
     }
 }
@@ -533,10 +636,12 @@ private fun CircularFloatingButton(
                     shape = { Capsule() },
                     effects = {
                         vibrancy()
-                        blur(GlassBlurRadius.toPx())
-                        // SENGAJA tanpa lens: di tombol bulat kecil, refraction Kyant
-                        // bikin artefak tepi (kelihatan seperti hexagon). Blur saja
-                        // sudah cukup "kaca" & lebih ringan (berlaku glass & frosted).
+                        // GLASS = blur (tanpa lens di tombol bulat, karena refraction
+                        // Kyant bikin artefak "hexagon" di elemen kecil). FROSTED =
+                        // TANPA blur juga -> hanya veil haze, jadi TAK ada hexagon.
+                        if (componentStyle.usesBlur()) {
+                            blur(GlassBlurRadius.toPx())
+                        }
                     },
                     onDrawSurface = { drawRect(glassTint) },
                 )
@@ -557,9 +662,11 @@ private fun CircularFloatingButton(
         Surface(
             onClick = onClick,
             shape = CircleShape,
-            color = MaterialTheme.colorScheme.surfaceContainerHighest.copy(
-                alpha = if (componentStyle == ComponentStyle.FROSTED) FrostedFallbackAlpha else SolidFallbackAlpha,
-            ),
+            color = if (componentStyle == ComponentStyle.FROSTED) {
+                MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = FrostedFallbackAlpha)
+            } else {
+                MaterialTheme.colorScheme.surfaceContainerHighest
+            },
             contentColor = MaterialTheme.colorScheme.onSurface,
             shadowElevation = 6.dp,
             modifier = modifier

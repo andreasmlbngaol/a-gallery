@@ -13,7 +13,13 @@ import id.andreasmbngaol.agallery.domain.model.PerformanceMode
 fun AppSettingsDto.toDomain(): AppSettings =
     AppSettings(
         edgeEffectMode = edgeEffectMode?.let { raw ->
-            EdgeEffectMode.entries.firstOrNull { it.name == raw }
+            // Migrasi nama lama -> baru (rilis <= 0.3.9 menyimpan FROSTED/GRADIENT).
+            val normalized = when (raw) {
+                "FROSTED" -> "BLURRY"
+                "GRADIENT" -> "DARKEN"
+                else -> raw
+            }
+            EdgeEffectMode.entries.firstOrNull { it.name == normalized }
         },
         componentStyle = componentStyle?.let { raw ->
             ComponentStyle.entries.firstOrNull { it.name == raw }

@@ -15,7 +15,9 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
-import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.gestures.waitForUpOrCancellation
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -41,10 +43,13 @@ import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
@@ -68,9 +73,13 @@ import com.kyant.backdrop.effects.vibrancy
 import com.kyant.shapes.RoundedRectangle
 import id.andreasmbngaol.agallery.R
 import id.andreasmbngaol.agallery.core.ui.drawsBackdrop
+import id.andreasmbngaol.agallery.core.ui.usesBlur
 import id.andreasmbngaol.agallery.core.ui.usesLens
 import id.andreasmbngaol.agallery.domain.model.ComponentStyle
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeoutOrNull
 import kotlin.math.abs
 import androidx.media3.common.MediaItem as ExoMediaItem
 
@@ -79,9 +88,16 @@ private val GlassBlurRadius = 4.dp
 private val GlassRefractionHeight = 12.dp
 private val GlassRefractionAmount = 16.dp
 private const val GlassTintAlpha = 0.3f
+// Veil "haze" FROSTED (drawBackdrop TANPA blur/lens) -> sedikit lebih pekat.
+private const val FrostedHazeAlpha = 0.4f
 // Non-glass: FROSTED translusen (masih berkesan kaca), SOLID hampir opaque.
 private const val FrostedFallbackAlpha = 0.55f
 private const val SolidFallbackAlpha = 0.95f
+
+// Gesture tahan-geser (hold) ala TikTok: percepat 2x (kiri & kanan sama-sama maju).
+private const val HoldSpeedMultiplier = 2f
+// Loncatan double-tap sisi kiri/kanan: mundur/maju 5 detik.
+private const val SeekStepMs = 5_000L
 
 /**
  * State audio video yang berlaku SELAMA APP DIBUKA (session, in-memory).
@@ -105,14 +121,18 @@ object VideoPlaybackPrefs {
  * - **Kontrol bawah** dalam container **liquid glass** (Kyant, API 33+;
  *   fallback frosted solid di bawahnya), urutan kiri->kanan:
  *   `[play/pause] [current time] [====slider====] [total time] [mute]`.
- * - **Tap video** untuk hide/show baris kontrol.
+ * - **Gesture** ala TikTok: 1x tap = show/hide kontrol; 2x tap TENGAH =
+ *   play/pause; 2x tap KIRI = mundur 5 detik (cap 0); 2x tap KANAN = maju
+ *   5 detik; tahan sisi KIRI atau KANAN = maju cepat 2x.
  *
- * ## Fix bug slider "loncat balik"
- * Saat user selesai menyeret (mis. dari 0:01 ke 0:10), ExoPlayer.seekTo itu
- * async. Kalau kita langsung baca currentPosition, sempat frame ia masih
- * 0:01 -> thumb loncat balik dulu. Solusinya [pendingSeekMs]: setelah seek,
- * posisi yang DITAMPILKAN dikunci ke target sampai player benar-benar nyusul
- * (selisih <= 350ms), baru lanjut polling normal.
+ * ## Fix bug slider
+ * 1. **Loncat balik**: [pendingSeekMs] mengunci posisi yang DITAMPILKAN ke target
+ *    sampai player benar-benar nyusul (selisih <= 350ms), baru polling normal.
+ * 2. **Video jalan saat masih menahan**: begitu scrub mulai, playback di-PAUSE
+ *    (status disimpan di [wasPlayingBeforeScrub]) & baru lanjut saat jari lepas.
+ * 3. **Seek meleset ke keyframe jauh** (mis. 5s malah balik ke 0): scrub live
+ *    pakai CLOSEST_SYNC (cepat), tapi saat dilepas pakai SeekParameters.EXACT
+ *    supaya benar-benar mendarat presisi di detik yang dipilih.
  *
  * ## Liquid glass di atas video
  * PlayerView dipaksa `surface_type=texture_view` (lihat res/layout/
@@ -156,6 +176,24 @@ fun VideoPlayerContent(
     var scrubTarget by remember { mutableFloatStateOf(0f) }
     // Target seek yang "dikunci" sampai player nyusul (anti loncat-balik).
     var pendingSeekMs by remember { mutableStateOf<Long?>(null) }
+    // Status main sebelum scrub -> dipulihkan setelah jari lepas (bug 1).
+    var wasPlayingBeforeScrub by remember { mutableStateOf(false) }
+    // Gesture tahan (hold) maju cepat 2x ala TikTok (kiri & kanan sama).
+    var isFastForwarding by remember { mutableStateOf(false) }
+    var wasPlayingBeforeHold by remember { mutableStateOf(false) }
+    var speedBeforeHold by remember { mutableFloatStateOf(1f) }
+    // Status tampil kontrol/topbar sebelum hold -> dipulihkan sesuai aslinya.
+    var controlsVisibleBeforeHold by remember { mutableStateOf(false) }
+    // Umpan balik double-tap loncat. `visible` mengatur animasi; `forward`
+    // menyimpan arah & DIPERTAHANKAN selama animasi keluar biar tak flicker
+    // ke sisi lain saat state di-null-kan.
+    var skipFeedbackVisible by remember { mutableStateOf(false) }
+    var skipFeedbackForward by remember { mutableStateOf(true) }
+    val scope = rememberCoroutineScope()
+    var skipFeedbackJob by remember { mutableStateOf<Job?>(null) }
+    // pointerInput pakai key Unit -> closure bisa basi; rememberUpdatedState
+    // memastikan gesture selalu baca controlsVisible terbaru.
+    val latestControlsVisible by rememberUpdatedState(controlsVisible)
 
     // Autoplay hanya di halaman aktif; pindah halaman -> pause.
     LaunchedEffect(isActive) {
@@ -269,14 +307,155 @@ fun VideoPlayerContent(
             },
         )
 
-        // --- Tap area: toggle visibility kontrol ---
+        // --- Gesture area (tap / double-tap / hold ala TikTok) ---
         Box(
             modifier = Modifier
                 .fillMaxSize()
                 .pointerInput(Unit) {
-                    detectTapGestures(onTap = { onToggleControls() })
+                    awaitEachGesture {
+                        val down = awaitFirstDown(requireUnconsumed = false)
+                        val widthPx = size.width.toFloat()
+                        val leftZone = down.position.x < widthPx / 3f
+                        val rightZone = down.position.x > widthPx * 2f / 3f
+
+                        // Fase 1: HOLD (jari tetap turun lewati long-press) vs TAP.
+                        val firstUp = withTimeoutOrNull(
+                            viewConfiguration.longPressTimeoutMillis,
+                        ) { waitForUpOrCancellation() }
+
+                        if (firstUp == null) {
+                            // ===== HOLD ===== kiri & kanan sama-sama maju cepat 2x.
+                            val holdActive = leftZone || rightZone
+                            if (holdActive) {
+                                wasPlayingBeforeHold = exoPlayer.playWhenReady
+                                speedBeforeHold = exoPlayer.playbackParameters.speed
+                                exoPlayer.setPlaybackSpeed(HoldSpeedMultiplier)
+                                exoPlayer.playWhenReady = true
+                                isFastForwarding = true
+                                // Sembunyikan kontrol/topbar/actions sementara,
+                                // TAPI hanya kalau memang lagi tampil.
+                                controlsVisibleBeforeHold = latestControlsVisible
+                                if (latestControlsVisible) onToggleControls()
+                            }
+                            // Tunggu jari diangkat -> pulihkan.
+                            waitForUpOrCancellation()
+                            if (holdActive) {
+                                exoPlayer.setPlaybackSpeed(speedBeforeHold)
+                                exoPlayer.playWhenReady = wasPlayingBeforeHold
+                                isFastForwarding = false
+                                // Pulihkan kontrol hanya kalau tadinya tampil
+                                // (state awal hide -> tetap hide).
+                                if (controlsVisibleBeforeHold && !latestControlsVisible) {
+                                    onToggleControls()
+                                }
+                            }
+                        } else {
+                            // ===== TAP: cek tap kedua utk double-tap =====
+                            val secondDown = withTimeoutOrNull(
+                                viewConfiguration.doubleTapTimeoutMillis,
+                            ) { awaitFirstDown(requireUnconsumed = false) }
+                            if (secondDown == null) {
+                                // Single tap -> show/hide kontrol.
+                                onToggleControls()
+                            } else {
+                                // Double tap (konsumsi up kedua) -> aksi per zona.
+                                withTimeoutOrNull(
+                                    viewConfiguration.longPressTimeoutMillis,
+                                ) { waitForUpOrCancellation() }
+                                when {
+                                    leftZone -> {
+                                        // Mundur 5 detik, cap ke 0.
+                                        val target = (exoPlayer.currentPosition - SeekStepMs)
+                                            .coerceAtLeast(0L)
+                                        exoPlayer.setSeekParameters(SeekParameters.EXACT)
+                                        exoPlayer.seekTo(target)
+                                        skipFeedbackForward = false
+                                        skipFeedbackVisible = true
+                                        skipFeedbackJob?.cancel()
+                                        skipFeedbackJob = scope.launch {
+                                            delay(600)
+                                            skipFeedbackVisible = false
+                                        }
+                                    }
+                                    rightZone -> {
+                                        // Maju 5 detik, cap ke durasi (kalau diketahui).
+                                        val dur = exoPlayer.duration
+                                        val max = if (dur > 0L) dur else Long.MAX_VALUE
+                                        val target = (exoPlayer.currentPosition + SeekStepMs)
+                                            .coerceAtMost(max)
+                                        exoPlayer.setSeekParameters(SeekParameters.EXACT)
+                                        exoPlayer.seekTo(target)
+                                        skipFeedbackForward = true
+                                        skipFeedbackVisible = true
+                                        skipFeedbackJob?.cancel()
+                                        skipFeedbackJob = scope.launch {
+                                            delay(600)
+                                            skipFeedbackVisible = false
+                                        }
+                                    }
+                                    else -> {
+                                        // Tengah -> play/pause.
+                                        if (exoPlayer.isPlaying) {
+                                            exoPlayer.pause()
+                                        } else {
+                                            exoPlayer.play()
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
                 },
         )
+
+        // --- Indikator hold maju 2x di tengah atas ---
+        AnimatedVisibility(
+            visible = isFastForwarding,
+            enter = fadeIn(tween(120)),
+            exit = fadeOut(tween(120)),
+            modifier = Modifier.align(Alignment.TopCenter).padding(top = 56.dp),
+        ) {
+            Box(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(50))
+                    .background(Color.Black.copy(alpha = 0.55f))
+                    .padding(horizontal = 16.dp, vertical = 8.dp),
+            ) {
+                Text(
+                    text = "2x  \u25B6\u25B6",
+                    color = Color.White,
+                    style = MaterialTheme.typography.labelLarge,
+                )
+            }
+        }
+
+        // --- Umpan balik double-tap loncat 5 detik (kiri/kanan) ---
+        // Arah dibaca dari skipFeedbackForward (bukan nilai yang di-null-kan),
+        // jadi selama animasi keluar posisinya tetap di sisi yang benar.
+        AnimatedVisibility(
+            visible = skipFeedbackVisible,
+            enter = fadeIn(tween(120)),
+            exit = fadeOut(tween(120)),
+            modifier = Modifier
+                .align(
+                    if (skipFeedbackForward) Alignment.CenterEnd
+                    else Alignment.CenterStart,
+                )
+                .padding(horizontal = 32.dp),
+        ) {
+            Box(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(50))
+                    .background(Color.Black.copy(alpha = 0.55f))
+                    .padding(horizontal = 16.dp, vertical = 8.dp),
+            ) {
+                Text(
+                    text = if (skipFeedbackForward) "5s  \u25B6\u25B6" else "\u25C0\u25C0  5s",
+                    color = Color.White,
+                    style = MaterialTheme.typography.labelLarge,
+                )
+            }
+        }
 
         // --- Baris kontrol (glass) di bawah ---
         AnimatedVisibility(
@@ -286,7 +465,9 @@ fun VideoPlayerContent(
             modifier = Modifier.align(Alignment.BottomCenter),
         ) {
             val glassTint =
-                MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = GlassTintAlpha)
+                MaterialTheme.colorScheme.surfaceContainerHighest.copy(
+                    alpha = if (style == ComponentStyle.FROSTED) FrostedHazeAlpha else GlassTintAlpha,
+                )
             val fallbackTint =
                 MaterialTheme.colorScheme.surfaceContainerHighest.copy(
                     alpha = if (style == ComponentStyle.FROSTED) FrostedFallbackAlpha else SolidFallbackAlpha,
@@ -308,7 +489,10 @@ fun VideoPlayerContent(
                         shape = { RoundedRectangle(16.dp) },
                         effects = {
                             vibrancy()
-                            blur(GlassBlurRadius.toPx())
+                            // GLASS = blur + lens. FROSTED = keduanya off -> veil haze saja.
+                            if (style.usesBlur()) {
+                                blur(GlassBlurRadius.toPx())
+                            }
                             if (style.usesLens()) {
                                 lens(GlassRefractionHeight.toPx(), GlassRefractionAmount.toPx())
                             }
@@ -362,11 +546,17 @@ fun VideoPlayerContent(
                     modifier = Modifier.weight(1f),
                     value = sliderValue,
                     onValueChange = { value ->
+                        if (!isScrubbing) {
+                            // Awal scrub: ingat status main lalu PAUSE supaya video
+                            // tidak jalan selama jari masih menahan (bug 1).
+                            wasPlayingBeforeScrub = exoPlayer.playWhenReady
+                            exoPlayer.playWhenReady = false
+                        }
                         isScrubbing = true
                         scrubTarget = value
-                        // Live-seek: video langsung loncat ke posisi slider saat
-                        // digeser, jadi user lihat preview frame di detik itu.
+                        // Live-preview cepat ke keyframe terdekat.
                         if (durationMs > 0L) {
+                            exoPlayer.setSeekParameters(SeekParameters.CLOSEST_SYNC)
                             exoPlayer.seekTo((value * durationMs).toLong())
                         }
                     },
@@ -374,9 +564,14 @@ fun VideoPlayerContent(
                         if (durationMs > 0L) {
                             val target = (scrubTarget * durationMs).toLong()
                             pendingSeekMs = target
+                            // EXACT supaya mendarat presisi di detik yg dipilih
+                            // (bukan snap ke keyframe jauh -> bug 2).
+                            exoPlayer.setSeekParameters(SeekParameters.EXACT)
                             exoPlayer.seekTo(target)
                         }
                         isScrubbing = false
+                        // Jari lepas -> lanjut play sesuai status sebelum scrub.
+                        exoPlayer.playWhenReady = wasPlayingBeforeScrub
                     },
                     colors = SliderDefaults.colors(
                         thumbColor = contentColor,

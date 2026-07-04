@@ -223,7 +223,6 @@ fun PhotoViewerScreen(
                             onTrashTap = { showTrashConfirm = true },
                             onHoldDelete = { viewModel.deletePhoto(item.uri) },
                             onRename = { showRename = true },
-                            onSetAs = { setAsMedia(context, item) },
                             onOpenWith = { openWithMedia(context, item) },
                             onCopy = {
                                 viewModel.loadAlbums()

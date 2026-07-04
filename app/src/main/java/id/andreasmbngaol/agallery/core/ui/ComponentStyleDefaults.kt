@@ -32,22 +32,32 @@ fun isGlassSupported(sdkInt: Int = Build.VERSION.SDK_INT): Boolean = sdkInt >= G
 
 /**
  * Apakah gaya ini menggambar backdrop kaca Kyant (drawBackdrop = render konten di
- * belakang ke layer + efek blur/lens)?
- * - GLASS & FROSTED = ya, TAPI butuh RuntimeShader (API 33+).
- * - SOLID = TIDAK -> pakai fill warna biasa, konten di belakang TAK di-render
- *   ulang ke layer (nol overhead backdrop, tak render background).
- * Catatan: [resolveComponentStyle] sudah memetakan GLASS -> FROSTED di < API 33,
- * jadi di perangkat < 33 ini otomatis false untuk SEMUA gaya (fallback fill).
+ * belakang ke layer + efek)? Butuh RuntimeShader = API 33+.
+ * - GLASS   = ya. Efek PENUH: vibrancy + blur + lens (refraction "liquid glass").
+ * - FROSTED = ya, TAPI hanya vibrancy + veil "haze" (lihat [usesBlur] & [usesLens]:
+ *   keduanya false). Jadi bentuknya TETAP seperti kaca (konten di belakang tembus),
+ *   TANPA blur & TANPA distorsi -> kesan kabut/haze, bukan liquid glass.
+ * - SOLID   = TIDAK -> fill warna opaque biasa.
+ * Catatan: [resolveComponentStyle] sudah memetakan GLASS -> FROSTED di < API 33.
+ * Di perangkat < 33 (RuntimeShader absen) ini false untuk semua gaya -> fallback fill.
  */
 fun ComponentStyle.drawsBackdrop(sdkInt: Int = Build.VERSION.SDK_INT): Boolean =
     this != ComponentStyle.SOLID && sdkInt >= GLASS_MIN_SDK
 
 /**
- * Apakah efek lens/refraction (pembiasan "liquid glass") dipakai?
- * Hanya GLASS. FROSTED sengaja blur SAJA (kaca buram) -> lebih ringan & tak ada
- * artefak refraction di elemen kecil (mis. tombol bulat yang tadinya "hexagon").
+ * Apakah efek lens/refraction (pembiasan "liquid glass") dipakai? Hanya GLASS.
+ * FROSTED tidak -> tak ada distorsi (sesuai kesan "haze", bukan kaca cair).
  */
 fun ComponentStyle.usesLens(): Boolean = this == ComponentStyle.GLASS
+
+/**
+ * Apakah efek blur (gaussian) dipakai di backdrop? Hanya GLASS.
+ * FROSTED sengaja TANPA blur -> pakai veil/haze (tint) saja. Selain sesuai
+ * permintaan "jangan blur, pakai haze", ini juga MENGHILANGKAN artefak heksagon
+ * dari kernel blur Kyant di elemen bulat kecil (mis. tombol Sort/Search) yang
+ * dulu tampak karena di tombol tak ada lens yang menutupinya.
+ */
+fun ComponentStyle.usesBlur(): Boolean = this == ComponentStyle.GLASS
 
 /**
  * Apakah backdrop di-capture LIVE tiap frame?

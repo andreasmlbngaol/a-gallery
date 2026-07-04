@@ -137,6 +137,7 @@ import id.andreasmbngaol.agallery.core.ui.FloatingTabBarHeight
 import id.andreasmbngaol.agallery.core.ui.SystemBarScrim
 import id.andreasmbngaol.agallery.core.ui.drawsBackdrop
 import id.andreasmbngaol.agallery.core.ui.rememberEffectiveComponentStyle
+import id.andreasmbngaol.agallery.core.ui.usesBlur
 import id.andreasmbngaol.agallery.core.ui.usesLens
 import id.andreasmbngaol.agallery.core.ui.rememberEffectiveEdgeEffectMode
 import id.andreasmbngaol.agallery.domain.model.ComponentStyle
@@ -1013,13 +1014,20 @@ private fun PhotoContextMenu(
                 shape = { Capsule() },
                 effects = {
                     vibrancy()
-                    blur(4.dp.toPx())
-                    // Lens hanya GLASS; FROSTED blur saja (kaca buram, ringan).
+                    // GLASS = blur + lens. FROSTED = keduanya off -> veil haze saja
+                    // (tanpa blur/distorsi & tanpa artefak).
+                    if (style.usesBlur()) {
+                        blur(4.dp.toPx())
+                    }
                     if (style.usesLens()) {
                         lens(12.dp.toPx(), 16.dp.toPx())
                     }
                 },
-                onDrawSurface = { drawRect(Color.White.copy(alpha = 0.18f)) },
+                onDrawSurface = {
+                    drawRect(
+                        Color.White.copy(alpha = if (style == ComponentStyle.FROSTED) 0.3f else 0.18f),
+                    )
+                },
             )
     } else {
         Modifier

@@ -6,22 +6,21 @@ import androidx.compose.runtime.remember
 import id.andreasmbngaol.agallery.domain.model.EdgeEffectMode
 
 /**
- * Ambang perangkat yang bisa blur beneran lewat RenderEffect. Sesuai kesepakatan:
- * FROSTED jadi default untuk API >= 32.
+ * Ambang perangkat yang bisa blur beneran lewat RenderEffect. Mode BLURRY butuh
+ * API >= 32; di bawah itu turun otomatis ke DARKEN.
  */
-const val FROSTED_MIN_SDK = 32
+const val BLURRY_EDGE_MIN_SDK = 32
 
 /**
- * Resolusi "default cerdas" (hybrid):
- * - chosen null  -> FROSTED kalau API >= 32, selain itu GRADIENT.
- * - chosen FROSTED di perangkat < 32 -> auto turun ke GRADIENT (fallback).
+ * Resolusi default:
+ * - chosen null -> DARKEN (default "rata tengah": ringan & jalan di semua perangkat).
+ * - chosen BLURRY di perangkat < 32 -> auto turun ke DARKEN (fallback, RenderEffect absen).
  * - selain itu -> pakai pilihan user apa adanya.
  */
 fun resolveEdgeEffectMode(chosen: EdgeEffectMode?, sdkInt: Int): EdgeEffectMode {
-    val base = chosen
-        ?: if (sdkInt >= FROSTED_MIN_SDK) EdgeEffectMode.FROSTED else EdgeEffectMode.GRADIENT
-    return if (base == EdgeEffectMode.FROSTED && sdkInt < FROSTED_MIN_SDK) {
-        EdgeEffectMode.GRADIENT
+    val base = chosen ?: EdgeEffectMode.DARKEN
+    return if (base == EdgeEffectMode.BLURRY && sdkInt < BLURRY_EDGE_MIN_SDK) {
+        EdgeEffectMode.DARKEN
     } else {
         base
     }
@@ -31,5 +30,6 @@ fun resolveEdgeEffectMode(chosen: EdgeEffectMode?, sdkInt: Int): EdgeEffectMode 
 fun rememberEffectiveEdgeEffectMode(chosen: EdgeEffectMode?): EdgeEffectMode =
     remember(chosen) { resolveEdgeEffectMode(chosen, Build.VERSION.SDK_INT) }
 
-/** True kalau perangkat sanggup efek frosted (blur) beneran. */
-fun isFrostedSupported(sdkInt: Int = Build.VERSION.SDK_INT): Boolean = sdkInt >= FROSTED_MIN_SDK
+/** True kalau perangkat sanggup efek BLURRY (blur RenderEffect) beneran. */
+fun isBlurryEdgeSupported(sdkInt: Int = Build.VERSION.SDK_INT): Boolean =
+    sdkInt >= BLURRY_EDGE_MIN_SDK

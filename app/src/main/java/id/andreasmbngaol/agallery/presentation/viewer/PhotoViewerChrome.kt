@@ -73,6 +73,7 @@ import com.kyant.backdrop.effects.lens
 import com.kyant.backdrop.effects.vibrancy
 import com.kyant.shapes.Capsule
 import id.andreasmbngaol.agallery.core.ui.drawsBackdrop
+import id.andreasmbngaol.agallery.core.ui.usesBlur
 import id.andreasmbngaol.agallery.core.ui.usesLens
 import id.andreasmbngaol.agallery.domain.model.Album
 import id.andreasmbngaol.agallery.domain.model.ComponentStyle
@@ -82,7 +83,9 @@ private val GlassBlurRadius = 4.dp
 private val GlassRefractionHeight = 12.dp
 private val GlassRefractionAmount = 16.dp
 private const val GlassTintAlpha = 0.3f
-// Non-glass: FROSTED translusen (masih berkesan kaca), SOLID hampir opaque.
+// Veil "haze" FROSTED (drawBackdrop TANPA blur/lens) -> sedikit lebih pekat.
+private const val FrostedHazeAlpha = 0.4f
+// Fallback fill (API < 33): FROSTED translusen (masih berkesan kaca), SOLID hampir opaque.
 private const val FrostedFallbackAlpha = 0.55f
 private const val SolidFallbackAlpha = 0.95f
 
@@ -116,7 +119,9 @@ private fun Modifier.liquidGlass(
     style: ComponentStyle,
     backdrop: Backdrop,
 ): Modifier {
-    val glassTint = MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = GlassTintAlpha)
+    val glassTint = MaterialTheme.colorScheme.surfaceContainerHighest.copy(
+        alpha = if (style == ComponentStyle.FROSTED) FrostedHazeAlpha else GlassTintAlpha,
+    )
     val fallbackTint = MaterialTheme.colorScheme.surfaceContainerHighest.copy(
         alpha = if (style == ComponentStyle.FROSTED) FrostedFallbackAlpha else SolidFallbackAlpha,
     )
@@ -126,9 +131,11 @@ private fun Modifier.liquidGlass(
             shape = { Capsule() },
             effects = {
                 vibrancy()
-                blur(GlassBlurRadius.toPx())
-                // Lens (refraction) HANYA GLASS. FROSTED = blur saja = kaca buram
-                // (persis tampilan beku saat swipe), lebih ringan & tanpa artefak.
+                // GLASS = blur + lens. FROSTED = keduanya off -> vibrancy + veil
+                // haze saja (kabut); bentuk tetap kaca tapi tanpa distorsi & blur.
+                if (style.usesBlur()) {
+                    blur(GlassBlurRadius.toPx())
+                }
                 if (style.usesLens()) {
                     lens(GlassRefractionHeight.toPx(), GlassRefractionAmount.toPx())
                 }
@@ -306,7 +313,6 @@ fun ViewerVideoActionRow(
     onTrashTap: () -> Unit,
     onHoldDelete: () -> Unit,
     onRename: () -> Unit,
-    onSetAs: () -> Unit,
     onOpenWith: () -> Unit,
     onCopy: () -> Unit,
     onMove: () -> Unit,
@@ -333,7 +339,6 @@ fun ViewerVideoActionRow(
         PlainMoreButton(
             tint = tint,
             onRename = onRename,
-            onSetAs = onSetAs,
             onOpenWith = onOpenWith,
             onCopy = onCopy,
             onMove = onMove,
@@ -383,7 +388,6 @@ private fun GlassMoreButton(
 private fun PlainMoreButton(
     tint: Color,
     onRename: () -> Unit,
-    onSetAs: () -> Unit,
     onOpenWith: () -> Unit,
     onCopy: () -> Unit,
     onMove: () -> Unit,
@@ -394,15 +398,16 @@ private fun PlainMoreButton(
         IconButton(onClick = { expanded = true }) {
             Icon(PhosphorIcons.Regular.DotsThreeVertical, contentDescription = "More", tint = tint)
         }
+        // Video: TANPA "Set as wallpaper" (wallpaper hanya relevan utk gambar).
         ViewerMoreDropdown(
             expanded = expanded,
             onDismiss = { expanded = false },
             onRename = onRename,
-            onSetAs = onSetAs,
             onOpenWith = onOpenWith,
             onCopy = onCopy,
             onMove = onMove,
             onDelete = onDelete,
+            showSetAs = false,
         )
     }
 }
@@ -412,11 +417,13 @@ private fun ViewerMoreDropdown(
     expanded: Boolean,
     onDismiss: () -> Unit,
     onRename: () -> Unit,
-    onSetAs: () -> Unit,
     onOpenWith: () -> Unit,
     onCopy: () -> Unit,
     onMove: () -> Unit,
     onDelete: () -> Unit,
+    onSetAs: () -> Unit = {},
+    // "Set as wallpaper" hanya untuk gambar; video menyembunyikannya.
+    showSetAs: Boolean = true,
 ) {
     DropdownMenu(expanded = expanded, onDismissRequest = onDismiss) {
         DropdownMenuItem(
@@ -427,14 +434,16 @@ private fun ViewerMoreDropdown(
                 onRename()
             },
         )
-        DropdownMenuItem(
-            text = { Text("Set as wallpaper") },
-            leadingIcon = { Icon(PhosphorIcons.Regular.Image, contentDescription = null) },
-            onClick = {
-                onDismiss()
-                onSetAs()
-            },
-        )
+        if (showSetAs) {
+            DropdownMenuItem(
+                text = { Text("Set as wallpaper") },
+                leadingIcon = { Icon(PhosphorIcons.Regular.Image, contentDescription = null) },
+                onClick = {
+                    onDismiss()
+                    onSetAs()
+                },
+            )
+        }
         DropdownMenuItem(
             text = { Text("Open with") },
             leadingIcon = { Icon(PhosphorIcons.Regular.ArrowSquareOut, contentDescription = null) },

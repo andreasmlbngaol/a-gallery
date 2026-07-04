@@ -31,17 +31,17 @@ import id.andreasmbngaol.agallery.domain.model.EdgeEffectMode
 /**
  * Menggambar efek di area status bar (atas) & navigation bar (bawah) DI ATAS [content].
  *
- * - FROSTED : blur kaca (Haze) + gradasi tint theme yang MENGUAT ke tepi.
+ * - BLURRY  : blur kaca (Haze) + gradasi tint theme yang MENGUAT ke tepi.
  *             Blur meng-obscure detail, gradasi menambah kontras supaya
  *             teks/ikon overlay (TopAppBar) tetap terbaca meski di atas
  *             foto terang di light mode / foto gelap di dark mode.
- * - GRADIENT: gradasi tint theme saja (tanpa blur).
+ * - DARKEN  : gradasi tint theme saja (tanpa blur).
  * - OFF     : tanpa efek.
  *
- * ## Z-order (penting untuk Frosted)
+ * ## Z-order (penting untuk BLURRY)
  *
  * Urutan menggambar (bawah → atas):
- * 1. [content]  — di-tag `hazeSource` saat mode FROSTED. Ini yang di-blur.
+ * 1. [content]  — di-tag `hazeSource` saat mode BLURRY. Ini yang di-blur.
  * 2. Top & bottom [EdgeScrim] — dua sub-layer:
  *    a. hazeEffect  : sample warna dari layer 1, blur bertingkat.
  *    b. gradient   : tint theme (surface color) semi-transparan yang menguat
@@ -72,7 +72,7 @@ fun SystemBarScrim(
     ) {
         // Layer 1: konten yang di-tag hazeSource (kalau FROSTED).
         val sourceModifier =
-            if (mode == EdgeEffectMode.FROSTED) Modifier.hazeSource(hazeState) else Modifier
+            if (mode == EdgeEffectMode.BLURRY) Modifier.hazeSource(hazeState) else Modifier
         content(sourceModifier)
 
         // Layer 2: scrim atas & bawah.
@@ -117,15 +117,15 @@ fun SystemBarScrim(
 }
 
 // Blur maksimum di ujung tepi layar (tipis saja), lalu memudar ke 0 ke arah konten.
-private val FrostedBlurRadius = 8.dp
+private val BlurryBlurRadius = 8.dp
 
-// Alpha maksimum gradasi tint theme di tepi. Cukup besar buat menambah
+// Alpha maksimum gradasi tint theme di tepi (mode BLURRY). Cukup besar buat menambah
 // kontras teks TopAppBar di atas foto terang/gelap, tapi tidak sampai
 // menutup foto sepenuhnya (blur masih terlihat).
-private const val FrostedGradientAlpha = 0.22f
-// Alpha gradasi pada mode GRADIENT (tanpa blur) — lebih pekat, karena
+private const val BlurryGradientAlpha = 0.22f
+// Alpha gradasi pada mode DARKEN (tanpa blur) — lebih pekat, karena
 // gradient adalah satu-satunya sumber kontras.
-private const val PlainGradientAlpha = 0.55f
+private const val DarkenGradientAlpha = 0.55f
 
 @Composable
 private fun EdgeScrim(
@@ -136,7 +136,7 @@ private fun EdgeScrim(
     modifier: Modifier,
 ) {
     when (mode) {
-        EdgeEffectMode.FROSTED -> {
+        EdgeEffectMode.BLURRY -> {
             // Bungkus 2 sub-layer:
             // - hazeEffect (blur)
             // - gradient tint theme (menguat ke tepi, memudar ke konten)
@@ -149,7 +149,7 @@ private fun EdgeScrim(
                     modifier = Modifier
                         .matchParentSize()
                         .hazeEffect(state = hazeState) {
-                            blurRadius = FrostedBlurRadius
+                            blurRadius = BlurryBlurRadius
                             backgroundColor = scrimColor
                             tints = listOf(HazeTint(scrimColor.copy(alpha = 0.15f)))
                             // Intensitas blur bergradasi. verticalGradient: startIntensity di
@@ -170,13 +170,13 @@ private fun EdgeScrim(
                             Brush.verticalGradient(
                                 colors = if (top) {
                                     listOf(
-                                        scrimColor.copy(alpha = FrostedGradientAlpha),
+                                        scrimColor.copy(alpha = BlurryGradientAlpha),
                                         Color.Transparent,
                                     )
                                 } else {
                                     listOf(
                                         Color.Transparent,
-                                        scrimColor.copy(alpha = FrostedGradientAlpha),
+                                        scrimColor.copy(alpha = BlurryGradientAlpha),
                                     )
                                 }
                             )
@@ -185,11 +185,11 @@ private fun EdgeScrim(
             }
         }
 
-        EdgeEffectMode.GRADIENT -> {
+        EdgeEffectMode.DARKEN -> {
             val colors = if (top) {
-                listOf(scrimColor.copy(alpha = PlainGradientAlpha), Color.Transparent)
+                listOf(scrimColor.copy(alpha = DarkenGradientAlpha), Color.Transparent)
             } else {
-                listOf(Color.Transparent, scrimColor.copy(alpha = PlainGradientAlpha))
+                listOf(Color.Transparent, scrimColor.copy(alpha = DarkenGradientAlpha))
             }
             Box(modifier = modifier.background(Brush.verticalGradient(colors)))
         }

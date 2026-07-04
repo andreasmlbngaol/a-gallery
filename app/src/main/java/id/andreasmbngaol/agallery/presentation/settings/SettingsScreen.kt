@@ -1,8 +1,13 @@
 package id.andreasmbngaol.agallery.presentation.settings
 
 import android.os.Build
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -12,6 +17,8 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.asPaddingValues
+import androidx.compose.foundation.layout.calculateEndPadding
+import androidx.compose.foundation.layout.calculateStartPadding
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -21,22 +28,30 @@ import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.disabled
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
+import id.andreasmbngaol.agallery.core.ui.EdgeEffectTopBarScaffold
 import id.andreasmbngaol.agallery.core.ui.FloatingTabBarHeight
-import id.andreasmbngaol.agallery.core.ui.isFrostedSupported
+import id.andreasmbngaol.agallery.core.ui.ScreenTopBarHeight
+import id.andreasmbngaol.agallery.core.ui.isBlurryEdgeSupported
 import id.andreasmbngaol.agallery.core.ui.isGlassSupported
 import id.andreasmbngaol.agallery.core.ui.resolveComponentStyle
 import id.andreasmbngaol.agallery.core.ui.resolveEdgeEffectMode
@@ -45,6 +60,7 @@ import id.andreasmbngaol.agallery.domain.model.EdgeEffectMode
 import id.andreasmbngaol.agallery.domain.model.MAX_GRID_COLUMNS
 import id.andreasmbngaol.agallery.domain.model.PerformanceMode
 import id.andreasmbngaol.agallery.domain.model.MIN_GRID_COLUMNS
+import kotlinx.coroutines.delay
 import org.koin.androidx.compose.koinViewModel
 
 // ---- Tuning "frosted glass" segmented control ----
@@ -96,8 +112,8 @@ private data class EdgeEffectChoice(
 // PerformanceMode (Low -> High): makin ke kanan = makin "berat"/intens.
 private val EdgeEffectChoices = listOf(
     EdgeEffectChoice(EdgeEffectMode.OFF, "Off"),
-    EdgeEffectChoice(EdgeEffectMode.GRADIENT, "Gradient"),
-    EdgeEffectChoice(EdgeEffectMode.FROSTED, "Frosted"),
+    EdgeEffectChoice(EdgeEffectMode.DARKEN, "Darken"),
+    EdgeEffectChoice(EdgeEffectMode.BLURRY, "Blurry"),
 )
 
 @Composable
@@ -111,30 +127,36 @@ private fun SettingsContent(
     performanceMode: PerformanceMode,
     onSelectPerformanceMode: (PerformanceMode) -> Unit,
 ) {
-    val defaultMode = remember { resolveEdgeEffectMode(null, Build.VERSION.SDK_INT) }
-    val shownSelection = chosenMode ?: defaultMode
-    val frostedSupported = isFrostedSupported()
-    val defaultComponentStyle = remember { resolveComponentStyle(null, Build.VERSION.SDK_INT) }
-    val shownComponentStyle = componentStyle ?: defaultComponentStyle
+    // Pakai nilai TER-RESOLVE (bukan mentah) supaya opsi yang tak didukung
+    // perangkat tak pernah tampak "terpilih" padahal sebenarnya jatuh ke fallback.
+    val shownSelection = resolveEdgeEffectMode(chosenMode, Build.VERSION.SDK_INT)
+    val blurrySupported = isBlurryEdgeSupported()
+    val shownComponentStyle = resolveComponentStyle(componentStyle, Build.VERSION.SDK_INT)
     val glassSupported = isGlassSupported()
 
+    val safeDrawing = WindowInsets.safeDrawing.asPaddingValues()
+    val layoutDirection = LocalLayoutDirection.current
+
+    // Topbar "Settings" seragam ala Gallery. Efek tepi (Off/Darken/Blurry) yang
+    // dipilih user ikut diterapkan ke area topbar lewat SystemBarScrim.
+    EdgeEffectTopBarScaffold(
+        title = "Settings",
+        edgeEffectMode = chosenMode,
+    ) { contentModifier ->
     Column(
-        modifier = Modifier
+        modifier = contentModifier
             .fillMaxSize()
-            .padding(WindowInsets.safeDrawing.asPaddingValues())
             .verticalScroll(rememberScrollState())
             .padding(
-                start = 16.dp,
-                end = 16.dp,
-                top = 12.dp,
+                start = safeDrawing.calculateStartPadding(layoutDirection) + 16.dp,
+                end = safeDrawing.calculateEndPadding(layoutDirection) + 16.dp,
+                // Turun di bawah topbar (status bar + tinggi topbar).
+                top = safeDrawing.calculateTopPadding() + ScreenTopBarHeight + 8.dp,
                 // Ruang ekstra di bawah supaya item terakhir tak ketutup floating
                 // nav bar (Settings kini jadi salah satu tab di dalam scaffold).
-                bottom = 12.dp + FloatingTabBarHeight,
+                bottom = safeDrawing.calculateBottomPadding() + 12.dp + FloatingTabBarHeight,
             ),
     ) {
-        Text(text = "Settings", style = MaterialTheme.typography.headlineSmall)
-        Spacer(Modifier.height(24.dp))
-
         // ===== Section: Gallery =====
         SettingsSectionHeader(title = "Gallery")
         SettingsCard {
@@ -158,6 +180,7 @@ private fun SettingsContent(
                 title = "Loading behavior",
                 description = "How aggressively thumbnails are preloaded while scrolling.",
                 helperText = performanceModeDescription(performanceMode),
+                selectionKey = performanceMode,
             ) {
                 PerformanceModeSegmentedControl(
                     selected = performanceMode,
@@ -168,35 +191,48 @@ private fun SettingsContent(
 
         Spacer(Modifier.height(SettingsSectionGap))
 
-        // ===== Section: Appearance =====
+        // ===== Section: Appearance (SATU island, dua setting sekategori) =====
         SettingsSectionHeader(title = "Appearance")
         SettingsCard {
             SettingsItem(
                 title = "Component style",
                 description = "Look of the floating bars, buttons & viewer islands across the app.",
                 helperText = componentStyleDescription(shownComponentStyle, glassSupported),
+                selectionKey = shownComponentStyle,
+                footnote = if (!glassSupported) {
+                    "Glass needs Android 13+ \u2014 unavailable on this device."
+                } else {
+                    null
+                },
             ) {
                 ComponentStyleSegmentedControl(
                     selected = shownComponentStyle,
                     onSelect = onSelectComponentStyle,
+                    glassSupported = glassSupported,
                 )
             }
-        }
 
-        Spacer(Modifier.height(SettingsSectionGap))
+            SettingsItemDivider()
 
-        SettingsCard {
             SettingsItem(
                 title = "Screen edge effect",
                 description = "Effect over the status bar & navigation bar when photos scroll behind them.",
-                helperText = edgeEffectDescription(shownSelection, frostedSupported),
+                helperText = edgeEffectDescription(shownSelection, blurrySupported),
+                selectionKey = shownSelection,
+                footnote = if (!blurrySupported) {
+                    "Blurry needs Android 12+ \u2014 unavailable on this device."
+                } else {
+                    null
+                },
             ) {
                 EdgeEffectSegmentedControl(
                     selected = shownSelection,
                     onSelect = onSelectMode,
+                    blurrySupported = blurrySupported,
                 )
             }
         }
+    }
     }
 }
 
@@ -234,15 +270,24 @@ private fun SettingsCard(
     )
 }
 
+/** Durasi helper text (penjelasan pilihan) tampil setelah user mengubah pilihan. */
+private const val HelperVisibleMillis = 4000L
+
 /**
- * Satu baris setting di dalam kartu: judul, deskripsi, kontrol, lalu helper
- * text opsional ([helperText]).
+ * Satu baris setting di dalam kartu: judul, deskripsi singkat, kontrol, lalu
+ * helper text opsional ([helperText]) yang menjelaskan PILIHAN aktif.
+ *
+ * Helper text kini TRANSIEN: hanya muncul beberapa detik ketika user MENGUBAH
+ * pilihan ([selectionKey] berubah), lalu otomatis menghilang. Tidak tampil saat
+ * layar pertama dibuka sehingga daftar setting tetap ringkas.
  */
 @Composable
 private fun SettingsItem(
     title: String,
     description: String,
     helperText: String? = null,
+    selectionKey: Any? = null,
+    footnote: String? = null,
     control: @Composable () -> Unit,
 ) {
     Column(modifier = Modifier.fillMaxWidth()) {
@@ -255,15 +300,65 @@ private fun SettingsItem(
         )
         Spacer(Modifier.height(12.dp))
         control()
-        if (helperText != null) {
+        // Catatan PERMANEN (mis. alasan opsi ter-nonaktif karena batas OS).
+        if (footnote != null) {
             Spacer(Modifier.height(10.dp))
             Text(
-                text = helperText,
+                text = footnote,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+            )
+        }
+        if (helperText != null) {
+            TransientHelperText(text = helperText, selectionKey = selectionKey)
+        }
+    }
+}
+
+/**
+ * Helper text yang muncul sesaat (fade + expand) tiap kali [selectionKey]
+ * berubah, lalu hilang sendiri setelah [HelperVisibleMillis]. Sengaja TIDAK
+ * tampil pada komposisi pertama (hanya reaksi atas perubahan pilihan user).
+ */
+@Composable
+private fun TransientHelperText(text: String, selectionKey: Any?) {
+    var visible by remember { mutableStateOf(false) }
+    var initialized by remember { mutableStateOf(false) }
+    LaunchedEffect(selectionKey) {
+        if (!initialized) {
+            initialized = true
+            return@LaunchedEffect
+        }
+        visible = true
+        delay(HelperVisibleMillis)
+        visible = false
+    }
+    AnimatedVisibility(
+        visible = visible,
+        enter = fadeIn(tween(200)) + expandVertically(tween(200)),
+        exit = fadeOut(tween(200)) + shrinkVertically(tween(200)),
+    ) {
+        Column {
+            Spacer(Modifier.height(10.dp))
+            Text(
+                text = text,
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
     }
+}
+
+/**
+ * Garis pemisah tipis antar setting DI DALAM satu island (mis. Component style
+ * <-> Screen edge effect di kategori Appearance).
+ */
+@Composable
+private fun SettingsItemDivider() {
+    HorizontalDivider(
+        modifier = Modifier.padding(vertical = 16.dp),
+        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f),
+    )
 }
 
 /**
@@ -275,13 +370,17 @@ private fun SettingsItem(
 private fun EdgeEffectSegmentedControl(
     selected: EdgeEffectMode,
     onSelect: (EdgeEffectMode) -> Unit,
+    blurrySupported: Boolean,
 ) {
     SegmentedGlassTrack {
         EdgeEffectChoices.forEach { choice ->
+            // BLURRY butuh API 32; di bawah itu di-nonaktifkan (bukan disembunyikan).
+            val enabled = choice.mode != EdgeEffectMode.BLURRY || blurrySupported
             SegmentedGlassItem(
                 label = choice.label,
                 selected = selected == choice.mode,
                 onClick = { onSelect(choice.mode) },
+                enabled = enabled,
                 modifier = Modifier.weight(1f),
             )
         }
@@ -365,13 +464,17 @@ private val ComponentStyleChoices = listOf(
 private fun ComponentStyleSegmentedControl(
     selected: ComponentStyle,
     onSelect: (ComponentStyle) -> Unit,
+    glassSupported: Boolean,
 ) {
     SegmentedGlassTrack {
         ComponentStyleChoices.forEach { choice ->
+            // GLASS butuh API 33; di bawah itu di-nonaktifkan (bukan disembunyikan).
+            val enabled = choice.style != ComponentStyle.GLASS || glassSupported
             SegmentedGlassItem(
                 label = choice.label,
                 selected = selected == choice.style,
                 onClick = { onSelect(choice.style) },
+                enabled = enabled,
                 modifier = Modifier.weight(1f),
             )
         }
@@ -419,6 +522,7 @@ private fun SegmentedGlassItem(
     selected: Boolean,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
+    enabled: Boolean = true,
 ) {
     val backgroundColor by animateColorAsState(
         targetValue = if (selected) {
@@ -430,10 +534,11 @@ private fun SegmentedGlassItem(
         label = "segment-bg",
     )
     val contentColor by animateColorAsState(
-        targetValue = if (selected) {
-            MaterialTheme.colorScheme.onSurface
-        } else {
-            MaterialTheme.colorScheme.onSurfaceVariant
+        targetValue = when {
+            // Ter-nonaktif: teks diredupkan (tak bisa dipilih).
+            !enabled -> MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.38f)
+            selected -> MaterialTheme.colorScheme.onSurface
+            else -> MaterialTheme.colorScheme.onSurfaceVariant
         },
         animationSpec = tween(220),
         label = "segment-fg",
@@ -443,8 +548,13 @@ private fun SegmentedGlassItem(
             .fillMaxHeight()
             .clip(RoundedCornerShape(SegmentedChipRadius))
             .background(backgroundColor)
-            .clickable(onClick = onClick)
-            .semantics { role = Role.RadioButton },
+            .then(
+                if (enabled) Modifier.clickable(onClick = onClick) else Modifier,
+            )
+            .semantics {
+                role = Role.RadioButton
+                if (!enabled) disabled()
+            },
         contentAlignment = Alignment.Center,
     ) {
         Text(
@@ -457,13 +567,13 @@ private fun SegmentedGlassItem(
 
 private fun edgeEffectDescription(
     mode: EdgeEffectMode,
-    frostedSupported: Boolean,
+    blurrySupported: Boolean,
 ): String = when (mode) {
-    EdgeEffectMode.FROSTED -> if (frostedSupported) {
-        "Frosted glass behind the system bars."
+    EdgeEffectMode.BLURRY -> if (blurrySupported) {
+        "Blurred glass behind the system bars."
     } else {
-        "Needs Android 12+ \u2014 falls back to Gradient on this device."
+        "Needs Android 12+ \u2014 falls back to Darken on this device."
     }
-    EdgeEffectMode.GRADIENT -> "Subtle dark gradient, light on every device."
+    EdgeEffectMode.DARKEN -> "Subtle dark gradient, light on every device."
     EdgeEffectMode.OFF -> "No effect at the screen edges."
 }

@@ -45,8 +45,11 @@ import com.adamglin.PhosphorIcons
 import com.adamglin.phosphoricons.Regular
 import com.adamglin.phosphoricons.regular.ImageSquare
 import id.andreasmbngaol.agallery.core.permission.MediaPermissionGate
+import id.andreasmbngaol.agallery.core.ui.EdgeEffectTopBarScaffold
 import id.andreasmbngaol.agallery.core.ui.FloatingTabBarHeight
+import id.andreasmbngaol.agallery.core.ui.ScreenTopBarHeight
 import id.andreasmbngaol.agallery.domain.model.Album
+import id.andreasmbngaol.agallery.domain.model.EdgeEffectMode
 import org.koin.androidx.compose.koinViewModel
 
 private val AlbumsEdgePadding = 12.dp
@@ -64,29 +67,44 @@ private val AlbumCoverCorner = 16.dp
 @Composable
 fun AlbumsScreen(
     modifier: Modifier = Modifier,
+    edgeEffectMode: EdgeEffectMode? = null,
     viewModel: AlbumsViewModel = koinViewModel(),
 ) {
     val safeDrawing = WindowInsets.safeDrawing.asPaddingValues()
     val layoutDirection = LocalLayoutDirection.current
-    // Bottom = safe area (nav bar) + tinggi floating tab bar, biar item terakhir
-    // tidak ketutup pill bar.
+    // Top = safe area + tinggi topbar seragam (biar item pertama tak ketutup
+    // topbar). Bottom = safe area (nav bar) + tinggi floating tab bar.
     val contentPadding = PaddingValues(
-        top = safeDrawing.calculateTopPadding() + AlbumsEdgePadding,
+        top = safeDrawing.calculateTopPadding() + ScreenTopBarHeight + AlbumsEdgePadding,
         bottom = safeDrawing.calculateBottomPadding() + FloatingTabBarHeight,
         start = safeDrawing.calculateStartPadding(layoutDirection) + AlbumsEdgePadding,
         end = safeDrawing.calculateEndPadding(layoutDirection) + AlbumsEdgePadding,
     )
 
-    MediaPermissionGate(modifier = modifier.fillMaxSize()) {
-        LaunchedEffect(Unit) { viewModel.refresh() }
-        val state by viewModel.state.collectAsState()
-        when (val current = state) {
-            AlbumsUiState.Loading -> LoadingState()
-            AlbumsUiState.Empty -> EmptyAlbumsState()
-            is AlbumsUiState.Content -> AlbumsGrid(
-                albums = current.albums,
-                contentPadding = contentPadding,
-            )
+    // Topbar "Albums" seragam ala Gallery; efek tepi (Off/Darken/Blurry) dari
+    // Settings ikut diterapkan lewat SystemBarScrim di dalam scaffold ini.
+    EdgeEffectTopBarScaffold(
+        title = "Albums",
+        edgeEffectMode = edgeEffectMode,
+        modifier = modifier,
+    ) { contentModifier ->
+        // PENTING: MediaPermissionGate MENGABAIKAN modifier-nya saat izin sudah
+        // diberikan (langsung memanggil content()). Jadi hazeSource (contentModifier)
+        // harus dipasang ke konten yang benar-benar digambar DI DALAM gate, bukan
+        // ke gate-nya \u2014 inilah kenapa efek Blurry tadi tak muncul di Albums.
+        MediaPermissionGate(modifier = Modifier.fillMaxSize()) {
+            Box(modifier = contentModifier.fillMaxSize()) {
+                LaunchedEffect(Unit) { viewModel.refresh() }
+                val state by viewModel.state.collectAsState()
+                when (val current = state) {
+                    AlbumsUiState.Loading -> LoadingState()
+                    AlbumsUiState.Empty -> EmptyAlbumsState()
+                    is AlbumsUiState.Content -> AlbumsGrid(
+                        albums = current.albums,
+                        contentPadding = contentPadding,
+                    )
+                }
+            }
         }
     }
 }

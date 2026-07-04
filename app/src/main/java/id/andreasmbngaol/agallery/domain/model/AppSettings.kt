@@ -3,7 +3,7 @@ package id.andreasmbngaol.agallery.domain.model
 /** Batas & default jumlah kolom grid galeri (dipakai lintas layer). */
 const val MIN_GRID_COLUMNS = 3
 const val MAX_GRID_COLUMNS = 5
-const val DEFAULT_GRID_COLUMNS = 3
+const val DEFAULT_GRID_COLUMNS = 4
 
 /**
  * Preferensi aplikasi (domain) \u2014 sumber kebenaran tunggal, dipersist via DataStore.
@@ -12,7 +12,7 @@ const val DEFAULT_GRID_COLUMNS = 3
  * GRADIENT di bawahnya. Resolusi final butuh Build.VERSION, jadi dilakukan di
  * layer presentation; domain cukup menyimpan pilihan mentah user.
  *
- * [gridColumns] jumlah kolom grid galeri (3..5, default 3).
+ * [gridColumns] jumlah kolom grid galeri (3..5, default 4 = nilai tengah).
  * [sortOrder] urutan sortir media; dipersist supaya TETAP walau app ditutup.
  * [performanceMode] trade-off RAM vs kelancaran scroll (prefetch + cache).
  */

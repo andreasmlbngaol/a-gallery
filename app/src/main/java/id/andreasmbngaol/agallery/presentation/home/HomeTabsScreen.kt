@@ -11,6 +11,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.dp
 import id.andreasmbngaol.agallery.core.ui.GalleryTab
 import id.andreasmbngaol.agallery.core.ui.GalleryTabScaffold
 import id.andreasmbngaol.agallery.core.ui.rememberEffectiveComponentStyle
@@ -20,7 +22,9 @@ import id.andreasmbngaol.agallery.presentation.gallery.GalleryGridScreen
 import id.andreasmbngaol.agallery.presentation.gallery.GalleryViewModel
 import id.andreasmbngaol.agallery.presentation.settings.SettingsScreen
 import org.koin.androidx.compose.koinViewModel
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
+import kotlin.math.roundToInt
 
 // Urutan halaman pager: Settings (0) | Gallery (1) | Albums (2). Gallery jadi
 // halaman awal (tengah) supaya swipe kanan -> Settings, swipe kiri -> Albums.
@@ -28,6 +32,11 @@ private const val PageSettings = 0
 private const val PageGallery = 1
 private const val PageAlbums = 2
 private const val HomePageCount = 3
+
+// Jarak GESER pada pill bar yang setara SATU halaman penuh pager. Dipakai untuk
+// memetakan drag px -> fraksi halaman saat MENGGERAKKAN pager secara kontinu
+// lewat bar (0 -> 0,4 dst). Makin kecil = makin sensitif.
+private val NavSwipePxPerPage = 72.dp
 
 /**
  * Root berisi dua tab (Gallery / Albums) yang bisa DI-SWIPE horizontal.
@@ -74,12 +83,22 @@ fun HomeTabsScreen(
     val componentStyleChosen by galleryViewModel.componentStyle.collectAsState()
     val componentStyle = rememberEffectiveComponentStyle(componentStyleChosen)
 
+    // Efek tepi (Off/Darken/Blurry) dari Settings -> dipakai topbar tab Albums
+    // supaya konsisten dgn Gallery. (Tab Settings pakai VM-nya sendiri.)
+    val edgeEffectMode by galleryViewModel.edgeEffectMode.collectAsState()
+
     // Status scroll grid galeri -> untuk MEMBEKUKAN capture backdrop nav bar saat
     // gaya FROSTED (hemat GPU). GLASS tetap live; SOLID tak pernah capture.
     var contentScrolling by remember { mutableStateOf(false) }
 
     val pagerState = rememberPagerState(initialPage = PageGallery, pageCount = { HomePageCount })
     val scope = rememberCoroutineScope()
+    val density = LocalDensity.current
+    // Skala: berapa px scroll pager per 1 px geser di bar (1 halaman = pageSize).
+    val navPxPerPage = with(density) { NavSwipePxPerPage.toPx() }
+    // Job animasi SNAP terakhir; dibatalkan saat gesture bar baru dimulai supaya
+    // dispatchRawDelta tak berebut dengan animasi settle sebelumnya.
+    var settleJob by remember { mutableStateOf<Job?>(null) }
 
     // Tab ter-highlight ngikutin halaman pager yang lagi aktif.
     val selectedTab = when (pagerState.currentPage) {
@@ -104,19 +123,40 @@ fun HomeTabsScreen(
         barVisible = !previewActive,
         componentStyle = componentStyle,
         contentInteracting = contentScrolling,
+        // GESER bar = gerakkan pager KONTINU (mengikuti jari), lalu SNAP ke tab
+        // terdekat saat dilepas. Highlight tab tetap ikut currentPage (baru
+        // pindah setelah melewati titik tengah antar-halaman).
+        onNavBarDragStart = { settleJob?.cancel() },
+        onNavBarDrag = { dragPx ->
+            val pageSize = pagerState.layoutInfo.pageSize
+            if (pageSize > 0 && navPxPerPage > 0f) {
+                // Geser jari KIRI (dragPx negatif) -> pager MAJU ke tab kanan
+                // (delta positif), jadi tandanya dibalik.
+                pagerState.dispatchRawDelta(-dragPx / navPxPerPage * pageSize)
+            }
+        },
+        onNavBarDragEnd = {
+            settleJob = scope.launch {
+                val target = (pagerState.currentPage + pagerState.currentPageOffsetFraction)
+                    .roundToInt()
+                    .coerceIn(0, HomePageCount - 1)
+                pagerState.animateScrollToPage(target)
+            }
+        },
     ) {
         HorizontalPager(
             state = pagerState,
             modifier = Modifier.fillMaxSize(),
             // Kunci swipe antar-tab saat preview long-press aktif.
             userScrollEnabled = !previewActive,
-            // Kedua halaman cuma dua, jadi biarkan tetangganya tetap ke-compose
-            // supaya state grid & posisi scroll tak reset saat swipe bolak-balik.
+            // Swipe KONTEN sengaja dibatasi 1 halaman per geseran (perilaku pager
+            // default) biar tak kelebihan. Untuk lompat jauh (mis. Settings->Albums)
+            // GESER pada bar menu bawah (lihat GalleryTabScaffold).
             beyondViewportPageCount = 1,
         ) { page ->
             when (page) {
                 PageSettings -> SettingsScreen()
-                PageAlbums -> AlbumsScreen()
+                PageAlbums -> AlbumsScreen(edgeEffectMode = edgeEffectMode)
                 else -> GalleryGridScreen(
                     onMediaClick = onMediaClick,
                     onScrollStateChange = { contentScrolling = it },
