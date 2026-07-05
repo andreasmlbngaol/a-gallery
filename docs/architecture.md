@@ -66,7 +66,7 @@ flowchart TB
 ## Project structure
 
 ```text
-AGallery/
+a-gallery/
 ├─ app/
 │  └─ src/main/
 │     ├─ AndroidManifest.xml           # Media permissions (READ_MEDIA_*, partial access)

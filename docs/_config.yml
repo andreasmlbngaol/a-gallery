@@ -1,0 +1,9 @@
+# GitHub Pages (Jekyll) configuration for the AGallery documentation site.
+# With this file present, enable Pages in the repo: Settings → Pages →
+# "Deploy from a branch" → branch: main, folder: /docs.
+title: AGallery Documentation
+description: >-
+  Technical documentation for AGallery — a fast, private, offline-first photo &
+  video gallery for Android, built with Jetpack Compose.
+theme: jekyll-theme-cayman
+show_downloads: false
