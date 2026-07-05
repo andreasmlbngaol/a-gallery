@@ -10,7 +10,9 @@ import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.spring
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.border
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -20,7 +22,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.draw.blur
 import androidx.compose.ui.graphics.vector.ImageVector
-import com.adamglin.phosphoricons.regular.Trash
+import com.adamglin.phosphoricons.bold.Trash
 import androidx.compose.animation.SizeTransform
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
@@ -42,6 +44,7 @@ import androidx.compose.foundation.layout.calculateStartPadding
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
@@ -70,14 +73,19 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shadow
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
@@ -126,14 +134,20 @@ import coil3.request.crossfade
 import coil3.video.videoFramePercent
 import com.adamglin.PhosphorIcons
 import com.adamglin.phosphoricons.Fill
-import com.adamglin.phosphoricons.Regular
+import com.adamglin.phosphoricons.Bold
 import com.adamglin.phosphoricons.fill.Heart
 import com.adamglin.phosphoricons.fill.Play
 import com.adamglin.phosphoricons.fill.Trash
-import com.adamglin.phosphoricons.regular.ArrowLeft
-import com.adamglin.phosphoricons.regular.Heart
-import com.adamglin.phosphoricons.regular.ImageSquare
-import com.adamglin.phosphoricons.regular.WarningCircle
+import com.adamglin.phosphoricons.bold.ArrowLeft
+import com.adamglin.phosphoricons.bold.Check
+import com.adamglin.phosphoricons.bold.CheckSquare
+import com.adamglin.phosphoricons.bold.Square
+import com.adamglin.phosphoricons.bold.X
+import com.adamglin.phosphoricons.bold.Copy
+import com.adamglin.phosphoricons.bold.FolderSimple
+import com.adamglin.phosphoricons.bold.Heart
+import com.adamglin.phosphoricons.bold.ImageSquare
+import com.adamglin.phosphoricons.bold.WarningCircle
 import id.andreasmbngaol.agallery.core.ui.ConfirmDeleteDialog
 import id.andreasmbngaol.agallery.core.ui.FloatingTabBarHeight
 import id.andreasmbngaol.agallery.core.ui.SystemBarScrim
@@ -145,8 +159,13 @@ import id.andreasmbngaol.agallery.core.ui.rememberEffectiveEdgeEffectMode
 import id.andreasmbngaol.agallery.domain.model.ComponentStyle
 import id.andreasmbngaol.agallery.domain.model.GallerySortOrder
 import id.andreasmbngaol.agallery.domain.model.MediaItem
+import id.andreasmbngaol.agallery.domain.model.MediaScope
+import id.andreasmbngaol.agallery.domain.model.mediaScopeFromKey
 import id.andreasmbngaol.agallery.domain.model.MediaType
 import id.andreasmbngaol.agallery.presentation.animation.sharedPhotoElement
+import id.andreasmbngaol.agallery.presentation.viewer.AlbumThumbnailPickerDialog
+import id.andreasmbngaol.agallery.presentation.viewer.HoldToDeleteButton
+import id.andreasmbngaol.agallery.presentation.viewer.MoveToTrashConfirmDialog
 import org.koin.androidx.compose.koinViewModel
 import java.time.Instant
 import java.time.ZoneId
@@ -224,6 +243,10 @@ fun GalleryGridScreen(
     // tombol Back ([onBack]) dan ruang bawah tak lagi menyisakan floating bar.
     staticTitle: String? = null,
     onBack: (() -> Unit)? = null,
+    // Aktifkan multi-select (Copy/Move/Delete batch). Hanya dipakai layar
+    // detail album; tab Gallery utama memakai default false.
+    selectionEnabled: Boolean = false,
+    albumKey: String? = null,
     viewModel: GalleryViewModel = koinViewModel(),
 ) {
     // Semua preferensi bersumber dari DataStore lewat VM (reaktif & persisten).
@@ -289,12 +312,35 @@ fun GalleryGridScreen(
     val previewItem by viewModel.previewItem.collectAsState()
     val favoriteIds by viewModel.favoriteIds.collectAsState()
 
+    // ---- Multi-select batch (aktif hanya bila selectionEnabled = detail album) ----
+    val albums by viewModel.albums.collectAsState()
+    var selectionMode by remember { mutableStateOf(false) }
+    val selected = remember { mutableStateMapOf<Long, MediaItem>() }
+    // Copy/Move/Delete berlaku di SEMUA album KECUALI album khusus.
+    // Album khusus = Recent (AllMedia), Videos (AllVideos), Favorites -> hanya Delete.
+    val isSpecialAlbum = remember(albumKey) {
+        when (albumKey?.let { mediaScopeFromKey(it) }) {
+            MediaScope.AllMedia, MediaScope.AllVideos, MediaScope.Favorites -> true
+            else -> false
+        }
+    }
+    fun toggleSelect(item: MediaItem) {
+        if (selected.containsKey(item.id)) selected.remove(item.id)
+        else selected[item.id] = item
+    }
+    fun exitSelection() {
+        selectionMode = false
+        selected.clear()
+    }
+    BackHandler(enabled = selectionMode) { exitSelection() }
+
     // Launcher untuk konfirmasi hapus scoped-storage (dialog sistem, API 30+).
     val deleteLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.StartIntentSenderForResult(),
     ) { result ->
         if (result.resultCode == Activity.RESULT_OK) {
             items.refresh()
+            exitSelection()
         }
         viewModel.dismissPreview()
     }
@@ -308,6 +354,25 @@ fun GalleryGridScreen(
         viewModel.mediaDeleted.collect {
             items.refresh()
             viewModel.dismissPreview()
+            exitSelection()
+        }
+    }
+    // Consent SATU-kali untuk batch move (API 30+); saat disetujui, VM lanjut.
+    val writeLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.StartIntentSenderForResult(),
+    ) { result ->
+        if (result.resultCode == Activity.RESULT_OK) viewModel.onWriteConsentGranted()
+        else viewModel.onWriteConsentDenied()
+    }
+    LaunchedEffect(Unit) {
+        viewModel.writeRequests.collect { sender ->
+            writeLauncher.launch(IntentSenderRequest.Builder(sender).build())
+        }
+    }
+    LaunchedEffect(Unit) {
+        viewModel.selectionActionDone.collect {
+            items.refresh()
+            exitSelection()
         }
     }
 
@@ -395,7 +460,10 @@ fun GalleryGridScreen(
                 gridColumns = gridColumns,
                 performanceMode = performanceMode,
                 onMediaClick = { id, index -> onMediaClick(id, index, sortOrder) },
-                onLongPress = { viewModel.showPreview(it) },
+                onLongPress = { item -> viewModel.showPreview(item) },
+                selectionMode = selectionMode,
+                isSelected = { selected.containsKey(it) },
+                onToggleSelect = { toggleSelect(it) },
             )
         }
     }
@@ -430,8 +498,216 @@ fun GalleryGridScreen(
             )
         }
 
+        // ---------- Island multi-select (hanya di detail album) ----------
+        if (selectionEnabled && items.itemCount > 0) {
+            var batchAlbumMode by remember { mutableStateOf<BatchAlbumMode?>(null) }
+            var showBatchTrashConfirm by remember { mutableStateOf(false) }
+            var showBatchDeleteConfirm by remember { mutableStateOf(false) }
+            val selCount = selected.size
+            val loadedItems = items.itemSnapshotList.items
+            val allSelected = loadedItems.isNotEmpty() &&
+                loadedItems.all { selected.containsKey(it.id) }
+            val tint = MaterialTheme.colorScheme.onSurface
+
+            Row(
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .navigationBarsPadding()
+                    .padding(bottom = 20.dp)
+                    .clip(RoundedCornerShape(percent = 50))
+                    .selectionGlass(componentStyle, topBarBackdrop)
+                    .padding(horizontal = 10.dp, vertical = 8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(4.dp),
+            ) {
+                if (!selectionMode) {
+                    // SATU-SATUNYA pemicu multi-select. Long-press item TETAP
+                    // membuka menu preview (Favorite / Trash / Delete) seperti semula.
+                    IslandAction(
+                        icon = PhosphorIcons.Bold.CheckSquare,
+                        label = "Select",
+                        tint = tint,
+                        onClick = { selectionMode = true },
+                    )
+                } else {
+                    // Select all / Select none (gaya & warna sama dgn island Trash).
+                    IslandAction(
+                        icon = if (allSelected) PhosphorIcons.Bold.Square
+                        else PhosphorIcons.Bold.CheckSquare,
+                        label = if (allSelected) "Select none" else "Select all",
+                        tint = tint,
+                        onClick = {
+                            if (allSelected) {
+                                selected.clear()
+                            } else {
+                                selected.clear()
+                                loadedItems.forEach { selected[it.id] = it }
+                            }
+                        },
+                    )
+                    if (selCount > 0) {
+                        // Copy & Move di SEMUA album kecuali khusus (Recent/Videos/Favorites).
+                        if (!isSpecialAlbum) {
+                            IslandAction(
+                                icon = PhosphorIcons.Bold.Copy,
+                                label = "Copy to album",
+                                tint = tint,
+                                onClick = {
+                                    viewModel.loadAlbums()
+                                    batchAlbumMode = BatchAlbumMode.COPY
+                                },
+                            )
+                            IslandAction(
+                                icon = PhosphorIcons.Bold.FolderSimple,
+                                label = "Move to album",
+                                tint = tint,
+                                onClick = {
+                                    viewModel.loadAlbums()
+                                    batchAlbumMode = BatchAlbumMode.MOVE
+                                },
+                            )
+                        }
+                        // Tap = ke Trash (konfirmasi ringan); tahan = hapus permanen
+                        // (animasi gradient sama seperti di photo/video viewer).
+                        HoldToDeleteButton(
+                            onTap = { showBatchTrashConfirm = true },
+                            onHoldComplete = { showBatchDeleteConfirm = true },
+                            tint = tint,
+                        )
+                    }
+                    IslandAction(
+                        icon = PhosphorIcons.Bold.X,
+                        label = "Cancel",
+                        tint = tint,
+                        onClick = { exitSelection() },
+                    )
+                }
+            }
+
+            // Picker album (grid thumbnail) utk Copy/Move batch.
+            batchAlbumMode?.let { mode ->
+                AlbumThumbnailPickerDialog(
+                    title = if (mode == BatchAlbumMode.COPY) "Copy to album" else "Move to album",
+                    albums = albums,
+                    onPick = { name ->
+                        val picked = selected.values.toList()
+                        if (mode == BatchAlbumMode.COPY) {
+                            viewModel.copyManyToAlbum(picked, name)
+                        } else {
+                            viewModel.moveManyToAlbum(picked, name)
+                        }
+                        batchAlbumMode = null
+                    },
+                    onDismiss = { batchAlbumMode = null },
+                )
+            }
+
+            if (showBatchTrashConfirm) {
+                MoveToTrashConfirmDialog(
+                    onConfirm = {
+                        viewModel.moveManyToTrash(selected.values.toList())
+                        showBatchTrashConfirm = false
+                    },
+                    onDismiss = { showBatchTrashConfirm = false },
+                )
+            }
+
+            if (showBatchDeleteConfirm) {
+                ConfirmDeleteDialog(
+                    count = selCount,
+                    onConfirm = {
+                        viewModel.deleteMany(selected.values.map { it.uri })
+                        showBatchDeleteConfirm = false
+                    },
+                    onDismiss = { showBatchDeleteConfirm = false },
+                )
+            }
+        }
+
     } // tutup Box root
 }
+
+/** Mode picker album utk aksi batch di island seleksi. */
+private enum class BatchAlbumMode { COPY, MOVE }
+
+/**
+ * Modifier kapsul liquid-glass (pola identik dgn island Trash/PhotoViewer).
+ * GLASS = blur + lens; FROSTED = vibrancy + veil; SOLID/API<33 = fallback fill.
+ */
+@Composable
+private fun Modifier.selectionGlass(style: ComponentStyle, backdrop: Backdrop): Modifier {
+    val glassTint = MaterialTheme.colorScheme.surfaceContainerHighest.copy(
+        alpha = if (style == ComponentStyle.FROSTED) 0.4f else 0.3f,
+    )
+    val fallbackTint = MaterialTheme.colorScheme.surfaceContainerHighest.copy(
+        alpha = if (style == ComponentStyle.FROSTED) 0.55f else 0.95f,
+    )
+    return if (style.drawsBackdrop()) {
+        drawBackdrop(
+            backdrop = backdrop,
+            shape = { Capsule() },
+            effects = {
+                vibrancy()
+                if (style.usesBlur()) blur(4.dp.toPx())
+                if (style.usesLens()) lens(12.dp.toPx(), 16.dp.toPx())
+            },
+            onDrawSurface = { drawRect(glassTint) },
+        )
+    } else {
+        clip(RoundedCornerShape(percent = 50)).background(fallbackTint)
+    }
+}
+
+/** Satu aksi di island: ikon Phosphor saja (label utk contentDescription). */
+@Composable
+private fun IslandAction(
+    label: String,
+    tint: Color,
+    onClick: () -> Unit,
+    icon: ImageVector,
+) {
+    Box(
+        modifier = Modifier
+            .clip(RoundedCornerShape(percent = 50))
+            .clickable(onClick = onClick)
+            .padding(10.dp),
+        contentAlignment = Alignment.Center,
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = label,
+            tint = tint,
+            modifier = Modifier.size(24.dp),
+        )
+    }
+}
+
+/** Lingkaran check: kosong (outline putih) atau terisi primary + centang. */
+@Composable
+private fun SelectionCheck(
+    selected: Boolean,
+    modifier: Modifier = Modifier,
+) {
+    val primary = MaterialTheme.colorScheme.primary
+    Box(
+        modifier = modifier
+            .size(24.dp)
+            .clip(CircleShape)
+            .background(if (selected) primary else Color.Black.copy(alpha = 0.35f))
+            .border(2.dp, Color.White, CircleShape),
+        contentAlignment = Alignment.Center,
+    ) {
+        if (selected) {
+            Icon(
+                imageVector = PhosphorIcons.Bold.Check,
+                contentDescription = null,
+                tint = Color.White,
+                modifier = Modifier.size(16.dp),
+            )
+        }
+    }
+}
+
 
 @Composable
 private fun GalleryPagingContent(
@@ -443,6 +719,9 @@ private fun GalleryPagingContent(
     performanceMode: PerformanceMode,
     onMediaClick: (Long, Int) -> Unit,
     onLongPress: (MediaItem) -> Unit,
+    selectionMode: Boolean = false,
+    isSelected: (Long) -> Boolean = { false },
+    onToggleSelect: (MediaItem) -> Unit = {},
 ) {
     val refresh = items.loadState.refresh
     when {
@@ -493,6 +772,9 @@ private fun GalleryPagingContent(
             performanceMode = performanceMode,
             onMediaClick = onMediaClick,
             onLongPress = onLongPress,
+            selectionMode = selectionMode,
+            isSelected = isSelected,
+            onToggleSelect = onToggleSelect,
         )
     }
 }
@@ -610,6 +892,9 @@ private fun GalleryGrid(
     performanceMode: PerformanceMode,
     onMediaClick: (Long, Int) -> Unit,
     onLongPress: (MediaItem) -> Unit,
+    selectionMode: Boolean = false,
+    isSelected: (Long) -> Boolean = { false },
+    onToggleSelect: (MediaItem) -> Unit = {},
 ) {
     GalleryPullToRefresh(
         items = items,
@@ -702,14 +987,28 @@ private fun GalleryGrid(
                     )
                     return@items
                 }
+                val isSel = isSelected(item.id)
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
                         .aspectRatio(1f)
                         .sharedPhotoElement(key = "photo-${item.id}")
+                        .then(
+                            if (isSel) {
+                                Modifier.border(3.dp, MaterialTheme.colorScheme.primary)
+                            } else {
+                                Modifier
+                            },
+                        )
                         .combinedClickable(
-                            onClick = { onMediaClick(item.id, index) },
-                            onLongClick = { onLongPress(item) },
+                            onClick = {
+                                if (selectionMode) onToggleSelect(item)
+                                else onMediaClick(item.id, index)
+                            },
+                            onLongClick = {
+                                if (selectionMode) onToggleSelect(item)
+                                else onLongPress(item)
+                            },
                         ),
                 ) {
                     AsyncImage(
@@ -740,6 +1039,14 @@ private fun GalleryGrid(
                             durationMs = item.durationMs,
                             modifier = Modifier
                                 .align(Alignment.BottomEnd)
+                                .padding(4.dp),
+                        )
+                    }
+                    if (selectionMode) {
+                        SelectionCheck(
+                            selected = isSel,
+                            modifier = Modifier
+                                .align(Alignment.TopStart)
                                 .padding(4.dp),
                         )
                     }
@@ -845,7 +1152,7 @@ private fun EmptyState(
                 verticalArrangement = Arrangement.Center,
             ) {
                 Icon(
-                    imageVector = PhosphorIcons.Regular.ImageSquare,
+                    imageVector = PhosphorIcons.Bold.ImageSquare,
                     contentDescription = null,
                     modifier = Modifier.size(64.dp),
                     tint = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -888,7 +1195,7 @@ private fun ErrorState(
                 verticalArrangement = Arrangement.Center,
             ) {
                 Icon(
-                    imageVector = PhosphorIcons.Regular.WarningCircle,
+                    imageVector = PhosphorIcons.Bold.WarningCircle,
                     contentDescription = null,
                     modifier = Modifier.size(64.dp),
                     tint = MaterialTheme.colorScheme.error,
@@ -1092,7 +1399,7 @@ private fun StyledCircleBackButton(
         contentAlignment = Alignment.Center,
     ) {
         Icon(
-            imageVector = PhosphorIcons.Regular.ArrowLeft,
+            imageVector = PhosphorIcons.Bold.ArrowLeft,
             contentDescription = "Back",
             // Ikon ikut theme (onBackground): di light-mode gelap, di dark-mode
             // terang -- tidak lagi "selalu putih" (yg invisible di light mode).
@@ -1160,13 +1467,13 @@ private fun PhotoContextMenu(
         horizontalArrangement = Arrangement.spacedBy(4.dp),
     ) {
         MenuAction(
-            icon = if (isFavorite) PhosphorIcons.Fill.Heart else PhosphorIcons.Regular.Heart,
+            icon = if (isFavorite) PhosphorIcons.Fill.Heart else PhosphorIcons.Bold.Heart,
             label = if (isFavorite) "Favorited" else "Favorite",
             tint = if (isFavorite) favoriteColor else neutralColor,
             onClick = onFavoriteClick,
         )
         MenuAction(
-            icon = PhosphorIcons.Regular.Trash,
+            icon = PhosphorIcons.Bold.Trash,
             label = "Trash",
             tint = neutralColor,
             onClick = onTrashClick,

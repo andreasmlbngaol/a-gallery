@@ -41,10 +41,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.adamglin.PhosphorIcons
-import com.adamglin.phosphoricons.Regular
-import com.adamglin.phosphoricons.regular.FolderSimple
-import com.adamglin.phosphoricons.regular.Image
-import com.adamglin.phosphoricons.regular.WarningCircle
+import com.adamglin.phosphoricons.Bold
+import com.adamglin.phosphoricons.bold.FolderSimple
+import com.adamglin.phosphoricons.bold.Image
+import com.adamglin.phosphoricons.bold.WarningCircle
 
 /**
  * Gate izin WAJIB yang membungkus SELURUH aplikasi (dipasang di MainActivity).
@@ -122,7 +122,7 @@ private fun MediaStep(
 
     PermissionBlockingScreen(
         modifier = modifier,
-        icon = if (denied) PhosphorIcons.Regular.WarningCircle else PhosphorIcons.Regular.Image,
+        icon = if (denied) PhosphorIcons.Bold.WarningCircle else PhosphorIcons.Bold.Image,
         title = if (denied) "Full access needed" else "Photos & videos",
         message = if (denied) {
             "AGallery needs access to ALL your photos and videos. " +
@@ -160,7 +160,7 @@ private fun AllFilesStep(
     }
     PermissionBlockingScreen(
         modifier = modifier,
-        icon = PhosphorIcons.Regular.FolderSimple,
+        icon = PhosphorIcons.Bold.FolderSimple,
         title = "All files access",
         message = "To delete, rename and organize your photos directly — and empty " +
             "Trash automatically — AGallery needs \"All files access\".",

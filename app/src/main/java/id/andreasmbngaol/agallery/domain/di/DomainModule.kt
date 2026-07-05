@@ -17,6 +17,7 @@ import id.andreasmbngaol.agallery.domain.usecase.CopyMediaToAlbumUseCase
 import id.andreasmbngaol.agallery.domain.usecase.MoveMediaToAlbumUseCase
 import id.andreasmbngaol.agallery.domain.usecase.ObserveFavoriteIdsUseCase
 import id.andreasmbngaol.agallery.domain.usecase.RenameMediaUseCase
+import id.andreasmbngaol.agallery.domain.usecase.RequestWriteAccessUseCase
 import id.andreasmbngaol.agallery.domain.usecase.SetComponentStyleUseCase
 import id.andreasmbngaol.agallery.domain.usecase.SetEdgeEffectModeUseCase
 import id.andreasmbngaol.agallery.domain.usecase.SetGridColumnsUseCase
@@ -35,6 +36,7 @@ val domainModule = module {
     factory { ObserveAlbumsUseCase(get()) }
     factory { SetAlbumCoverUseCase(get()) }
     factory { RefreshMediaUseCase(get()) }
+    factory { RequestWriteAccessUseCase(get()) }
     factory { ToggleFavoriteUseCase(get()) }
     factory { MoveToTrashUseCase(get()) }
     factory { ObserveTrashItemsUseCase(get()) }

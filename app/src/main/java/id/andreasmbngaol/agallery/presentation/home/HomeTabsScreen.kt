@@ -45,6 +45,7 @@ fun HomeTabsScreen(
     onOpenSearch: () -> Unit = {},
     onOpenAlbum: (albumKey: String, name: String) -> Unit = { _, _ -> },
     onOpenTrash: () -> Unit = {},
+    onCreateAlbum: () -> Unit = {},
 ) {
     val galleryViewModel: GalleryViewModel = koinViewModel()
 
@@ -95,6 +96,7 @@ fun HomeTabsScreen(
             scope.launch { pagerState.animateScrollToPage(target) }
         },
         onOpenSearch = onOpenSearch,
+        onCreateAlbum = onCreateAlbum,
         sortOrder = sortOrder,
         onToggleSort = toggleSort,
         barVisible = !previewActive,

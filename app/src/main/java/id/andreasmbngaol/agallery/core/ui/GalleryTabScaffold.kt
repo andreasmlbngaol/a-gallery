@@ -67,10 +67,10 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import com.adamglin.PhosphorIcons
-import com.adamglin.phosphoricons.Regular
-import com.adamglin.phosphoricons.regular.MagnifyingGlass
-import com.adamglin.phosphoricons.regular.SortAscending
-import com.adamglin.phosphoricons.regular.SortDescending
+import com.adamglin.phosphoricons.Bold
+import com.adamglin.phosphoricons.bold.Plus
+import com.adamglin.phosphoricons.bold.SortAscending
+import com.adamglin.phosphoricons.bold.SortDescending
 import com.kyant.backdrop.Backdrop
 import com.kyant.backdrop.backdrops.layerBackdrop
 import com.kyant.backdrop.backdrops.rememberLayerBackdrop
@@ -171,6 +171,7 @@ fun GalleryTabScaffold(
     onNavBarDrag: (dragPx: Float) -> Unit = {},
     onNavBarDragStart: () -> Unit = {},
     onNavBarDragEnd: () -> Unit = {},
+    onCreateAlbum: () -> Unit = {},
     content: @Composable () -> Unit,
 ) {
     // Kapan konten (grid) di-CAPTURE sebagai sumber backdrop:
@@ -215,6 +216,7 @@ fun GalleryTabScaffold(
                 onNavBarDrag = onNavBarDrag,
                 onNavBarDragStart = onNavBarDragStart,
                 onNavBarDragEnd = onNavBarDragEnd,
+                onCreateAlbum = onCreateAlbum,
             )
         }
     }
@@ -229,6 +231,7 @@ private fun FloatingTabBar(
     onToggleSort: () -> Unit,
     backdrop: Backdrop,
     componentStyle: ComponentStyle,
+    onCreateAlbum: () -> Unit = {},
     onNavBarDrag: (dragPx: Float) -> Unit = {},
     onNavBarDragStart: () -> Unit = {},
     onNavBarDragEnd: () -> Unit = {},
@@ -249,8 +252,28 @@ private fun FloatingTabBar(
         horizontalArrangement = Arrangement.SpaceEvenly,
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        // Kiri: action khusus tab. Saat ini hanya tab Gallery yang punya
-        // action (Sort). Tab Settings/Albums tidak menampilkan tombol apa pun.
+        // Kiri: spacer penyeimbang supaya pill tetap ter-center terhadap
+        // tombol di kanan. Gallery (Sort) & Albums (+) sama-sama butuh ini.
+        // Tombol Search di Gallery untuk sementara dihapus.
+        if (selectedTab == GalleryTab.Gallery || selectedTab == GalleryTab.Albums) {
+            Spacer(Modifier.size(FloatingButtonSize))
+        }
+
+        // Tengah: pill tab (Settings | Gallery | Albums), lebar tetap & selalu
+        // di tengah bar. Tab terpilih ditengahkan -> peek kiri/kanan simetris.
+        TabSwitcher(
+            selectedTab = selectedTab,
+            onSelectTab = onSelectTab,
+            backdrop = backdrop,
+            componentStyle = componentStyle,
+            glassTint = glassTint,
+            onNavBarDrag = onNavBarDrag,
+            onNavBarDragStart = onNavBarDragStart,
+            onNavBarDragEnd = onNavBarDragEnd,
+        )
+
+        // Kanan: tombol Sort (khusus tab Gallery). Dipindah dari kiri ke kanan;
+        // tombol Search sementara dihapus (plumbing onOpenSearch tetap ada).
         if (selectedTab == GalleryTab.Gallery) {
             CircularFloatingButton(
                 onClick = onToggleSort,
@@ -281,8 +304,8 @@ private fun FloatingTabBar(
                 ) { order ->
                     HaloIcon(
                         imageVector = when (order) {
-                            GallerySortOrder.DateDesc -> PhosphorIcons.Regular.SortDescending
-                            GallerySortOrder.DateAsc -> PhosphorIcons.Regular.SortAscending
+                            GallerySortOrder.DateDesc -> PhosphorIcons.Bold.SortDescending
+                            GallerySortOrder.DateAsc -> PhosphorIcons.Bold.SortAscending
                         },
                         modifier = Modifier.size(24.dp),
                     )
@@ -290,30 +313,18 @@ private fun FloatingTabBar(
             }
         }
 
-        // Tengah: pill tab (Settings | Gallery | Albums), lebar tetap & selalu
-        // di tengah bar. Tab terpilih ditengahkan -> peek kiri/kanan simetris.
-        TabSwitcher(
-            selectedTab = selectedTab,
-            onSelectTab = onSelectTab,
-            backdrop = backdrop,
-            componentStyle = componentStyle,
-            glassTint = glassTint,
-            onNavBarDrag = onNavBarDrag,
-            onNavBarDragStart = onNavBarDragStart,
-            onNavBarDragEnd = onNavBarDragEnd,
-        )
-
-        // Kanan: tombol Search (khusus tab Gallery).
-        if (selectedTab == GalleryTab.Gallery) {
+        // Kanan (tab Albums): tombol "+" untuk buat album baru. Style-nya
+        // identik dgn tombol Sort/Search (CircularFloatingButton + HaloIcon).
+        if (selectedTab == GalleryTab.Albums) {
             CircularFloatingButton(
-                onClick = onOpenSearch,
-                contentDescription = "Search photos",
+                onClick = onCreateAlbum,
+                contentDescription = "New album",
                 backdrop = backdrop,
                 componentStyle = componentStyle,
                 glassTint = glassTint,
             ) {
                 HaloIcon(
-                    imageVector = PhosphorIcons.Regular.MagnifyingGlass,
+                    imageVector = PhosphorIcons.Bold.Plus,
                     modifier = Modifier.size(24.dp),
                 )
             }

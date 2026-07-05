@@ -69,11 +69,11 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import coil3.compose.AsyncImage
 import com.adamglin.PhosphorIcons
-import com.adamglin.phosphoricons.Regular
-import com.adamglin.phosphoricons.regular.CaretRight
-import com.adamglin.phosphoricons.regular.PushPin
-import com.adamglin.phosphoricons.regular.PushPinSlash
-import com.adamglin.phosphoricons.regular.Trash
+import com.adamglin.phosphoricons.Bold
+import com.adamglin.phosphoricons.bold.CaretRight
+import com.adamglin.phosphoricons.bold.PushPin
+import com.adamglin.phosphoricons.bold.PushPinSlash
+import com.adamglin.phosphoricons.bold.Trash
 import id.andreasmbngaol.agallery.domain.model.LOCKED_PIN_ALBUM_KEYS
 import com.kyant.backdrop.Backdrop
 import com.kyant.backdrop.backdrops.layerBackdrop
@@ -728,7 +728,7 @@ private fun HoldPreviewOverlay(
                     horizontalArrangement = Arrangement.spacedBy(10.dp),
                 ) {
                     androidx.compose.material3.Icon(
-                        imageVector = if (isPinned) PhosphorIcons.Regular.PushPinSlash else PhosphorIcons.Regular.PushPin,
+                        imageVector = if (isPinned) PhosphorIcons.Bold.PushPinSlash else PhosphorIcons.Bold.PushPin,
                         contentDescription = null,
                         tint = Color.White,
                         modifier = Modifier.size(20.dp),
@@ -780,7 +780,7 @@ private fun TrashRow(
                 contentAlignment = Alignment.Center,
             ) {
                 androidx.compose.material3.Icon(
-                    imageVector = PhosphorIcons.Regular.Trash,
+                    imageVector = PhosphorIcons.Bold.Trash,
                     contentDescription = null,
                     tint = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.size(22.dp),
@@ -798,7 +798,7 @@ private fun TrashRow(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             androidx.compose.material3.Icon(
-                imageVector = PhosphorIcons.Regular.CaretRight,
+                imageVector = PhosphorIcons.Bold.CaretRight,
                 contentDescription = null,
                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.size(18.dp),

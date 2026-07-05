@@ -42,6 +42,8 @@ fun AlbumDetailScreen(
             onMediaClick = onMediaClick,
             staticTitle = albumName,
             onBack = onBack,
+            selectionEnabled = true,
+            albumKey = albumKey,
             viewModel = viewModel,
         )
     }

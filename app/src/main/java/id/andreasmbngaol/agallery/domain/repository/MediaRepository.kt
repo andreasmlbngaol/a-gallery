@@ -115,4 +115,12 @@ interface MediaRepository {
         mimeType: String,
         isVideo: Boolean,
     )
+
+    /**
+     * Bangun satu write-request (API 30+) untuk SEKUMPULAN uri sekaligus,
+     * dipakai batch move di album detail supaya user cukup menyetujui SATU
+     * dialog consent untuk semua item. Null bila tak perlu consent (All-files
+     * access) atau perangkat < API 30.
+     */
+    suspend fun createWriteRequest(uris: List<String>): IntentSender?
 }

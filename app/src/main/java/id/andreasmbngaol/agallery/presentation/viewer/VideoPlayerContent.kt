@@ -59,11 +59,11 @@ import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.SeekParameters
 import androidx.media3.ui.PlayerView
 import com.adamglin.PhosphorIcons
-import com.adamglin.phosphoricons.Regular
-import com.adamglin.phosphoricons.regular.Pause
-import com.adamglin.phosphoricons.regular.Play
-import com.adamglin.phosphoricons.regular.SpeakerHigh
-import com.adamglin.phosphoricons.regular.SpeakerSlash
+import com.adamglin.phosphoricons.Bold
+import com.adamglin.phosphoricons.bold.Pause
+import com.adamglin.phosphoricons.bold.Play
+import com.adamglin.phosphoricons.bold.SpeakerHigh
+import com.adamglin.phosphoricons.bold.SpeakerSlash
 import com.kyant.backdrop.backdrops.layerBackdrop
 import com.kyant.backdrop.backdrops.rememberLayerBackdrop
 import com.kyant.backdrop.drawBackdrop
@@ -527,9 +527,9 @@ fun VideoPlayerContent(
                 ) {
                     Icon(
                         imageVector = if (isPlaying) {
-                            PhosphorIcons.Regular.Pause
+                            PhosphorIcons.Bold.Pause
                         } else {
-                            PhosphorIcons.Regular.Play
+                            PhosphorIcons.Bold.Play
                         },
                         contentDescription = if (isPlaying) "Pause" else "Play",
                         tint = contentColor,
@@ -590,9 +590,9 @@ fun VideoPlayerContent(
                 IconButton(onClick = { VideoPlaybackPrefs.isMuted = !VideoPlaybackPrefs.isMuted }) {
                     Icon(
                         imageVector = if (isMuted) {
-                            PhosphorIcons.Regular.SpeakerSlash
+                            PhosphorIcons.Bold.SpeakerSlash
                         } else {
-                            PhosphorIcons.Regular.SpeakerHigh
+                            PhosphorIcons.Bold.SpeakerHigh
                         },
                         contentDescription = if (isMuted) "Unmute" else "Mute",
                         tint = contentColor,

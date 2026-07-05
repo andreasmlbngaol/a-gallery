@@ -14,6 +14,7 @@ import androidx.navigation3.runtime.rememberNavBackStack
 import androidx.navigation3.ui.NavDisplay
 import id.andreasmbngaol.agallery.presentation.animation.LocalSharedTransitionScope
 import id.andreasmbngaol.agallery.presentation.albums.AlbumDetailScreen
+import id.andreasmbngaol.agallery.presentation.albums.CreateAlbumScreen
 import id.andreasmbngaol.agallery.presentation.home.HomeTabsScreen
 import id.andreasmbngaol.agallery.presentation.trash.TrashScreen
 import id.andreasmbngaol.agallery.presentation.viewer.PhotoViewerScreen
@@ -68,6 +69,7 @@ fun AGalleryNavDisplay() {
                                     )
                                 },
                                 onOpenTrash = { backStack.add(Screen.Trash) },
+                                onCreateAlbum = { backStack.add(Screen.CreateAlbum) },
                             )
                         }
 
@@ -104,6 +106,12 @@ fun AGalleryNavDisplay() {
                             // sendiri dari TrashViewModel (via GetSettingsUseCase),
                             // jadi styling-nya konsisten dgn layar lain.
                             TrashScreen(
+                                onBack = { backStack.removeLastOrNull() },
+                            )
+                        }
+
+                        is Screen.CreateAlbum -> NavEntry(key) {
+                            CreateAlbumScreen(
                                 onBack = { backStack.removeLastOrNull() },
                             )
                         }

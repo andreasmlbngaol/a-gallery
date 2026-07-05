@@ -42,4 +42,13 @@ sealed interface Screen : NavKey {
      */
     @Serializable
     data object Trash : Screen
+
+    /**
+     * Alur "buat album baru": user diminta nama dulu, lalu memilih foto dari
+     * album yang sudah ada untuk di-COPY ke folder album baru. Cancel = tak ada
+     * folder yang dibuat (folder hanya lahir saat foto pertama benar-benar
+     * disalin), jadi tak ada folder kosong yang perlu dihapus.
+     */
+    @Serializable
+    data object CreateAlbum : Screen
 }

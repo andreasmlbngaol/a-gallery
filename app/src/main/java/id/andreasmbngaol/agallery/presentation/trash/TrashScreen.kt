@@ -74,12 +74,12 @@ import coil3.request.ImageRequest
 import coil3.request.crossfade
 import com.adamglin.PhosphorIcons
 import com.adamglin.phosphoricons.Fill
-import com.adamglin.phosphoricons.Regular
+import com.adamglin.phosphoricons.Bold
 import com.adamglin.phosphoricons.fill.Play
-import com.adamglin.phosphoricons.regular.ArrowClockwise
-import com.adamglin.phosphoricons.regular.ArrowLeft
-import com.adamglin.phosphoricons.regular.Info
-import com.adamglin.phosphoricons.regular.Trash
+import com.adamglin.phosphoricons.bold.ArrowClockwise
+import com.adamglin.phosphoricons.bold.ArrowLeft
+import com.adamglin.phosphoricons.bold.Info
+import com.adamglin.phosphoricons.bold.Trash
 import com.kyant.backdrop.Backdrop
 import com.kyant.backdrop.backdrops.layerBackdrop
 import com.kyant.backdrop.backdrops.rememberLayerBackdrop
@@ -232,7 +232,7 @@ fun TrashScreen(
                     backdrop = backdrop,
                 ) {
                     Icon(
-                        imageVector = PhosphorIcons.Regular.ArrowLeft,
+                        imageVector = PhosphorIcons.Bold.ArrowLeft,
                         contentDescription = null,
                         tint = MaterialTheme.colorScheme.onSurface,
                     )
@@ -599,13 +599,13 @@ private fun TrashActionIsland(
             }
             if (selectedCount > 0) {
                 IslandAction(
-                    icon = PhosphorIcons.Regular.ArrowClockwise,
+                    icon = PhosphorIcons.Bold.ArrowClockwise,
                     label = "Restore",
                     tint = MaterialTheme.colorScheme.primary,
                     onClick = onRestore,
                 )
                 IslandAction(
-                    icon = PhosphorIcons.Regular.Trash,
+                    icon = PhosphorIcons.Bold.Trash,
                     label = "Delete",
                     tint = MaterialTheme.colorScheme.error,
                     onClick = onDelete,
@@ -804,7 +804,7 @@ private fun TrashViewer(
                     backdrop = viewerBackdrop,
                 ) {
                     Icon(
-                        imageVector = PhosphorIcons.Regular.ArrowLeft,
+                        imageVector = PhosphorIcons.Bold.ArrowLeft,
                         contentDescription = null,
                         tint = tint,
                     )
@@ -826,19 +826,19 @@ private fun TrashViewer(
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
                     IslandAction(
-                        icon = PhosphorIcons.Regular.ArrowClockwise,
+                        icon = PhosphorIcons.Bold.ArrowClockwise,
                         label = "Restore",
                         tint = MaterialTheme.colorScheme.primary,
                         onClick = { onRestore(current) },
                     )
                     IslandAction(
-                        icon = PhosphorIcons.Regular.Trash,
+                        icon = PhosphorIcons.Bold.Trash,
                         label = "Delete",
                         tint = MaterialTheme.colorScheme.error,
                         onClick = { onDelete(current) },
                     )
                     IslandAction(
-                        icon = PhosphorIcons.Regular.Info,
+                        icon = PhosphorIcons.Bold.Info,
                         label = "Details",
                         tint = tint,
                         onClick = { showDetails = true },
@@ -875,19 +875,19 @@ private fun TrashActionRow(
         verticalAlignment = Alignment.CenterVertically,
     ) {
         IslandAction(
-            icon = PhosphorIcons.Regular.ArrowClockwise,
+            icon = PhosphorIcons.Bold.ArrowClockwise,
             label = "Restore",
             tint = MaterialTheme.colorScheme.primary,
             onClick = onRestore,
         )
         IslandAction(
-            icon = PhosphorIcons.Regular.Trash,
+            icon = PhosphorIcons.Bold.Trash,
             label = "Delete",
             tint = MaterialTheme.colorScheme.error,
             onClick = onDelete,
         )
         IslandAction(
-            icon = PhosphorIcons.Regular.Info,
+            icon = PhosphorIcons.Bold.Info,
             label = "Details",
             tint = MaterialTheme.colorScheme.onSurface,
             onClick = onDetails,

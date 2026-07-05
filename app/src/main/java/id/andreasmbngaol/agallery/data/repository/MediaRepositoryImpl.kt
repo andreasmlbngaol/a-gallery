@@ -242,4 +242,7 @@ class MediaRepositoryImpl(
     ) {
         mediaStore.copyMediaToAlbum(uriString, relativePath, displayName, mimeType, isVideo)
     }
+
+    override suspend fun createWriteRequest(uris: List<String>): IntentSender? =
+        mediaStore.buildWriteRequest(uris.map { it.toUri() })
 }

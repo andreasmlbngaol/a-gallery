@@ -358,9 +358,8 @@ fun PhotoViewerScreen(
                 )
             }
             albumPickerMode?.let { mode ->
-                AlbumPickerDialog(
+                AlbumThumbnailPickerDialog(
                     title = if (mode == AlbumPickerMode.COPY) "Copy to album" else "Move to album",
-                    actionLabel = if (mode == AlbumPickerMode.COPY) "Copy" else "Move",
                     albums = albums,
                     onPick = { name ->
                         if (mode == AlbumPickerMode.COPY) {

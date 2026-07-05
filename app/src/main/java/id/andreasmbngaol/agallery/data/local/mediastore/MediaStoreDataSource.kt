@@ -502,6 +502,19 @@ class MediaStoreDataSource(
         }
     }
 
+    /**
+     * Bangun write-request untuk BANYAK uri sekaligus (batch move). Null bila
+     * All-files access aktif (tak perlu consent) atau perangkat < API 30.
+     */
+    fun buildWriteRequest(uris: List<Uri>): IntentSender? {
+        if (uris.isEmpty()) return null
+        if (AllFilesAccess.isGranted()) return null
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            return MediaStore.createWriteRequest(resolver, uris).intentSender
+        }
+        return null
+    }
+
     /** True bila app punya All-files access (atau OS < 11 yg tak butuh). */
     fun hasAllFilesAccess(): Boolean = AllFilesAccess.isGranted()
 

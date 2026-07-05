@@ -52,20 +52,20 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import com.adamglin.PhosphorIcons
 import com.adamglin.phosphoricons.Fill
-import com.adamglin.phosphoricons.Regular
+import com.adamglin.phosphoricons.Bold
 import com.adamglin.phosphoricons.fill.Heart
 import com.adamglin.phosphoricons.fill.Trash
-import com.adamglin.phosphoricons.regular.ArrowLeft
-import com.adamglin.phosphoricons.regular.ArrowSquareOut
-import com.adamglin.phosphoricons.regular.Copy
-import com.adamglin.phosphoricons.regular.DotsThreeVertical
-import com.adamglin.phosphoricons.regular.FolderSimple
-import com.adamglin.phosphoricons.regular.Heart
-import com.adamglin.phosphoricons.regular.Image
-import com.adamglin.phosphoricons.regular.Info
-import com.adamglin.phosphoricons.regular.PencilSimple
-import com.adamglin.phosphoricons.regular.ShareNetwork
-import com.adamglin.phosphoricons.regular.Trash
+import com.adamglin.phosphoricons.bold.ArrowLeft
+import com.adamglin.phosphoricons.bold.ArrowSquareOut
+import com.adamglin.phosphoricons.bold.Copy
+import com.adamglin.phosphoricons.bold.DotsThreeVertical
+import com.adamglin.phosphoricons.bold.FolderSimple
+import com.adamglin.phosphoricons.bold.Heart
+import com.adamglin.phosphoricons.bold.Image
+import com.adamglin.phosphoricons.bold.Info
+import com.adamglin.phosphoricons.bold.PencilSimple
+import com.adamglin.phosphoricons.bold.ShareNetwork
+import com.adamglin.phosphoricons.bold.Trash
 import com.kyant.backdrop.Backdrop
 import com.kyant.backdrop.drawBackdrop
 import com.kyant.backdrop.effects.blur
@@ -227,7 +227,7 @@ fun ViewerTopBar(
             style = style,
             backdrop = backdrop,
         ) {
-            Icon(PhosphorIcons.Regular.ArrowLeft, contentDescription = null, tint = tint)
+            Icon(PhosphorIcons.Bold.ArrowLeft, contentDescription = null, tint = tint)
         }
         GlassIconButton(
             onClick = onInfo,
@@ -235,7 +235,7 @@ fun ViewerTopBar(
             style = style,
             backdrop = backdrop,
         ) {
-            Icon(PhosphorIcons.Regular.Info, contentDescription = null, tint = tint)
+            Icon(PhosphorIcons.Bold.Info, contentDescription = null, tint = tint)
         }
     }
 }
@@ -275,12 +275,12 @@ fun ViewerActionBar(
         // Island A: Share · Delete(tahan) · Favorite (urutan sesuai permintaan).
         GlassIsland(style, backdrop) {
             IconButton(onClick = onShare) {
-                Icon(PhosphorIcons.Regular.ShareNetwork, contentDescription = "Share", tint = tint)
+                Icon(PhosphorIcons.Bold.ShareNetwork, contentDescription = "Share", tint = tint)
             }
             HoldToDeleteButton(onTap = onTrashTap, onHoldComplete = onHoldDelete, tint = tint)
             IconButton(onClick = onFavorite) {
                 Icon(
-                    imageVector = if (isFavorite) PhosphorIcons.Fill.Heart else PhosphorIcons.Regular.Heart,
+                    imageVector = if (isFavorite) PhosphorIcons.Fill.Heart else PhosphorIcons.Bold.Heart,
                     contentDescription = if (isFavorite) "Remove from favorites" else "Add to favorites",
                     tint = if (isFavorite) FavoritePink else tint,
                 )
@@ -329,12 +329,12 @@ fun ViewerVideoActionRow(
         verticalAlignment = Alignment.CenterVertically,
     ) {
         IconButton(onClick = onShare) {
-            Icon(PhosphorIcons.Regular.ShareNetwork, contentDescription = "Share", tint = tint)
+            Icon(PhosphorIcons.Bold.ShareNetwork, contentDescription = "Share", tint = tint)
         }
         HoldToDeleteButton(onTap = onTrashTap, onHoldComplete = onHoldDelete, tint = tint)
         IconButton(onClick = onFavorite) {
             Icon(
-                imageVector = if (isFavorite) PhosphorIcons.Fill.Heart else PhosphorIcons.Regular.Heart,
+                imageVector = if (isFavorite) PhosphorIcons.Fill.Heart else PhosphorIcons.Bold.Heart,
                 contentDescription = if (isFavorite) "Remove from favorites" else "Add to favorites",
                 tint = if (isFavorite) FavoritePink else tint,
             )
@@ -373,7 +373,7 @@ private fun GlassMoreButton(
             style = style,
             backdrop = backdrop,
         ) {
-            Icon(PhosphorIcons.Regular.DotsThreeVertical, contentDescription = null, tint = tint)
+            Icon(PhosphorIcons.Bold.DotsThreeVertical, contentDescription = null, tint = tint)
         }
         ViewerMoreDropdown(
             expanded = expanded,
@@ -403,7 +403,7 @@ private fun PlainMoreButton(
     var expanded by remember { mutableStateOf(false) }
     Box {
         IconButton(onClick = { expanded = true }) {
-            Icon(PhosphorIcons.Regular.DotsThreeVertical, contentDescription = "More", tint = tint)
+            Icon(PhosphorIcons.Bold.DotsThreeVertical, contentDescription = "More", tint = tint)
         }
         // Video: TANPA "Set as wallpaper" (wallpaper hanya relevan utk gambar).
         ViewerMoreDropdown(
@@ -437,7 +437,7 @@ private fun ViewerMoreDropdown(
     DropdownMenu(expanded = expanded, onDismissRequest = onDismiss) {
         DropdownMenuItem(
             text = { Text("Rename") },
-            leadingIcon = { Icon(PhosphorIcons.Regular.PencilSimple, contentDescription = null) },
+            leadingIcon = { Icon(PhosphorIcons.Bold.PencilSimple, contentDescription = null) },
             onClick = {
                 onDismiss()
                 onRename()
@@ -445,7 +445,7 @@ private fun ViewerMoreDropdown(
         )
         DropdownMenuItem(
             text = { Text("Set as cover") },
-            leadingIcon = { Icon(PhosphorIcons.Regular.Image, contentDescription = null) },
+            leadingIcon = { Icon(PhosphorIcons.Bold.Image, contentDescription = null) },
             onClick = {
                 onDismiss()
                 onSetAsCover()
@@ -454,7 +454,7 @@ private fun ViewerMoreDropdown(
         if (showSetAs) {
             DropdownMenuItem(
                 text = { Text("Set as wallpaper") },
-                leadingIcon = { Icon(PhosphorIcons.Regular.Image, contentDescription = null) },
+                leadingIcon = { Icon(PhosphorIcons.Bold.Image, contentDescription = null) },
                 onClick = {
                     onDismiss()
                     onSetAs()
@@ -463,7 +463,7 @@ private fun ViewerMoreDropdown(
         }
         DropdownMenuItem(
             text = { Text("Open with") },
-            leadingIcon = { Icon(PhosphorIcons.Regular.ArrowSquareOut, contentDescription = null) },
+            leadingIcon = { Icon(PhosphorIcons.Bold.ArrowSquareOut, contentDescription = null) },
             onClick = {
                 onDismiss()
                 onOpenWith()
@@ -471,7 +471,7 @@ private fun ViewerMoreDropdown(
         )
         DropdownMenuItem(
             text = { Text("Copy to album") },
-            leadingIcon = { Icon(PhosphorIcons.Regular.Copy, contentDescription = null) },
+            leadingIcon = { Icon(PhosphorIcons.Bold.Copy, contentDescription = null) },
             onClick = {
                 onDismiss()
                 onCopy()
@@ -479,7 +479,7 @@ private fun ViewerMoreDropdown(
         )
         DropdownMenuItem(
             text = { Text("Move to album") },
-            leadingIcon = { Icon(PhosphorIcons.Regular.FolderSimple, contentDescription = null) },
+            leadingIcon = { Icon(PhosphorIcons.Bold.FolderSimple, contentDescription = null) },
             onClick = {
                 onDismiss()
                 onMove()
@@ -562,7 +562,7 @@ fun HoldToDeleteButton(
             )
         }
         Icon(
-            imageVector = PhosphorIcons.Regular.Trash,
+            imageVector = PhosphorIcons.Bold.Trash,
             contentDescription = "Move to Trash (hold to delete permanently)",
             tint = tint,
         )
@@ -609,7 +609,7 @@ fun MoveToTrashConfirmDialog(
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        icon = { Icon(PhosphorIcons.Regular.Trash, contentDescription = null) },
+        icon = { Icon(PhosphorIcons.Bold.Trash, contentDescription = null) },
         title = { Text("Move to Trash?") },
         text = { Text("This item will be moved to Trash. You can restore it later from Trash.") },
         confirmButton = { TextButton(onClick = onConfirm) { Text("Move to Trash") } },

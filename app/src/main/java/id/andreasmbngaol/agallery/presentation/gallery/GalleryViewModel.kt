@@ -11,14 +11,19 @@ import id.andreasmbngaol.agallery.domain.model.DEFAULT_GRID_COLUMNS
 import id.andreasmbngaol.agallery.domain.model.EdgeEffectMode
 import id.andreasmbngaol.agallery.domain.model.GallerySortOrder
 import id.andreasmbngaol.agallery.domain.model.MediaItem
+import id.andreasmbngaol.agallery.domain.model.Album
 import id.andreasmbngaol.agallery.domain.model.MediaScope
 import id.andreasmbngaol.agallery.domain.model.PerformanceMode
+import id.andreasmbngaol.agallery.domain.usecase.CopyMediaToAlbumUseCase
 import id.andreasmbngaol.agallery.domain.usecase.DeleteMediaUseCase
+import id.andreasmbngaol.agallery.domain.usecase.GetAlbumsUseCase
 import id.andreasmbngaol.agallery.domain.usecase.GetMediaPagingUseCase
 import id.andreasmbngaol.agallery.domain.usecase.GetSettingsUseCase
+import id.andreasmbngaol.agallery.domain.usecase.MoveMediaToAlbumUseCase
 import id.andreasmbngaol.agallery.domain.usecase.MoveToTrashUseCase
 import id.andreasmbngaol.agallery.domain.usecase.ObserveFavoriteIdsUseCase
 import id.andreasmbngaol.agallery.domain.usecase.RefreshMediaUseCase
+import id.andreasmbngaol.agallery.domain.usecase.RequestWriteAccessUseCase
 import id.andreasmbngaol.agallery.domain.usecase.SetSortOrderUseCase
 import id.andreasmbngaol.agallery.domain.usecase.ToggleFavoriteUseCase
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -50,6 +55,10 @@ class GalleryViewModel(
     private val moveToTrashUseCase: MoveToTrashUseCase,
     private val deleteMedia: DeleteMediaUseCase,
     private val refreshMediaUseCase: RefreshMediaUseCase,
+    private val getAlbums: GetAlbumsUseCase,
+    private val copyToAlbumUseCase: CopyMediaToAlbumUseCase,
+    private val moveToAlbumUseCase: MoveMediaToAlbumUseCase,
+    private val requestWriteAccess: RequestWriteAccessUseCase,
 ) : ViewModel() {
 
     private val settings: StateFlow<AppSettings> = getSettings()
@@ -189,5 +198,101 @@ class GalleryViewModel(
             moveToTrashUseCase(item)
             dismissPreview()
         }
+    }
+
+    // ---------------------------------------------------------------------
+    // Multi-select batch (khusus dipakai di layar detail album; tab Gallery
+    // utama tidak mengaktifkan seleksi -> anggota ini tak terpakai di sana).
+    // ---------------------------------------------------------------------
+
+    private val _albums = MutableStateFlow<List<Album>>(emptyList())
+    val albums: StateFlow<List<Album>> = _albums.asStateFlow()
+
+    /** Muat daftar album folder (album cerdas disaring) untuk picker Copy/Move. */
+    fun loadAlbums() {
+        viewModelScope.launch {
+            _albums.value = getAlbums().filter { !it.isSmart }.sortedBy { it.name.lowercase() }
+        }
+    }
+
+    // Batch move butuh SATU consent untuk semua uri (API 30+).
+    private val _writeRequests = MutableSharedFlow<IntentSender>(extraBufferCapacity = 1)
+    val writeRequests: SharedFlow<IntentSender> = _writeRequests.asSharedFlow()
+
+    // Ditembakkan saat aksi batch copy/move selesai -> UI keluar dari mode
+    // seleksi & refresh grid.
+    private val _selectionActionDone = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
+    val selectionActionDone: SharedFlow<Unit> = _selectionActionDone.asSharedFlow()
+
+    private var pendingWriteAction: (suspend () -> Unit)? = null
+
+    /** Pindahkan banyak item ke Trash (soft-delete). */
+    fun moveManyToTrash(items: List<MediaItem>) {
+        viewModelScope.launch {
+            items.forEach { moveToTrashUseCase(it) }
+            _mediaDeleted.emit(Unit)
+        }
+    }
+
+    /** Hapus permanen banyak item (dialog sistem scoped-storage bila perlu). */
+    fun deleteMany(uris: List<String>) {
+        viewModelScope.launch {
+            val sender = deleteMedia(uris)
+            if (sender != null) {
+                _deleteRequests.emit(sender)
+            } else {
+                _mediaDeleted.emit(Unit)
+            }
+        }
+    }
+
+    /** Salin banyak item ke album [albumName] (buat file baru; tanpa consent). */
+    fun copyManyToAlbum(items: List<MediaItem>, albumName: String) {
+        val path = albumRelativePath(albumName)
+        viewModelScope.launch {
+            items.forEach { runCatching { copyToAlbumUseCase(it, path) } }
+            refreshMediaUseCase()
+            _selectionActionDone.emit(Unit)
+        }
+    }
+
+    /**
+     * Pindahkan banyak item ke album [albumName] (in-place). Minta SATU consent
+     * untuk semua uri; setelah disetujui, pemindahan dijalankan di [doMoveAll].
+     */
+    fun moveManyToAlbum(items: List<MediaItem>, albumName: String) {
+        val path = albumRelativePath(albumName)
+        val uris = items.map { it.uri }
+        viewModelScope.launch {
+            val sender = requestWriteAccess(uris)
+            if (sender != null) {
+                pendingWriteAction = { doMoveAll(uris, path) }
+                _writeRequests.emit(sender)
+            } else {
+                doMoveAll(uris, path)
+            }
+        }
+    }
+
+    private suspend fun doMoveAll(uris: List<String>, relativePath: String) {
+        uris.forEach { runCatching { moveToAlbumUseCase(it, relativePath) } }
+        refreshMediaUseCase()
+        _mediaDeleted.emit(Unit)
+        _selectionActionDone.emit(Unit)
+    }
+
+    fun onWriteConsentGranted() {
+        val action = pendingWriteAction ?: return
+        pendingWriteAction = null
+        viewModelScope.launch { action() }
+    }
+
+    fun onWriteConsentDenied() {
+        pendingWriteAction = null
+    }
+
+    private fun albumRelativePath(name: String): String {
+        val clean = name.trim().trim('/')
+        return "DCIM/$clean/"
     }
 }
