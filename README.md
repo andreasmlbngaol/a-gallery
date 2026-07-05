@@ -7,11 +7,11 @@
 [![Download](https://img.shields.io/badge/Download-Latest%20APK-3DDC84?style=for-the-badge&logo=android&logoColor=white)](../../releases/latest)
 [![Android](https://img.shields.io/badge/Android-8.0%2B-3DDC84?style=for-the-badge&logo=android&logoColor=white)](https://developer.android.com/)
 [![License: Noncommercial](https://img.shields.io/badge/License-PolyForm%20Noncommercial%201.0.0-3DA639?style=for-the-badge)](./LICENSE)
-[![Release](https://img.shields.io/github/v/release/andreasmbngaol/AGallery?style=for-the-badge&color=blue)](../../releases)
+[![Release](https://img.shields.io/github/v/release/andreasmlbngaol/a-gallery?style=for-the-badge&color=blue)](../../releases)
 
 </div>
 
-> 🛠️ **For developers:** this README is written for people who just want to *use* the app. The full technical documentation (architecture, building, signing, releasing) lives in the **[Documentation site](https://andreasmbngaol.github.io/AGallery/)** (source under [`/docs`](./docs)).
+> 🛠️ **For developers:** this README is written for people who just want to *use* the app. The full technical documentation (architecture, building, signing, releasing) lives in the **[Documentation site](https://andreasmlbngaol.github.io/a-gallery/)** (source under [`/docs`](./docs)).
 
 ---
 
@@ -107,7 +107,7 @@ section below.
 Want to build it yourself, understand the architecture, or cut a signed release?
 Everything technical lives in the separate documentation site:
 
-👉 **[AGallery Documentation](https://andreasmbngaol.github.io/AGallery/)** — or read the Markdown sources in [`/docs`](./docs):
+👉 **[AGallery Documentation](https://andreasmlbngaol.github.io/a-gallery/)** — or read the Markdown sources in [`/docs`](./docs):
 
 - [Overview & tech stack](./docs/index.md)
 - [Architecture](./docs/architecture.md)

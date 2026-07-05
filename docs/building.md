@@ -9,7 +9,7 @@
 ## Clone & open
 
 ```shell
-git clone https://github.com/andreasmbngaol/a-gallery.git
+git clone https://github.com/andreasmlbngaol/a-gallery.git
 cd a-gallery
 ```
 
