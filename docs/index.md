@@ -34,7 +34,7 @@ backdrop.
 
 ### App & UI
 
-- **Kotlin 2.4** targeting **Android 8.0+ (minSdk 29)**, compiled against **SDK 37** with **AGP 9.2**.
+- **Kotlin 2.4** targeting **Android 10+ (minSdk 29)**, compiled against **SDK 37** with **AGP 9.2**.
 - **Jetpack Compose** (BOM `2026.06.01`) — 100% Compose UI, no XML layouts.
 - **Material 3 `1.5.0-alpha` (Expressive)** — pinned explicitly for `ButtonGroup` / `ToggleButton` APIs not yet in the BOM-managed stable.
 - **Navigation 3** (`navigation3-runtime` / `-ui`) with ViewModel scoping for Nav3.
@@ -80,6 +80,6 @@ backdrop.
 | Share & set as wallpaper | ✅ |
 | Sort (date asc/desc) | ✅ |
 | Settings (grid density, component style) | ✅ |
-| Search | ⏳ planned |
+| On-device semantic search (AI) | ⏳ planned |
 | Location / map view | ⏳ planned |
 | Photo editing | ❌ out of scope |

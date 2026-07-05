@@ -82,9 +82,9 @@ AGallery follows **[Semantic Versioning](https://semver.org/)** (`MAJOR.MINOR.PA
   (padding, colors, corner radius, animation tweaks) that add **no new
   capability**.
 - **`MINOR`** (`1.1.0`, `1.2.0`, …) — new user-facing features or options
-  (e.g. Search, location/map view, a new theme or setting).
-- **`MAJOR`** (`2.0.0`) — breaking changes to behavior or data (e.g. a full
-  rework of how albums are stored).
+  (e.g. location/map view, a new tool, a new theme or setting).
+- **`MAJOR`** (`2.0.0`) — a major product milestone or a breaking change
+  (e.g. `2.0.0` introduces the on-device AI era).
 
 Rule of thumb: *"just made the existing thing nicer"* → PATCH; *"added something
 new you can use or choose"* → MINOR.

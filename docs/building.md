@@ -4,7 +4,7 @@
 
 - **[Android Studio](https://developer.android.com/studio)** (latest canary/preview — the project uses **AGP 9.2** and **compileSdk 37**).
 - **JDK 17+** (bundled with recent Android Studio).
-- An Android device or emulator running **Android 8.0 (API 29) or newer**.
+- An Android device or emulator running **Android 10 (API 29) or newer**.
 
 ## Clone & open
 
