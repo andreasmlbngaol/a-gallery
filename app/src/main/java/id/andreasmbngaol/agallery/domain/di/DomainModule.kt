@@ -7,7 +7,10 @@ import id.andreasmbngaol.agallery.domain.usecase.GetMediaDetailsUseCase
 import id.andreasmbngaol.agallery.domain.usecase.GetMediaPagingUseCase
 import id.andreasmbngaol.agallery.domain.usecase.GetSettingsUseCase
 import id.andreasmbngaol.agallery.domain.usecase.MoveToTrashUseCase
+import id.andreasmbngaol.agallery.domain.usecase.ObserveAlbumsUseCase
 import id.andreasmbngaol.agallery.domain.usecase.ObserveTrashItemsUseCase
+import id.andreasmbngaol.agallery.domain.usecase.RefreshMediaUseCase
+import id.andreasmbngaol.agallery.domain.usecase.SetAlbumCoverUseCase
 import id.andreasmbngaol.agallery.domain.usecase.RestoreFromTrashUseCase
 import id.andreasmbngaol.agallery.domain.usecase.FinalizePermanentDeleteUseCase
 import id.andreasmbngaol.agallery.domain.usecase.CopyMediaToAlbumUseCase
@@ -29,6 +32,9 @@ val domainModule = module {
     factory { GetMediaDetailsUseCase(get()) }
     factory { DeleteMediaUseCase(get()) }
     factory { GetAlbumsUseCase(get()) }
+    factory { ObserveAlbumsUseCase(get()) }
+    factory { SetAlbumCoverUseCase(get()) }
+    factory { RefreshMediaUseCase(get()) }
     factory { ToggleFavoriteUseCase(get()) }
     factory { MoveToTrashUseCase(get()) }
     factory { ObserveTrashItemsUseCase(get()) }

@@ -18,6 +18,7 @@ import id.andreasmbngaol.agallery.domain.usecase.GetMediaPagingUseCase
 import id.andreasmbngaol.agallery.domain.usecase.GetSettingsUseCase
 import id.andreasmbngaol.agallery.domain.usecase.MoveToTrashUseCase
 import id.andreasmbngaol.agallery.domain.usecase.ObserveFavoriteIdsUseCase
+import id.andreasmbngaol.agallery.domain.usecase.RefreshMediaUseCase
 import id.andreasmbngaol.agallery.domain.usecase.SetSortOrderUseCase
 import id.andreasmbngaol.agallery.domain.usecase.ToggleFavoriteUseCase
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -48,6 +49,7 @@ class GalleryViewModel(
     private val toggleFavorite: ToggleFavoriteUseCase,
     private val moveToTrashUseCase: MoveToTrashUseCase,
     private val deleteMedia: DeleteMediaUseCase,
+    private val refreshMediaUseCase: RefreshMediaUseCase,
 ) : ViewModel() {
 
     private val settings: StateFlow<AppSettings> = getSettings()
@@ -123,6 +125,16 @@ class GalleryViewModel(
 
     fun setScope(scope: MediaScope) {
         if (_scope.value != scope) _scope.value = scope
+    }
+
+    /**
+     * Paksa re-index sumber media. Dipanggil saat izin akses media baru
+     * diberikan (grant tidak selalu memicu ContentObserver MediaStore). Satu
+     * panggilan menyegarkan grid galeri DAN daftar album karena keduanya
+     * berbagi trigger di repository.
+     */
+    fun refreshMedia() {
+        refreshMediaUseCase()
     }
 
     fun setSortOrder(order: GallerySortOrder) {

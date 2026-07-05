@@ -1,5 +1,8 @@
 package id.andreasmbngaol.agallery.data.paging
 
+import android.database.ContentObserver
+import android.os.Handler
+import android.os.Looper
 import androidx.paging.PagingSource
 import androidx.paging.PagingState
 import id.andreasmbngaol.agallery.data.local.mediastore.MediaStoreDataSource
@@ -33,6 +36,20 @@ class MediaPagingSource(
     // scope Favorites di repository). includeIds kosong -> hasil kosong.
     private val includeIds: Set<Long>? = null,
 ) : PagingSource<Int, MediaItem>() {
+
+    // Auto re-indexing: begitu MediaStore berubah (foto/video baru, terhapus),
+    // batalkan source ini supaya Paging membuat source baru & memuat ulang.
+    // getRefreshKey menjaga posisi scroll mendekati anchor semula.
+    private val observer = object : ContentObserver(Handler(Looper.getMainLooper())) {
+        override fun onChange(selfChange: Boolean) {
+            invalidate()
+        }
+    }
+
+    init {
+        dataSource.registerObserver(observer)
+        registerInvalidatedCallback { dataSource.unregisterObserver(observer) }
+    }
 
     override suspend fun load(params: LoadParams<Int>): LoadResult<Int, MediaItem> {
         val page = params.key ?: 0

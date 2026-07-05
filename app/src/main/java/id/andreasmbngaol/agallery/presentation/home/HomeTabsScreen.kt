@@ -4,6 +4,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -13,6 +14,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
+import com.google.accompanist.permissions.ExperimentalPermissionsApi
+import com.google.accompanist.permissions.isGranted
+import com.google.accompanist.permissions.rememberMultiplePermissionsState
+import id.andreasmbngaol.agallery.core.permission.MediaPermissions
 import id.andreasmbngaol.agallery.core.ui.GalleryTab
 import id.andreasmbngaol.agallery.core.ui.GalleryTabScaffold
 import id.andreasmbngaol.agallery.core.ui.rememberEffectiveComponentStyle
@@ -33,6 +38,7 @@ private const val HomePageCount = 3
 
 private val NavSwipePxPerPage = 72.dp
 
+@OptIn(ExperimentalPermissionsApi::class)
 @Composable
 fun HomeTabsScreen(
     onMediaClick: (mediaId: Long, index: Int, sortOrder: GallerySortOrder) -> Unit,
@@ -41,6 +47,16 @@ fun HomeTabsScreen(
     onOpenTrash: () -> Unit = {},
 ) {
     val galleryViewModel: GalleryViewModel = koinViewModel()
+
+    // Auto re-index begitu izin media diberikan. Grant permission tidak selalu
+    // memicu ContentObserver MediaStore, jadi pertama kali akses didapat kita
+    // paksa refresh -> grid & daftar album langsung terisi tanpa perlu
+    // pull-to-refresh atau tutup-buka app.
+    val mediaPermissions = rememberMultiplePermissionsState(MediaPermissions.required())
+    val hasMediaAccess = mediaPermissions.permissions.any { it.status.isGranted }
+    LaunchedEffect(hasMediaAccess) {
+        if (hasMediaAccess) galleryViewModel.refreshMedia()
+    }
     val sortOrder by galleryViewModel.sortOrder.collectAsState()
     val toggleSort: () -> Unit = { galleryViewModel.toggleSortOrder() }
     val previewItem by galleryViewModel.previewItem.collectAsState()

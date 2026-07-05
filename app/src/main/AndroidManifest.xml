@@ -12,9 +12,23 @@
         android:name="android.permission.READ_EXTERNAL_STORAGE"
         android:maxSdkVersion="32" />
 
+    <!-- All files access (WAJIB, diminta di awal app): hapus/rename/pindah file
+         media milik app lain LANGSUNG tanpa dialog sistem, plus auto-purge Trash
+         30 hari di background. -->
+    <uses-permission
+        android:name="android.permission.MANAGE_EXTERNAL_STORAGE"
+        tools:ignore="ScopedStorage" />
+
+    <!-- Android 10 (API 29): butuh WRITE + legacy storage supaya hapus langsung
+         berfungsi (OS ini belum punya konsep All-files access). -->
+    <uses-permission
+        android:name="android.permission.WRITE_EXTERNAL_STORAGE"
+        android:maxSdkVersion="29" />
+
     <application
         android:name=".AGalleryApp"
         android:allowBackup="true"
+        android:requestLegacyExternalStorage="true"
         android:dataExtractionRules="@xml/data_extraction_rules"
         android:fullBackupContent="@xml/backup_rules"
         android:icon="@mipmap/ic_launcher"

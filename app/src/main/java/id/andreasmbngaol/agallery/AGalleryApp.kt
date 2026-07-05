@@ -11,6 +11,7 @@ import coil3.video.VideoFrameDecoder
 import id.andreasmbngaol.agallery.core.image.MediaStoreThumbnailFetcher
 import id.andreasmbngaol.agallery.core.image.MediaStoreThumbnailKeyer
 import id.andreasmbngaol.agallery.core.di.appModules
+import id.andreasmbngaol.agallery.data.work.TrashPurgeWorker
 import id.andreasmbngaol.agallery.domain.model.PerformanceMode
 import id.andreasmbngaol.agallery.domain.repository.SettingsRepository
 import kotlinx.coroutines.flow.first
@@ -33,6 +34,9 @@ class AGalleryApp : Application(), SingletonImageLoader.Factory {
             androidContext(this@AGalleryApp)
             modules(appModules)
         }
+        // Jadwalkan auto-purge Trash harian (hapus permanen item > 30 hari).
+        // Efektif hanya bila user mengaktifkan All-files access.
+        TrashPurgeWorker.schedule(this)
     }
 
     /**

@@ -5,12 +5,13 @@ import androidx.room.RoomDatabase
 import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 import id.andreasmbngaol.agallery.data.local.room.dao.MediaDao
+import id.andreasmbngaol.agallery.data.local.room.entity.AlbumCoverEntity
 import id.andreasmbngaol.agallery.data.local.room.entity.FavoriteEntity
 import id.andreasmbngaol.agallery.data.local.room.entity.TrashedEntity
 
 @Database(
-    entities = [FavoriteEntity::class, TrashedEntity::class],
-    version = 2,
+    entities = [FavoriteEntity::class, TrashedEntity::class, AlbumCoverEntity::class],
+    version = 3,
     exportSchema = false,
 )
 abstract class AGalleryDatabase : RoomDatabase() {
@@ -30,6 +31,26 @@ val MIGRATION_1_2 = object : Migration(1, 2) {
                 "`uri` TEXT NOT NULL, " +
                 "`trashedAt` INTEGER NOT NULL, " +
                 "PRIMARY KEY(`mediaId`))",
+        )
+    }
+}
+
+/**
+ * v2 -> v3:
+ * - Menambah kolom `isVideo` + `durationMs` ke tabel `trashed` supaya layar
+ *   Trash bisa menampilkan badge video + durasi (baris lama default 0/false).
+ * - Menambah tabel `album_cover` untuk fitur "Set as Cover" (override sampul
+ *   album per user).
+ */
+val MIGRATION_2_3 = object : Migration(2, 3) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL("ALTER TABLE `trashed` ADD COLUMN `isVideo` INTEGER NOT NULL DEFAULT 0")
+        db.execSQL("ALTER TABLE `trashed` ADD COLUMN `durationMs` INTEGER NOT NULL DEFAULT 0")
+        db.execSQL(
+            "CREATE TABLE IF NOT EXISTS `album_cover` (" +
+                "`albumKey` TEXT NOT NULL, " +
+                "`mediaId` INTEGER NOT NULL, " +
+                "PRIMARY KEY(`albumKey`))",
         )
     }
 }

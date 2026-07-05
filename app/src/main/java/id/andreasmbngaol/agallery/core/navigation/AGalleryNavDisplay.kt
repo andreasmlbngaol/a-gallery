@@ -100,11 +100,10 @@ fun AGalleryNavDisplay() {
                         }
 
                         is Screen.Trash -> NavEntry(key) {
-                            // Trash tidak butuh edge-effect scrim; teruskan null
-                            // (fallback default). Kalau nanti mau ikut setting
-                            // user, tinggal ambil dari GalleryViewModel.
+                            // TrashScreen kini membaca componentStyle & edgeEffectMode
+                            // sendiri dari TrashViewModel (via GetSettingsUseCase),
+                            // jadi styling-nya konsisten dgn layar lain.
                             TrashScreen(
-                                edgeEffectMode = null,
                                 onBack = { backStack.removeLastOrNull() },
                             )
                         }

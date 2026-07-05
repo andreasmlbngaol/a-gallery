@@ -3,6 +3,7 @@ package id.andreasmbngaol.agallery.data.local.room.dao
 import androidx.room.Dao
 import androidx.room.Query
 import androidx.room.Upsert
+import id.andreasmbngaol.agallery.data.local.room.entity.AlbumCoverEntity
 import id.andreasmbngaol.agallery.data.local.room.entity.FavoriteEntity
 import id.andreasmbngaol.agallery.data.local.room.entity.TrashedEntity
 import kotlinx.coroutines.flow.Flow
@@ -24,7 +25,7 @@ interface MediaDao {
     @Query("SELECT mediaId FROM trashed")
     fun observeTrashedIds(): Flow<List<Long>>
 
-    /** Isi Trash lengkap (terbaru dulu) — untuk layar Trash (menyusul). */
+    /** Isi Trash lengkap (terbaru dulu) — untuk layar Trash. */
     @Query("SELECT * FROM trashed ORDER BY trashedAt DESC")
     fun observeTrashed(): Flow<List<TrashedEntity>>
 
@@ -34,7 +35,22 @@ interface MediaDao {
     @Query("DELETE FROM trashed WHERE mediaId = :mediaId")
     suspend fun removeTrashed(mediaId: Long)
 
+    /** Marker Trash yg lebih tua dari [threshold] (epoch ms) — utk purge 30 hari. */
+    @Query("SELECT * FROM trashed WHERE trashedAt < :threshold")
+    suspend fun getTrashedOlderThan(threshold: Long): List<TrashedEntity>
+
     /** Hapus marker Trash yg lebih tua dari [threshold] (epoch ms) → purge 30 hari. */
     @Query("DELETE FROM trashed WHERE trashedAt < :threshold")
     suspend fun purgeTrashedOlderThan(threshold: Long)
+
+    // --- Album cover override ("Set as Cover") ---
+
+    @Query("SELECT * FROM album_cover")
+    fun observeAlbumCovers(): Flow<List<AlbumCoverEntity>>
+
+    @Upsert
+    suspend fun setAlbumCover(cover: AlbumCoverEntity)
+
+    @Query("DELETE FROM album_cover WHERE albumKey = :albumKey")
+    suspend fun removeAlbumCover(albumKey: String)
 }

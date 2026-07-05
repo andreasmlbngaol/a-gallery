@@ -9,6 +9,7 @@ import id.andreasmbngaol.agallery.data.local.prefs.AppSettingsDto
 import id.andreasmbngaol.agallery.data.local.prefs.AppSettingsSerializer
 import id.andreasmbngaol.agallery.data.local.room.AGalleryDatabase
 import id.andreasmbngaol.agallery.data.local.room.MIGRATION_1_2
+import id.andreasmbngaol.agallery.data.local.room.MIGRATION_2_3
 import id.andreasmbngaol.agallery.data.repository.MediaRepositoryImpl
 import id.andreasmbngaol.agallery.data.repository.SettingsRepositoryImpl
 import id.andreasmbngaol.agallery.domain.repository.MediaRepository
@@ -24,7 +25,7 @@ val dataModule = module {
             androidContext(),
             AGalleryDatabase::class.java,
             "agallery.db",
-        ).addMigrations(MIGRATION_1_2).build()
+        ).addMigrations(MIGRATION_1_2, MIGRATION_2_3).build()
     }
     single { get<AGalleryDatabase>().mediaDao() }
     single { MediaStoreDataSource(androidContext()) }

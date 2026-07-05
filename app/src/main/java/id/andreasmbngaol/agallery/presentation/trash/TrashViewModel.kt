@@ -3,15 +3,20 @@ package id.andreasmbngaol.agallery.presentation.trash
 import android.content.IntentSender
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import id.andreasmbngaol.agallery.domain.model.ComponentStyle
+import id.andreasmbngaol.agallery.domain.model.EdgeEffectMode
+import id.andreasmbngaol.agallery.domain.model.MediaDetails
 import id.andreasmbngaol.agallery.domain.model.TrashItem
 import id.andreasmbngaol.agallery.domain.repository.MediaRepository
 import id.andreasmbngaol.agallery.domain.usecase.FinalizePermanentDeleteUseCase
+import id.andreasmbngaol.agallery.domain.usecase.GetSettingsUseCase
 import id.andreasmbngaol.agallery.domain.usecase.ObserveTrashItemsUseCase
 import id.andreasmbngaol.agallery.domain.usecase.RestoreFromTrashUseCase
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
@@ -31,9 +36,19 @@ import kotlinx.coroutines.launch
  *    menyetujui, sistem menghapus file MediaStore.
  * 4. UI memanggil [confirmPermanentDelete] dgn mediaId supaya row Room
  *    juga ikut dibersihkan (mencegah ghost record).
+ *
+ * ## Auto-purge 30 hari (retensi)
+ * Trash di app ini INTERNAL (metadata di Room; file MediaStore masih ada).
+ * Karena app kini WAJIB punya All-files access, penghapusan file bisa dilakukan
+ * LANGSUNG tanpa dialog sistem. Auto-purge UTAMA dijalankan di background oleh
+ * TrashPurgeWorker (harian). [autoPurgeExpired] tetap dipakai sebagai cadangan
+ * saat layar Trash dibuka: mengumpulkan item yg umurnya >= [RETENTION_DAYS] hari
+ * lalu menghapusnya langsung (createDeleteRequest mengembalikan null -> file
+ * dihapus & row Room dibersihkan tanpa perlu dialog).
  */
 class TrashViewModel(
     observeTrashItems: ObserveTrashItemsUseCase,
+    getSettings: GetSettingsUseCase,
     private val restoreFromTrash: RestoreFromTrashUseCase,
     private val finalizePermanentDelete: FinalizePermanentDeleteUseCase,
     private val mediaRepository: MediaRepository,
@@ -45,6 +60,16 @@ class TrashViewModel(
             started = SharingStarted.WhileSubscribed(5_000L),
             initialValue = emptyList(),
         )
+
+    // Gaya komponen (Solid/Frosted/Glass) & efek tepi dari Settings supaya
+    // topbar, island, dan scrim layar Trash SERAGAM dgn layar lain.
+    val componentStyle: StateFlow<ComponentStyle?> = getSettings()
+        .map { it.componentStyle }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000L), null)
+
+    val edgeEffectMode: StateFlow<EdgeEffectMode?> = getSettings()
+        .map { it.edgeEffectMode }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000L), null)
 
     private val _deleteRequests = MutableSharedFlow<IntentSender>(extraBufferCapacity = 1)
     val deleteRequests: SharedFlow<IntentSender> = _deleteRequests
@@ -105,5 +130,39 @@ class TrashViewModel(
     /** Dipanggil UI setelah SAF delete-dialog di-approve. */
     fun confirmPermanentDelete(mediaId: Long) {
         viewModelScope.launch { finalizePermanentDelete(mediaId) }
+    }
+
+    /**
+     * Muat metadata detail (ukuran, dimensi, folder) on-demand untuk panel
+     * detail di TrashViewer (swipe ke atas / tombol Details). Sama seperti alur
+     * di PhotoViewer supaya query grid tetap ringan.
+     */
+    suspend fun loadDetails(uri: String): MediaDetails? = mediaRepository.getMediaDetails(uri)
+
+    /**
+     * Kumpulkan item yg umurnya sudah melewati retensi [RETENTION_DAYS] hari.
+     * Dipakai UI untuk auto-purge saat layar Trash dibuka.
+     */
+    fun expiredItems(now: Long = System.currentTimeMillis()): List<TrashItem> {
+        val threshold = RETENTION_DAYS * 86_400_000L
+        return items.value.filter { now - it.trashedAt >= threshold }
+    }
+
+    /**
+     * Auto-purge item kedaluwarsa (opportunistic, saat layar dibuka). Memakai
+     * alur SAF delete-many -> satu dialog konfirmasi sistem utk semua item yg
+     * sudah lewat 30 hari. Mengembalikan daftar id yg diajukan supaya UI bisa
+     * finalize row Room setelah user menyetujui. Return kosong bila tak ada
+     * yg kedaluwarsa (UI tak perlu melakukan apa-apa).
+     */
+    fun autoPurgeExpired(): List<Long> {
+        val expired = expiredItems()
+        if (expired.isEmpty()) return emptyList()
+        requestPermanentDeleteMany(expired)
+        return expired.map { it.id }
+    }
+
+    companion object {
+        const val RETENTION_DAYS = 30L
     }
 }

@@ -524,9 +524,13 @@ private fun SegmentedGlassItem(
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
 ) {
+    // Chip terpilih memakai secondaryContainer (warna solid, bukan sekadar
+    // surface transparan) supaya KONTRAS-nya jelas dgn track di light mode.
+    // Sebelumnya selected & track sama-sama surfaceContainerHighest -> nyaris
+    // tak terlihat mana yg dipilih terutama di light mode.
     val backgroundColor by animateColorAsState(
         targetValue = if (selected) {
-            MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = SelectedChipAlpha)
+            MaterialTheme.colorScheme.secondaryContainer
         } else {
             Color.Transparent
         },
@@ -537,7 +541,7 @@ private fun SegmentedGlassItem(
         targetValue = when {
             // Ter-nonaktif: teks diredupkan (tak bisa dipilih).
             !enabled -> MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.38f)
-            selected -> MaterialTheme.colorScheme.onSurface
+            selected -> MaterialTheme.colorScheme.onSecondaryContainer
             else -> MaterialTheme.colorScheme.onSurfaceVariant
         },
         animationSpec = tween(220),

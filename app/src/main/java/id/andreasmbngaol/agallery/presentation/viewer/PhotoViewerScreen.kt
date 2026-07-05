@@ -3,7 +3,7 @@ package id.andreasmbngaol.agallery.presentation.viewer
 import android.app.Activity
 import android.content.Context
 import android.content.Intent
-import android.net.Uri
+import androidx.core.net.toUri
 import android.os.Build
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
@@ -49,6 +49,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 import com.kyant.backdrop.backdrops.layerBackdrop
 import com.kyant.backdrop.backdrops.rememberLayerBackdrop
+import id.andreasmbngaol.agallery.core.ui.ConfirmDeleteDialog
 import id.andreasmbngaol.agallery.core.ui.drawsBackdrop
 import id.andreasmbngaol.agallery.core.ui.rememberEffectiveComponentStyle
 import id.andreasmbngaol.agallery.core.ui.usesLiveBackdrop
@@ -57,6 +58,7 @@ import id.andreasmbngaol.agallery.domain.model.GallerySortOrder
 import id.andreasmbngaol.agallery.domain.model.MediaItem
 import id.andreasmbngaol.agallery.domain.model.MediaScope
 import id.andreasmbngaol.agallery.domain.model.MediaType
+import id.andreasmbngaol.agallery.domain.model.bucketAlbumKey
 import id.andreasmbngaol.agallery.domain.model.mediaScopeFromKey
 import id.andreasmbngaol.agallery.presentation.animation.sharedPhotoElement
 import kotlinx.coroutines.launch
@@ -112,6 +114,7 @@ fun PhotoViewerScreen(
     var showDetails by remember { mutableStateOf(false) }
     var showRename by remember { mutableStateOf(false) }
     var showTrashConfirm by remember { mutableStateOf(false) }
+    var pendingDeleteUri by remember { mutableStateOf<String?>(null) }
     var albumPickerMode by remember { mutableStateOf<AlbumPickerMode?>(null) }
 
     // Consent hapus permanen (system delete dialog).
@@ -230,8 +233,11 @@ fun PhotoViewerScreen(
                             onShare = { shareMedia(context, item) },
                             onFavorite = { viewModel.onToggleFavorite(item.id, item.id !in favoriteIds) },
                             onTrashTap = { showTrashConfirm = true },
-                            onHoldDelete = { viewModel.deletePhoto(item.uri) },
+                            onHoldDelete = { pendingDeleteUri = item.uri },
                             onRename = { showRename = true },
+                            onSetAsCover = {
+                                viewModel.setAlbumCover(albumKey ?: bucketAlbumKey(item.bucketId), item.id)
+                            },
                             onOpenWith = { openWithMedia(context, item) },
                             onCopy = {
                                 viewModel.loadAlbums()
@@ -241,7 +247,7 @@ fun PhotoViewerScreen(
                                 viewModel.loadAlbums()
                                 albumPickerMode = AlbumPickerMode.MOVE
                             },
-                            onDelete = { viewModel.deletePhoto(item.uri) },
+                            onDelete = { pendingDeleteUri = item.uri },
                         )
                     }
                 } else {
@@ -295,9 +301,12 @@ fun PhotoViewerScreen(
                         onShare = { shareMedia(context, item) },
                         onFavorite = { viewModel.onToggleFavorite(item.id, item.id !in favoriteIds) },
                         onTrashTap = { showTrashConfirm = true },
-                        onHoldDelete = { viewModel.deletePhoto(item.uri) },
+                        onHoldDelete = { pendingDeleteUri = item.uri },
                         onRename = { showRename = true },
                         onSetAs = { setAsMedia(context, item) },
+                        onSetAsCover = {
+                            viewModel.setAlbumCover(albumKey ?: bucketAlbumKey(item.bucketId), item.id)
+                        },
                         onOpenWith = { openWithMedia(context, item) },
                         onCopy = {
                             viewModel.loadAlbums()
@@ -307,7 +316,7 @@ fun PhotoViewerScreen(
                             viewModel.loadAlbums()
                             albumPickerMode = AlbumPickerMode.MOVE
                         },
-                        onDelete = { viewModel.deletePhoto(item.uri) },
+                        onDelete = { pendingDeleteUri = item.uri },
                     )
                 }
             }
@@ -336,6 +345,16 @@ fun PhotoViewerScreen(
                         showTrashConfirm = false
                     },
                     onDismiss = { showTrashConfirm = false },
+                )
+            }
+            pendingDeleteUri?.let { uri ->
+                ConfirmDeleteDialog(
+                    count = 1,
+                    onConfirm = {
+                        viewModel.deletePhoto(uri)
+                        pendingDeleteUri = null
+                    },
+                    onDismiss = { pendingDeleteUri = null },
                 )
             }
             albumPickerMode?.let { mode ->
@@ -471,7 +490,7 @@ private fun PhotoViewerPage(
 private fun shareMedia(context: Context, item: MediaItem) {
     val intent = Intent(Intent.ACTION_SEND).apply {
         type = item.mimeType.ifEmpty { if (item.type == MediaType.VIDEO) "video/*" else "image/*" }
-        putExtra(Intent.EXTRA_STREAM, Uri.parse(item.uri))
+        putExtra(Intent.EXTRA_STREAM, item.uri.toUri())
         addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
     }
     context.startActivity(Intent.createChooser(intent, "Share"))
@@ -481,7 +500,7 @@ private fun shareMedia(context: Context, item: MediaItem) {
 private fun setAsMedia(context: Context, item: MediaItem) {
     val mime = item.mimeType.ifEmpty { "image/*" }
     val intent = Intent(Intent.ACTION_ATTACH_DATA).apply {
-        setDataAndType(Uri.parse(item.uri), mime)
+        setDataAndType(item.uri.toUri(), mime)
         putExtra("mimeType", mime)
         addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
     }
@@ -492,7 +511,7 @@ private fun setAsMedia(context: Context, item: MediaItem) {
 private fun openWithMedia(context: Context, item: MediaItem) {
     val mime = item.mimeType.ifEmpty { if (item.type == MediaType.VIDEO) "video/*" else "image/*" }
     val intent = Intent(Intent.ACTION_VIEW).apply {
-        setDataAndType(Uri.parse(item.uri), mime)
+        setDataAndType(item.uri.toUri(), mime)
         addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
     }
     context.startActivity(Intent.createChooser(intent, "Open with"))

@@ -33,8 +33,8 @@ android {
         applicationId = "id.andreasmbngaol.agallery"
         minSdk = 29
         targetSdk = 37
-        versionCode = 7
-        versionName = "0.5.0"
+        versionCode = 8
+        versionName = "0.6.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -144,6 +144,9 @@ dependencies {
     // Baseline Profile installer — masang baseline profile (kalau ada) pas app
     // dipasang, biar startup & scroll lebih ngebut (ART AOT-compile jalur panas).
     implementation(libs.androidx.profileinstaller)
+
+    // WorkManager — auto-purge Trash 30 hari di background.
+    implementation(libs.androidx.work.runtime)
 
 
     testImplementation(libs.junit)

@@ -43,12 +43,35 @@ interface MediaRepository {
 
     /** Album folder + album cerdas (Recent/Camera/Videos/Screenshots/dst). */
     suspend fun getAlbums(): List<Album>
+
+    /**
+     * Versi REAKTIF dari [getAlbums]. Ter-update otomatis saat MediaStore
+     * berubah, favorit/Trash berubah, cover override berubah, atau [refreshMedia]
+     * dipicu. Ini inti "auto re-indexing" album tanpa perlu tutup-buka app.
+     */
+    fun observeAlbums(): Flow<List<Album>>
+
+    /** Simpan pilihan cover album ("Set as Cover") -> reaktif via [observeAlbums]. */
+    suspend fun setAlbumCover(albumKey: String, mediaId: Long)
+
+    /**
+     * Paksa refresh sumber media (grid paging + [observeAlbums]). Dipakai
+     * terutama setelah user memberi izin akses media, karena grant tidak
+     * selalu memicu notifikasi ContentObserver MediaStore.
+     */
+    fun refreshMedia()
+
     suspend fun setFavorite(mediaId: Long, isFavorite: Boolean)
 
     /** Stream ID media yg difavoritkan (Room). Untuk render status di UI. */
     fun observeFavoriteIds(): Flow<List<Long>>
 
-    suspend fun moveToTrash(mediaId: Long, uri: String)
+    suspend fun moveToTrash(
+        mediaId: Long,
+        uri: String,
+        isVideo: Boolean,
+        durationMs: Long,
+    )
 
     /**
      * Stream isi Trash (terbaru dulu). Sumbernya tabel Room `trashed`;
@@ -65,6 +88,22 @@ interface MediaRepository {
      * supaya row Room ikut hilang & tidak jadi ghost record.
      */
     suspend fun finalizePermanentDelete(mediaId: Long)
+
+    /**
+     * Auto-purge retensi Trash: kembalikan URI item yg umurnya melebihi
+     * [retentionDays] (mis. 30) supaya caller bisa membangun SAF delete-request
+     * utk menghapus file-nya. Marker Room baru dihapus setelah delete disetujui
+     * (via [finalizePermanentDelete]).
+     */
+    suspend fun purgeExpiredTrash(retentionDays: Int = 30): List<String>
+
+    /**
+     * Purge LANGSUNG (tanpa dialog) item Trash yg umurnya > [retentionDays].
+     * Hanya jalan bila app punya All-files access; kalau tidak, return 0.
+     * Dipakai TrashPurgeWorker utk auto-purge 30 hari di background.
+     * Mengembalikan jumlah item yg benar-benar terhapus.
+     */
+    suspend fun autoPurgeExpiredDirectly(retentionDays: Int = 30): Int
     suspend fun getMediaDetails(uri: String): MediaDetails?
     suspend fun createDeleteRequest(uris: List<String>): IntentSender?
     suspend fun renameMedia(uriString: String, newDisplayName: String): IntentSender?

@@ -256,6 +256,7 @@ fun ViewerActionBar(
     onHoldDelete: () -> Unit,
     onRename: () -> Unit,
     onSetAs: () -> Unit,
+    onSetAsCover: () -> Unit,
     onOpenWith: () -> Unit,
     onCopy: () -> Unit,
     onMove: () -> Unit,
@@ -292,6 +293,7 @@ fun ViewerActionBar(
             tint = tint,
             onRename = onRename,
             onSetAs = onSetAs,
+            onSetAsCover = onSetAsCover,
             onOpenWith = onOpenWith,
             onCopy = onCopy,
             onMove = onMove,
@@ -313,6 +315,7 @@ fun ViewerVideoActionRow(
     onTrashTap: () -> Unit,
     onHoldDelete: () -> Unit,
     onRename: () -> Unit,
+    onSetAsCover: () -> Unit,
     onOpenWith: () -> Unit,
     onCopy: () -> Unit,
     onMove: () -> Unit,
@@ -339,6 +342,7 @@ fun ViewerVideoActionRow(
         PlainMoreButton(
             tint = tint,
             onRename = onRename,
+            onSetAsCover = onSetAsCover,
             onOpenWith = onOpenWith,
             onCopy = onCopy,
             onMove = onMove,
@@ -355,6 +359,7 @@ private fun GlassMoreButton(
     tint: Color,
     onRename: () -> Unit,
     onSetAs: () -> Unit,
+    onSetAsCover: () -> Unit,
     onOpenWith: () -> Unit,
     onCopy: () -> Unit,
     onMove: () -> Unit,
@@ -375,6 +380,7 @@ private fun GlassMoreButton(
             onDismiss = { expanded = false },
             onRename = onRename,
             onSetAs = onSetAs,
+            onSetAsCover = onSetAsCover,
             onOpenWith = onOpenWith,
             onCopy = onCopy,
             onMove = onMove,
@@ -388,6 +394,7 @@ private fun GlassMoreButton(
 private fun PlainMoreButton(
     tint: Color,
     onRename: () -> Unit,
+    onSetAsCover: () -> Unit,
     onOpenWith: () -> Unit,
     onCopy: () -> Unit,
     onMove: () -> Unit,
@@ -403,6 +410,7 @@ private fun PlainMoreButton(
             expanded = expanded,
             onDismiss = { expanded = false },
             onRename = onRename,
+            onSetAsCover = onSetAsCover,
             onOpenWith = onOpenWith,
             onCopy = onCopy,
             onMove = onMove,
@@ -422,6 +430,7 @@ private fun ViewerMoreDropdown(
     onMove: () -> Unit,
     onDelete: () -> Unit,
     onSetAs: () -> Unit = {},
+    onSetAsCover: () -> Unit = {},
     // "Set as wallpaper" hanya untuk gambar; video menyembunyikannya.
     showSetAs: Boolean = true,
 ) {
@@ -432,6 +441,14 @@ private fun ViewerMoreDropdown(
             onClick = {
                 onDismiss()
                 onRename()
+            },
+        )
+        DropdownMenuItem(
+            text = { Text("Set as cover") },
+            leadingIcon = { Icon(PhosphorIcons.Regular.Image, contentDescription = null) },
+            onClick = {
+                onDismiss()
+                onSetAsCover()
             },
         )
         if (showSetAs) {

@@ -2,7 +2,7 @@ package id.andreasmbngaol.agallery.core.image
 
 import android.content.ContentResolver
 import android.graphics.Bitmap
-import android.net.Uri
+import androidx.core.net.toUri
 import android.util.Size as AndroidSize
 import coil3.ImageLoader
 import coil3.asImage
@@ -57,7 +57,7 @@ class MediaStoreThumbnailFetcher(
             .coerceAtLeast(1)
 
         val raw = contentResolver.loadThumbnail(
-            Uri.parse(model.uri),
+            model.uri.toUri(),
             AndroidSize(width, height),
             null,
         )

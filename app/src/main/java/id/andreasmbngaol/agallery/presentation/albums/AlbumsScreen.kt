@@ -124,6 +124,16 @@ fun AlbumsScreen(
     val state by viewModel.state.collectAsState()
     val haptic = LocalHapticFeedback.current
 
+    // #8 (scroll-position hilang saat back dari AlbumDetail): pertahankan
+    // konten terakhir. Ketika kembali, flow bisa sesaat re-emit Loading -> grid
+    // sempat KOSONG -> LazyGrid kehilangan anchor & reset ke atas. Dgn menahan
+    // Content terakhir saat state sedang Loading, grid tak pernah kosong
+    // mendadak sehingga posisi scroll ter-restore dgn benar.
+    var lastContent by remember { mutableStateOf<AlbumsUiState.Content?>(null) }
+    LaunchedEffect(state) { (state as? AlbumsUiState.Content)?.let { lastContent = it } }
+    val effectiveState: AlbumsUiState =
+        if (state is AlbumsUiState.Loading) lastContent ?: state else state
+
     // ==== State long-press / drag ==================================
     // holdingAlbum: kartu yang lagi ditahan (preview overlay muncul saat
     // dragging == null).
@@ -152,8 +162,12 @@ fun AlbumsScreen(
 
     // Local mutable copy dari list pinned untuk reorder real-time.
     // Selalu resync tiap pinned dari VM berubah (kecuali sedang di-drag).
-    val pinnedRaw = (state as? AlbumsUiState.Content)?.pinned.orEmpty()
-    val pinnedList: SnapshotStateList<Album> = remember { mutableStateListOfAlbums() }
+    val pinnedRaw = (effectiveState as? AlbumsUiState.Content)?.pinned.orEmpty()
+    // PENTING (fix scroll turun ke bawah saat back dari AlbumDetail): inisialisasi
+    // list SUDAH terisi pinnedRaw pada frame pertama. Kalau di-init kosong lalu
+    // baru diisi lewat LaunchedEffect (1 frame telat), frame pertama grid punya
+    // item lebih sedikit -> indeks scroll yg di-restore mendarat di bawah (Trash).
+    val pinnedList: SnapshotStateList<Album> = remember { pinnedRaw.toMutableStateList() }
     LaunchedEffect(pinnedRaw, draggingKey) {
         if (draggingKey == null) {
             pinnedList.clear()
@@ -196,7 +210,7 @@ fun AlbumsScreen(
                     .then(if (previewOverlayActive) Modifier.blur(20.dp) else Modifier)
                     .graphicsLayer { alpha = if (previewOverlayActive) 0.9f else 1f },
             ) {
-                when (val current = state) {
+                when (val current = effectiveState) {
                     is AlbumsUiState.Content -> {
                         // ---------- Pinned ----------
                         if (pinnedList.isNotEmpty()) {
@@ -361,9 +375,16 @@ private fun PinnedAlbumCard(
                 if (isDragging) {
                     translationX = dragOffset.x
                     translationY = dragOffset.y
-                    scaleX = 1.06f
-                    scaleY = 1.06f
-                    shadowElevation = 12f
+                    // Scale sengaja kecil (1.04) + kartu di-scale dari tengah.
+                    // Dikombinasikan dgn padding horizontal pd label (lihat
+                    // AlbumCardBody) supaya teks nama & jumlah item TIDAK
+                    // terpotong di kiri/kanan saat kartu terangkat.
+                    scaleX = 1.04f
+                    scaleY = 1.04f
+                    // clip=false: layer tidak memotong konten yg melewati batas
+                    // (bayangan & tepi kartu boleh menonjol saat diangkat).
+                    clip = false
+                    shadowElevation = 16f
                 }
             }
             // SATU pointer input handler yang menangani tap, long-press-diam,
@@ -505,12 +526,15 @@ private fun AlbumCardBody(album: Album) {
         }
     }
     Spacer(Modifier.height(6.dp))
+    // padding horizontal kecil -> memberi "ruang napas" supaya saat kartu
+    // pinned diangkat (di-scale) teks tidak menyentuh tepi sel & terpotong.
     Text(
         text = album.name,
         style = MaterialTheme.typography.bodyMedium,
         fontWeight = FontWeight.Medium,
         color = MaterialTheme.colorScheme.onSurface,
         maxLines = 1,
+        modifier = Modifier.padding(horizontal = 4.dp),
     )
     Text(
         text = albumSubtitle(album),
@@ -519,6 +543,7 @@ private fun AlbumCardBody(album: Album) {
         // Format 2-baris dipakai saat album punya foto DAN video sekaligus,
         // biar tidak terpotong di grid 3-kolom yg lebar kartunya sempit.
         maxLines = 2,
+        modifier = Modifier.padding(horizontal = 4.dp),
     )
 }
 

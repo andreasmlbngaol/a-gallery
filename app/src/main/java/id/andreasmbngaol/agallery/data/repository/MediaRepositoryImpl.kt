@@ -1,12 +1,13 @@
 package id.andreasmbngaol.agallery.data.repository
 
 import android.content.IntentSender
-import android.net.Uri
+import androidx.core.net.toUri
 import androidx.paging.Pager
 import androidx.paging.PagingConfig
 import androidx.paging.PagingData
 import id.andreasmbngaol.agallery.data.local.mediastore.MediaStoreDataSource
 import id.andreasmbngaol.agallery.data.local.room.dao.MediaDao
+import id.andreasmbngaol.agallery.data.local.room.entity.AlbumCoverEntity
 import id.andreasmbngaol.agallery.data.local.room.entity.FavoriteEntity
 import id.andreasmbngaol.agallery.data.local.room.entity.TrashedEntity
 import id.andreasmbngaol.agallery.data.paging.MediaPagingSource
@@ -15,9 +16,11 @@ import id.andreasmbngaol.agallery.domain.model.GallerySortOrder
 import id.andreasmbngaol.agallery.domain.model.MediaDetails
 import id.andreasmbngaol.agallery.domain.model.MediaItem
 import id.andreasmbngaol.agallery.domain.model.MediaScope
+import id.andreasmbngaol.agallery.domain.model.TrashItem
 import id.andreasmbngaol.agallery.domain.repository.MediaRepository
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
@@ -37,6 +40,12 @@ class MediaRepositoryImpl(
         enablePlaceholders = true,
     )
 
+    // Sinyal refresh manual. Setiap kali di-increment (via [refreshMedia]),
+    // getMediaPaging & observeAlbums membangun ulang sumbernya. Dipakai
+    // terutama setelah user memberi izin media (grant tidak selalu memicu
+    // ContentObserver MediaStore).
+    private val refreshTrigger = MutableStateFlow(0)
+
     @OptIn(ExperimentalCoroutinesApi::class)
     override fun getMediaPaging(
         sortOrder: GallerySortOrder,
@@ -48,7 +57,8 @@ class MediaRepositoryImpl(
             combine(
                 mediaDao.observeTrashedIds().map { it.toHashSet() }.distinctUntilChanged(),
                 mediaDao.observeFavoriteIds().map { it.toHashSet() }.distinctUntilChanged(),
-            ) { excluded, favs -> excluded to favs }
+                refreshTrigger,
+            ) { excluded, favs, _ -> excluded to favs }
                 .flatMapLatest { (excluded, favs) ->
                     Pager(
                         config = pagingConfig,
@@ -66,9 +76,10 @@ class MediaRepositoryImpl(
         } else {
             // Scope biasa (kamera/allMedia/videos/screenshots/recordings/bucket).
             // Trash tetap disaring di level SOURCE agar count & offset konsisten.
-            mediaDao.observeTrashedIds()
-                .map { it.toHashSet() }
-                .distinctUntilChanged()
+            combine(
+                mediaDao.observeTrashedIds().map { it.toHashSet() }.distinctUntilChanged(),
+                refreshTrigger,
+            ) { excluded, _ -> excluded }
                 .flatMapLatest { excluded ->
                     Pager(
                         config = pagingConfig,
@@ -99,9 +110,35 @@ class MediaRepositoryImpl(
     }
 
     override suspend fun getAlbums(): List<Album> {
-        // Sekali baca daftar favorit -> ikut jadi salah satu album cerdas.
+        // Sekali baca daftar favorit, trash, & cover override -> ikut menentukan
+        // album cerdas Favorites, penyaringan item trash, & sampul pilihan user.
         val favs = mediaDao.observeFavoriteIds().first().toHashSet()
-        return mediaStore.queryAlbums(favs)
+        val trashed = mediaDao.observeTrashedIds().first().toHashSet()
+        val coverOverrides = mediaDao.observeAlbumCovers().first()
+            .associate { it.albumKey to it.mediaId }
+        return mediaStore.queryAlbums(favs, trashed, coverOverrides)
+    }
+
+    override fun observeAlbums(): Flow<List<Album>> =
+        combine(
+            // contentChanges() sudah emit sekali di awal (snapshot pertama),
+            // lalu tiap kali MediaStore berubah.
+            mediaStore.contentChanges(),
+            mediaDao.observeFavoriteIds().map { it.toHashSet() }.distinctUntilChanged(),
+            mediaDao.observeTrashedIds().map { it.toHashSet() }.distinctUntilChanged(),
+            mediaDao.observeAlbumCovers().distinctUntilChanged(),
+            refreshTrigger,
+        ) { _, favs, trashed, covers, _ ->
+            val coverOverrides = covers.associate { it.albumKey to it.mediaId }
+            mediaStore.queryAlbums(favs, trashed, coverOverrides)
+        }
+
+    override suspend fun setAlbumCover(albumKey: String, mediaId: Long) {
+        mediaDao.setAlbumCover(AlbumCoverEntity(albumKey = albumKey, mediaId = mediaId))
+    }
+
+    override fun refreshMedia() {
+        refreshTrigger.value += 1
     }
 
     override suspend fun setFavorite(mediaId: Long, isFavorite: Boolean) {
@@ -114,23 +151,32 @@ class MediaRepositoryImpl(
 
     override fun observeFavoriteIds(): Flow<List<Long>> = mediaDao.observeFavoriteIds()
 
-    override suspend fun moveToTrash(mediaId: Long, uri: String) {
+    override suspend fun moveToTrash(
+        mediaId: Long,
+        uri: String,
+        isVideo: Boolean,
+        durationMs: Long,
+    ) {
         mediaDao.addTrashed(
             TrashedEntity(
                 mediaId = mediaId,
                 uri = uri,
                 trashedAt = System.currentTimeMillis(),
+                isVideo = isVideo,
+                durationMs = durationMs,
             ),
         )
     }
 
-    override fun observeTrashItems(): Flow<List<id.andreasmbngaol.agallery.domain.model.TrashItem>> =
+    override fun observeTrashItems(): Flow<List<TrashItem>> =
         mediaDao.observeTrashed().map { rows ->
             rows.map { e ->
-                id.andreasmbngaol.agallery.domain.model.TrashItem(
+                TrashItem(
                     id = e.mediaId,
                     uri = e.uri,
                     trashedAt = e.trashedAt,
+                    isVideo = e.isVideo,
+                    durationMs = e.durationMs,
                 )
             }
         }
@@ -148,8 +194,35 @@ class MediaRepositoryImpl(
         mediaDao.removeTrashed(mediaId)
     }
 
+    override suspend fun purgeExpiredTrash(retentionDays: Int): List<String> {
+        // Ambil URI item yg umurnya melewati retensi supaya caller bisa bangun
+        // SAF delete-request. Marker Room baru dihapus lewat
+        // [finalizePermanentDelete] setelah delete disetujui.
+        val threshold =
+            System.currentTimeMillis() - retentionDays.toLong() * 24L * 60L * 60L * 1000L
+        return mediaDao.getTrashedOlderThan(threshold).map { it.uri }
+    }
+
+    override suspend fun autoPurgeExpiredDirectly(retentionDays: Int): Int {
+        // Background purge butuh All-files access karena tak bisa tampilkan
+        // dialog consent. Tanpa izin -> no-op (item ditahan sampai purge manual).
+        if (!mediaStore.hasAllFilesAccess()) return 0
+        val threshold =
+            System.currentTimeMillis() - retentionDays.toLong() * 24L * 60L * 60L * 1000L
+        val expired = mediaDao.getTrashedOlderThan(threshold)
+        if (expired.isEmpty()) return 0
+        var deleted = 0
+        expired.forEach { e ->
+            if (mediaStore.deleteDirect(listOf(e.uri.toUri()))) {
+                mediaDao.removeTrashed(e.mediaId)
+                deleted++
+            }
+        }
+        return deleted
+    }
+
     override suspend fun createDeleteRequest(uris: List<String>): IntentSender? =
-        mediaStore.buildDeleteRequest(uris.map { Uri.parse(it) })
+        mediaStore.buildDeleteRequest(uris.map { it.toUri() })
 
     override suspend fun getMediaDetails(uri: String): MediaDetails? =
         mediaStore.queryDetails(uri)

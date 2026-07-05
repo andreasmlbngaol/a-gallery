@@ -134,7 +134,7 @@ import com.adamglin.phosphoricons.regular.ArrowLeft
 import com.adamglin.phosphoricons.regular.Heart
 import com.adamglin.phosphoricons.regular.ImageSquare
 import com.adamglin.phosphoricons.regular.WarningCircle
-import id.andreasmbngaol.agallery.core.permission.MediaPermissionGate
+import id.andreasmbngaol.agallery.core.ui.ConfirmDeleteDialog
 import id.andreasmbngaol.agallery.core.ui.FloatingTabBarHeight
 import id.andreasmbngaol.agallery.core.ui.SystemBarScrim
 import id.andreasmbngaol.agallery.core.ui.drawsBackdrop
@@ -386,7 +386,7 @@ fun GalleryGridScreen(
         } else {
             Modifier.fillMaxSize()
         }
-        MediaPermissionGate(modifier = gridBackdropModifier) {
+        Box(modifier = gridBackdropModifier) {
             GalleryPagingContent(
                 items = items,
                 gridState = gridState,
@@ -401,6 +401,8 @@ fun GalleryGridScreen(
     }
         } // tutup Box background (blur)
 
+        var pendingDeleteUri by remember { mutableStateOf<String?>(null) }
+
         previewItem?.let { preview ->
             PhotoPreviewOverlay(
                 item = preview,
@@ -413,7 +415,18 @@ fun GalleryGridScreen(
                     viewModel.onToggleFavorite(preview.id, preview.id !in favoriteIds)
                 },
                 onTrashClick = { viewModel.moveToTrash(preview) },
-                onDeleteClick = { viewModel.deletePhoto(preview.uri) },
+                onDeleteClick = { pendingDeleteUri = preview.uri },
+            )
+        }
+
+        pendingDeleteUri?.let { uri ->
+            ConfirmDeleteDialog(
+                count = 1,
+                onConfirm = {
+                    viewModel.deletePhoto(uri)
+                    pendingDeleteUri = null
+                },
+                onDismiss = { pendingDeleteUri = null },
             )
         }
 
@@ -1119,11 +1132,12 @@ private fun PhotoContextMenu(
                 shape = { Capsule() },
                 effects = {
                     vibrancy()
-                    // GLASS = blur + lens. FROSTED = keduanya off -> veil haze saja
-                    // (tanpa blur/distorsi & tanpa artefak).
-                    if (style.usesBlur()) {
-                        blur(4.dp.toPx())
-                    }
+                    // Selalu blur backdrop di preview overlay supaya foto-foto lain
+                    // di belakang TIDAK bocor tajam lewat kaca (khususnya FROSTED
+                    // yg tanpa lens). Hasilnya latar yg tampak = blurry, konsisten
+                    // dgn background overlay yg memang diblur. GLASS pakai blur
+                    // lebih tipis karena sudah dikombinasi dgn lens.
+                    blur((if (style.usesLens()) 8.dp else 24.dp).toPx())
                     if (style.usesLens()) {
                         lens(12.dp.toPx(), 16.dp.toPx())
                     }

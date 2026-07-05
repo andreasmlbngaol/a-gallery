@@ -10,9 +10,13 @@ package id.andreasmbngaol.agallery.domain.model
  * [id] = MediaStore _ID (unik, dipakai untuk restore/purge).
  * [uri] = content-uri MediaStore utk load thumbnail & bangun delete-request.
  * [trashedAt] = epoch-ms saat di-trash; menentukan sisa retensi 30 hari.
+ * [isVideo] & [durationMs] disimpan saat di-trash supaya layar Trash bisa
+ * menampilkan badge video + durasi tanpa perlu query ulang MediaStore.
  */
 data class TrashItem(
     val id: Long,
     val uri: String,
     val trashedAt: Long,
+    val isVideo: Boolean = false,
+    val durationMs: Long = 0L,
 )

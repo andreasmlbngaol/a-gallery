@@ -20,6 +20,7 @@ import id.andreasmbngaol.agallery.domain.usecase.MoveMediaToAlbumUseCase
 import id.andreasmbngaol.agallery.domain.usecase.MoveToTrashUseCase
 import id.andreasmbngaol.agallery.domain.usecase.ObserveFavoriteIdsUseCase
 import id.andreasmbngaol.agallery.domain.usecase.RenameMediaUseCase
+import id.andreasmbngaol.agallery.domain.usecase.SetAlbumCoverUseCase
 import id.andreasmbngaol.agallery.domain.usecase.ToggleFavoriteUseCase
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -54,6 +55,7 @@ class PhotoViewerViewModel(
     private val renameMediaUseCase: RenameMediaUseCase,
     private val moveToAlbumUseCase: MoveMediaToAlbumUseCase,
     private val copyToAlbumUseCase: CopyMediaToAlbumUseCase,
+    private val setAlbumCoverUseCase: SetAlbumCoverUseCase,
 ) : ViewModel() {
 
     private data class ViewerParams(
@@ -135,6 +137,17 @@ class PhotoViewerViewModel(
 
     fun onToggleFavorite(mediaId: Long, isFavorite: Boolean) {
         viewModelScope.launch { toggleFavorite(mediaId, isFavorite) }
+    }
+
+    /**
+     * Jadikan [mediaId] sebagai cover album [albumKey] ("Set as Cover").
+     * Reaktif: daftar album otomatis memakai cover baru lewat observeAlbums().
+     */
+    fun setAlbumCover(albumKey: String, mediaId: Long) {
+        viewModelScope.launch {
+            setAlbumCoverUseCase(albumKey, mediaId)
+            _messages.emit("Album cover updated")
+        }
     }
 
     fun moveToTrash(item: MediaItem) {
