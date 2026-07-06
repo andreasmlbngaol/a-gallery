@@ -3,10 +3,7 @@ package id.andreasmbngaol.agallery.presentation.viewer
 import android.app.Activity
 import android.content.Context
 import android.content.Intent
-import androidx.core.net.toUri
-import android.os.Build
 import android.widget.Toast
-import id.andreasmbngaol.agallery.R
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.IntentSenderRequest
@@ -41,15 +38,16 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.unit.dp
+import androidx.core.net.toUri
 import com.kyant.backdrop.backdrops.layerBackdrop
 import com.kyant.backdrop.backdrops.rememberLayerBackdrop
+import id.andreasmbngaol.agallery.R
 import id.andreasmbngaol.agallery.core.ui.ConfirmDeleteDialog
 import id.andreasmbngaol.agallery.core.ui.drawsBackdrop
 import id.andreasmbngaol.agallery.core.ui.rememberEffectiveComponentStyle
@@ -72,11 +70,11 @@ import org.koin.androidx.compose.koinViewModel
  * - Swipe antar media (HorizontalPager), pinch-to-zoom (Telephoto), video pakai
  *   [VideoPlayerContent].
  * - "Chrome" (top bar + action bar + kontrol video) di-toggle dgn tap layar.
- *   Statusnya global & persist antar halaman DAN config change ([chromeVisible]
+ *   Statusnya global & persist antar halaman DAN config change (chromeVisible
  *   via rememberSaveable).
  * - Semua tombol pakai **liquid glass** (tergantung setting edge-effect, sama
  *   seperti nav bar gallery). Top bar: Back (kiri) + Info (kanan). Foto: action
- *   bar = 2 island [Share · Delete · Favorite] + [More]. Video: kontrol + aksi
+ *   bar = 2 island [Share · Delete · Favorite] + More. Video: kontrol + aksi
  *   digabung jadi 1 island (kontrol di atas, aksi di bawah).
  * - Tap Trash -> konfirmasi pindah ke Trash. Tahan Trash -> hapus permanen
  *   (konfirmasi diserahkan ke dialog sistem Android, tanpa dialog internal).
@@ -85,7 +83,6 @@ import org.koin.androidx.compose.koinViewModel
  */
 @Composable
 fun PhotoViewerScreen(
-    mediaId: Long,
     initialIndex: Int,
     sortOrder: GallerySortOrder,
     onBack: () -> Unit,
@@ -412,8 +409,8 @@ private fun PhotoViewerPage(
 
     // Saat panel detail terbuka, media diangkat ke atas supaya tetap kelihatan
     // di atas sheet (perilaku Google Photos). Hanya untuk halaman aktif.
-    val configuration = LocalConfiguration.current
-    val liftPx = with(density) { (configuration.screenHeightDp.dp * 0.22f).toPx() }
+//    val configuration = LocalConfiguration.current
+    val liftPx = with(density) { (LocalWindowInfo.current.containerSize.height.dp * 0.22f).toPx() }
     val liftOffset by animateFloatAsState(
         targetValue = if (detailsOpen && isActive) -liftPx else 0f,
         animationSpec = tween(durationMillis = 280),

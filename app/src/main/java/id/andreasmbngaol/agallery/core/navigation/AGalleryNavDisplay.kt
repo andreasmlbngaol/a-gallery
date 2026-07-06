@@ -57,9 +57,6 @@ fun AGalleryNavDisplay() {
                                         ),
                                     )
                                 },
-                                onOpenSearch = {
-                                    // TODO: tambahkan Screen.Search + rute-nya.
-                                },
                                 onOpenAlbum = { albumKey, name ->
                                     backStack.add(
                                         Screen.AlbumDetail(
@@ -75,7 +72,6 @@ fun AGalleryNavDisplay() {
 
                         is Screen.PhotoViewer -> NavEntry(key) {
                             PhotoViewerScreen(
-                                mediaId = key.mediaId,
                                 initialIndex = key.initialIndex,
                                 sortOrder = key.sortOrder,
                                 albumKey = key.albumKey,

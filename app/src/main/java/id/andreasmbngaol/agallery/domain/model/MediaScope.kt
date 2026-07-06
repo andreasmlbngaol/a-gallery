@@ -52,7 +52,7 @@ const val ALBUM_KEY_TRASH = "trash"
 private const val BUCKET_KEY_PREFIX = "bucket:"
 
 /**
- * Kunci album yang TIDAK BOLEH di-unpin oleh user. Dipakai [AlbumsViewModel]
+ * Kunci album yang TIDAK BOLEH di-unpin oleh user. Dipakai [id.andreasmbngaol.agallery.presentation.albums.AlbumsViewModel]
  * untuk menolak operasi unpin & memberi hint di UI (tombol Unpin di overlay
  * hold disembunyikan untuk album-album ini).
  *

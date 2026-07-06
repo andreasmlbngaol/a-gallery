@@ -1,6 +1,5 @@
 package id.andreasmbngaol.agallery.core.ui
 
-import android.os.Build
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.ContentTransform
@@ -158,7 +157,6 @@ private const val SelectedFrostedAlpha = 0.8f
 fun GalleryTabScaffold(
     selectedTab: GalleryTab,
     onSelectTab: (GalleryTab) -> Unit,
-    onOpenSearch: () -> Unit,
     sortOrder: GallerySortOrder,
     onToggleSort: () -> Unit,
     modifier: Modifier = Modifier,
@@ -210,7 +208,6 @@ fun GalleryTabScaffold(
             FloatingTabBar(
                 selectedTab = selectedTab,
                 onSelectTab = onSelectTab,
-                onOpenSearch = onOpenSearch,
                 sortOrder = sortOrder,
                 onToggleSort = onToggleSort,
                 backdrop = backdrop,
@@ -228,16 +225,15 @@ fun GalleryTabScaffold(
 private fun FloatingTabBar(
     selectedTab: GalleryTab,
     onSelectTab: (GalleryTab) -> Unit,
-    onOpenSearch: () -> Unit,
     sortOrder: GallerySortOrder,
     onToggleSort: () -> Unit,
     backdrop: Backdrop,
     componentStyle: ComponentStyle,
+    modifier: Modifier = Modifier,
     onCreateAlbum: () -> Unit = {},
     onNavBarDrag: (dragPx: Float) -> Unit = {},
     onNavBarDragStart: () -> Unit = {},
     onNavBarDragEnd: () -> Unit = {},
-    modifier: Modifier = Modifier,
 ) {
     // Veil di atas backdrop: FROSTED pakai haze (lebih pekat, TANPA blur), GLASS tipis.
     val glassTint = MaterialTheme.colorScheme.surfaceContainerHighest.copy(
@@ -350,10 +346,10 @@ private fun TabSwitcher(
     backdrop: Backdrop,
     componentStyle: ComponentStyle,
     glassTint: Color,
+    modifier: Modifier = Modifier,
     onNavBarDrag: (dragPx: Float) -> Unit = {},
     onNavBarDragStart: () -> Unit = {},
     onNavBarDragEnd: () -> Unit = {},
-    modifier: Modifier = Modifier,
 ) {
     val entries = listOf(
         GalleryTab.Settings to stringResource(R.string.tab_settings),
@@ -433,7 +429,7 @@ private fun TabSwitcher(
     // baru animasikan perpindahan-perpindahan berikutnya.
     val chipReady = remember { mutableStateOf(false) }
     LaunchedEffect(measured) { if (measured) chipReady.value = true }
-    val chipSpec = if (chipReady.value) tween<Int>(340, easing = FastOutSlowInEasing) else snap<Int>()
+    val chipSpec = if (chipReady.value) tween(340, easing = FastOutSlowInEasing) else snap<Int>()
     val chipX by animateIntAsState(targetChipX, chipSpec, label = "tab-chip-x")
     val chipWidth by animateIntAsState(targetChipWidth, chipSpec, label = "tab-chip-w")
 
@@ -471,7 +467,7 @@ private fun TabSwitcher(
                         .padding(vertical = SelectionInset)
                         .width(with(density) { chipWidth.toDp() })
                         .fillMaxHeight()
-                        .then(selectedChipModifier(backdrop, componentStyle)),
+                        .selectedChipModifier(backdrop, componentStyle),
                 )
             }
             // Lapisan 2: baris teks tab (klik + pengukuran lebar).
@@ -552,7 +548,7 @@ private fun PillSegment(
  * dipakai oleh chip meluncur di [TabSwitcher].
  */
 @Composable
-private fun selectedChipModifier(
+private fun Modifier.selectedChipModifier(
     backdrop: Backdrop,
     componentStyle: ComponentStyle,
 ): Modifier {
@@ -570,7 +566,7 @@ private fun selectedChipModifier(
     val selectedSolid = MaterialTheme.colorScheme.surfaceContainerHighest
 
     return when {
-        componentStyle.drawsBackdrop() -> Modifier.drawBackdrop(
+        componentStyle.drawsBackdrop() -> this.drawBackdrop(
             backdrop = backdrop,
             shape = { Capsule() },
             effects = {
@@ -584,7 +580,7 @@ private fun selectedChipModifier(
             },
             onDrawSurface = { drawRect(selectedGlassTint) },
         )
-        else -> Modifier.clip(CircleShape).background(
+        else -> this.clip(CircleShape).background(
             if (componentStyle == ComponentStyle.FROSTED) selectedFrosted else selectedSolid,
         )
     }

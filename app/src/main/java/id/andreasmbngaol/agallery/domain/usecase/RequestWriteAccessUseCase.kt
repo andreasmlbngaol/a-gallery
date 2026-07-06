@@ -4,7 +4,7 @@ import android.content.IntentSender
 import id.andreasmbngaol.agallery.domain.repository.MediaRepository
 
 /**
- * Minta SATU write consent (API 30+) untuk sekumpulan [uris] sekaligus.
+ * Minta SATU write consent (API 30+) untuk sekumpulan uris sekaligus.
  *
  * Dipakai oleh aksi batch "Move to album": alih-alih meminta izin per item,
  * kita minta satu [IntentSender] untuk semua uri. Setelah user menyetujui,

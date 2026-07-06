@@ -11,8 +11,8 @@ import androidx.room.PrimaryKey
  * [isVideo] & [durationMs] direkam saat di-trash supaya layar Trash bisa
  * menampilkan badge video + durasi tanpa query MediaStore lagi.
  *
- * The permanent purge after 30 days is handled by [MediaDao.getTrashedOlderThan]
- * + [MediaDao.purgeTrashedOlderThan] (dipicu saat app start / layar Trash dibuka).
+ * The permanent purge after 30 days is handled by [id.andreasmbngaol.agallery.data.local.room.dao.MediaDao.getTrashedOlderThan]
+ * + [id.andreasmbngaol.agallery.data.local.room.dao.MediaDao.purgeTrashedOlderThan] (dipicu saat app start / layar Trash dibuka).
  */
 @Entity(tableName = "trashed")
 data class TrashedEntity(

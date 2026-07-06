@@ -42,7 +42,6 @@ private val NavSwipePxPerPage = 72.dp
 @Composable
 fun HomeTabsScreen(
     onMediaClick: (mediaId: Long, index: Int, sortOrder: GallerySortOrder) -> Unit,
-    onOpenSearch: () -> Unit = {},
     onOpenAlbum: (albumKey: String, name: String) -> Unit = { _, _ -> },
     onOpenTrash: () -> Unit = {},
     onCreateAlbum: () -> Unit = {},
@@ -95,7 +94,6 @@ fun HomeTabsScreen(
             }
             scope.launch { pagerState.animateScrollToPage(target) }
         },
-        onOpenSearch = onOpenSearch,
         onCreateAlbum = onCreateAlbum,
         sortOrder = sortOrder,
         onToggleSort = toggleSort,

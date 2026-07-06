@@ -23,7 +23,6 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -40,8 +39,9 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.SheetValue
 import androidx.compose.material3.Text
-import androidx.compose.material3.rememberModalBottomSheetState
+import androidx.compose.material3.rememberBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -64,24 +64,23 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalWindowInfo
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.res.stringResource
-import id.andreasmbngaol.agallery.R
 import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
 import coil3.request.crossfade
 import com.adamglin.PhosphorIcons
-import com.adamglin.phosphoricons.Fill
 import com.adamglin.phosphoricons.Bold
-import com.adamglin.phosphoricons.fill.Play
+import com.adamglin.phosphoricons.Fill
 import com.adamglin.phosphoricons.bold.ArrowClockwise
 import com.adamglin.phosphoricons.bold.ArrowLeft
 import com.adamglin.phosphoricons.bold.Info
 import com.adamglin.phosphoricons.bold.Trash
+import com.adamglin.phosphoricons.fill.Play
 import com.kyant.backdrop.Backdrop
 import com.kyant.backdrop.backdrops.layerBackdrop
 import com.kyant.backdrop.backdrops.rememberLayerBackdrop
@@ -90,7 +89,10 @@ import com.kyant.backdrop.effects.blur
 import com.kyant.backdrop.effects.lens
 import com.kyant.backdrop.effects.vibrancy
 import com.kyant.shapes.Capsule
+import id.andreasmbngaol.agallery.R
 import id.andreasmbngaol.agallery.core.image.MediaStoreThumbnail
+import id.andreasmbngaol.agallery.core.permission.AllFilesAccess
+import id.andreasmbngaol.agallery.core.ui.ConfirmDeleteDialog
 import id.andreasmbngaol.agallery.core.ui.SystemBarScrim
 import id.andreasmbngaol.agallery.core.ui.drawsBackdrop
 import id.andreasmbngaol.agallery.core.ui.rememberEffectiveComponentStyle
@@ -99,8 +101,6 @@ import id.andreasmbngaol.agallery.core.ui.usesBlur
 import id.andreasmbngaol.agallery.core.ui.usesLens
 import id.andreasmbngaol.agallery.domain.model.ComponentStyle
 import id.andreasmbngaol.agallery.domain.model.MediaDetails
-import id.andreasmbngaol.agallery.core.permission.AllFilesAccess
-import id.andreasmbngaol.agallery.core.ui.ConfirmDeleteDialog
 import id.andreasmbngaol.agallery.domain.model.TrashItem
 import id.andreasmbngaol.agallery.presentation.viewer.GlassIconButton
 import id.andreasmbngaol.agallery.presentation.viewer.VideoPlayerContent
@@ -136,7 +136,7 @@ private const val GridThumbnailPx = 400
  * - **Action island** mode seleksi: Select all / Restore / Delete / Cancel.
  *
  * ## Auto-purge 30 hari
- * Auto-purge utama kini dijalankan di background oleh [TrashPurgeWorker]
+ * Auto-purge utama kini dijalankan di background oleh [id.andreasmbngaol.agallery.data.work.TrashPurgeWorker]
  * (harian) bila app punya All-files access -> hapus permanen tanpa dialog.
  * Sebagai cadangan, saat layar dibuka [TrashViewModel.autoPurgeExpired] juga
  * mengumpulkan item kedaluwarsa. Tanpa All-files access, hapus tetap lewat SAF
@@ -687,8 +687,9 @@ private fun TrashViewer(
     val dragOffsetY = remember { Animatable(0f) }
     // Berapa jauh media diangkat saat panel detail terbuka (~22% tinggi layar),
     // sama seperti PhotoViewer biasa supaya media tetap kelihatan di atas sheet.
-    val configuration = LocalConfiguration.current
-    val liftPx = with(density) { (configuration.screenHeightDp.dp * 0.22f).toPx() }
+//    val y = LocalConfiguration.current.screenHeightDp
+//    val x = LocalWindowInfo.current.containerSize.height
+    val liftPx = with(density) { (LocalWindowInfo.current.containerSize.height.dp * 0.22f).toPx() }
 
     Box(
         modifier = Modifier
@@ -905,7 +906,10 @@ private fun TrashDetailsSheet(
     loadDetails: suspend (String) -> MediaDetails?,
     onDismiss: () -> Unit,
 ) {
-    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    val sheetState = rememberBottomSheetState(
+        initialValue = SheetValue.Hidden,
+        enabledValues = setOf(SheetValue.Hidden, SheetValue.Expanded), // skip PartiallyExpanded
+    )
     var details by remember(item.id) { mutableStateOf<MediaDetails?>(null) }
     LaunchedEffect(item.id) {
         details = loadDetails(item.uri)

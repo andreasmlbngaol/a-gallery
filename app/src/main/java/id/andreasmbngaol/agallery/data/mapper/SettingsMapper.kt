@@ -35,12 +35,12 @@ fun AppSettingsDto.toDomain(): AppSettings =
         pinnedAlbumKeys = pinnedAlbumKeys,
     )
 
-fun AppSettings.toDto(): AppSettingsDto =
-    AppSettingsDto(
-        edgeEffectMode = edgeEffectMode?.name,
-        componentStyle = componentStyle?.name,
-        gridColumns = gridColumns,
-        sortOrder = sortOrder.name,
-        performanceMode = performanceMode.name,
-        pinnedAlbumKeys = pinnedAlbumKeys,
-    )
+//fun AppSettings.toDto(): AppSettingsDto =
+//    AppSettingsDto(
+//        edgeEffectMode = edgeEffectMode?.name,
+//        componentStyle = componentStyle?.name,
+//        gridColumns = gridColumns,
+//        sortOrder = sortOrder.name,
+//        performanceMode = performanceMode.name,
+//        pinnedAlbumKeys = pinnedAlbumKeys,
+//    )

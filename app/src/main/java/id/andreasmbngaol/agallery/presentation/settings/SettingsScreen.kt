@@ -65,14 +65,13 @@ import id.andreasmbngaol.agallery.domain.model.PerformanceMode
 import id.andreasmbngaol.agallery.domain.model.MIN_GRID_COLUMNS
 import kotlinx.coroutines.delay
 import org.koin.androidx.compose.koinViewModel
+import kotlin.time.Duration.Companion.milliseconds
 
 // ---- Tuning "frosted glass" segmented control ----
 // Track: kaca tipis. Karena layar Settings latarnya rata (bukan foto), efek
 // dibuat frosted/translucent, bukan refraction penuh seperti bar mengambang
 // di atas grid (refraction butuh konten kaya di belakang biar kelihatan).
 private const val TrackGlassAlpha = 0.4f
-// Chip terpilih: kaca lebih pekat -> penanda selected sesuai bahasa glass.
-private const val SelectedChipAlpha = 0.9f
 private val SegmentedControlHeight = 48.dp
 private val SegmentedTrackRadius = 24.dp
 private val SegmentedChipRadius = 20.dp
@@ -103,7 +102,7 @@ fun SettingsScreen(
 }
 
 /**
- * Satu pilihan mode efek tepi. [label] = teks pendek di segmen; deskripsi
+ * Satu pilihan mode efek tepi.label = teks pendek di segmen; deskripsi
  * panjang ada di [edgeEffectDescription] (helper text di bawah kontrol).
  */
 private data class EdgeEffectChoice(
@@ -333,7 +332,7 @@ private fun TransientHelperText(text: String, selectionKey: Any?) {
             return@LaunchedEffect
         }
         visible = true
-        delay(HelperVisibleMillis)
+        delay(HelperVisibleMillis.milliseconds)
         visible = false
     }
     AnimatedVisibility(
@@ -409,7 +408,7 @@ private fun GridColumnsSegmentedControl(
 }
 
 /**
- * Satu pilihan mode performa. [label] = teks pendek di segmen; penjelasan
+ * Satu pilihan mode performa. label = teks pendek di segmen; penjelasan
  * panjang ada di [performanceModeDescription] (helper text di bawah kontrol).
  */
 private data class PerformanceChoice(

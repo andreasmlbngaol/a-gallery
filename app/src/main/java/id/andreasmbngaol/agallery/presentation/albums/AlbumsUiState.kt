@@ -5,8 +5,8 @@ import id.andreasmbngaol.agallery.domain.model.Album
 /**
  * State layar Albums.
  *
- * [Content] sekarang dipecah jadi [pinned] (5 album cerdas + folder yang
- * di-pin user, urutan tetap seperti yang disimpan) dan [more] (sisa folder,
+ * [Content] sekarang dipecah jadi pinned (5 album cerdas + folder yang
+ * di-pin user, urutan tetap seperti yang disimpan) dan more (sisa folder,
  * disortir menurut nama).
  */
 sealed interface AlbumsUiState {

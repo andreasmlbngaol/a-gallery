@@ -6,32 +6,29 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.IntentSenderRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.SizeTransform
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
-import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.border
-import androidx.compose.foundation.combinedClickable
-import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.layout.BoxWithConstraints
-import androidx.compose.foundation.layout.sizeIn
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.setValue
-import androidx.compose.ui.draw.blur
-import androidx.compose.ui.graphics.vector.ImageVector
-import com.adamglin.phosphoricons.bold.Trash
-import androidx.compose.animation.SizeTransform
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.gestures.FlingBehavior
+import androidx.compose.foundation.gestures.ScrollScope
+import androidx.compose.foundation.gestures.ScrollableDefaults
+import androidx.compose.foundation.gestures.detectVerticalDragGestures
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -41,6 +38,7 @@ import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.calculateEndPadding
 import androidx.compose.foundation.layout.calculateStartPadding
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -48,7 +46,9 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.sizeIn
 import androidx.compose.foundation.layout.statusBars
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyGridState
@@ -60,7 +60,6 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -70,23 +69,26 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateMapOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shadow
-import androidx.compose.ui.graphics.StrokeCap
-import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
@@ -98,30 +100,31 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.paging.LoadState
 import androidx.paging.compose.LazyPagingItems
-import coil3.SingletonImageLoader
-import id.andreasmbngaol.agallery.R
-import id.andreasmbngaol.agallery.core.image.MediaStoreThumbnail
-import id.andreasmbngaol.agallery.domain.model.PerformanceMode
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.collectLatest
-import kotlinx.coroutines.flow.distinctUntilChanged
-import kotlinx.coroutines.withContext
 import androidx.paging.compose.collectAsLazyPagingItems
 import androidx.paging.compose.itemContentType
 import androidx.paging.compose.itemKey
-import android.os.Build
-import androidx.compose.foundation.gestures.FlingBehavior
-import androidx.compose.foundation.gestures.ScrollScope
-import androidx.compose.foundation.gestures.ScrollableDefaults
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.foundation.gestures.detectVerticalDragGestures
-import androidx.compose.foundation.layout.fillMaxHeight
-import androidx.compose.foundation.layout.width
-import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.ui.input.pointer.pointerInput
-import kotlin.math.ceil
-import kotlinx.coroutines.launch
+import coil3.SingletonImageLoader
+import coil3.compose.AsyncImage
+import coil3.request.ImageRequest
+import coil3.request.crossfade
+import coil3.video.videoFramePercent
+import com.adamglin.PhosphorIcons
+import com.adamglin.phosphoricons.Bold
+import com.adamglin.phosphoricons.Fill
+import com.adamglin.phosphoricons.bold.ArrowLeft
+import com.adamglin.phosphoricons.bold.Check
+import com.adamglin.phosphoricons.bold.CheckSquare
+import com.adamglin.phosphoricons.bold.Copy
+import com.adamglin.phosphoricons.bold.FolderSimple
+import com.adamglin.phosphoricons.bold.Heart
+import com.adamglin.phosphoricons.bold.ImageSquare
+import com.adamglin.phosphoricons.bold.Square
+import com.adamglin.phosphoricons.bold.Trash
+import com.adamglin.phosphoricons.bold.WarningCircle
+import com.adamglin.phosphoricons.bold.X
+import com.adamglin.phosphoricons.fill.Heart
+import com.adamglin.phosphoricons.fill.Play
+import com.adamglin.phosphoricons.fill.Trash
 import com.kyant.backdrop.Backdrop
 import com.kyant.backdrop.backdrops.layerBackdrop
 import com.kyant.backdrop.backdrops.rememberLayerBackdrop
@@ -130,49 +133,40 @@ import com.kyant.backdrop.effects.blur
 import com.kyant.backdrop.effects.lens
 import com.kyant.backdrop.effects.vibrancy
 import com.kyant.shapes.Capsule
-import coil3.compose.AsyncImage
-import coil3.request.ImageRequest
-import coil3.request.crossfade
-import coil3.video.videoFramePercent
-import com.adamglin.PhosphorIcons
-import com.adamglin.phosphoricons.Fill
-import com.adamglin.phosphoricons.Bold
-import com.adamglin.phosphoricons.fill.Heart
-import com.adamglin.phosphoricons.fill.Play
-import com.adamglin.phosphoricons.fill.Trash
-import com.adamglin.phosphoricons.bold.ArrowLeft
-import com.adamglin.phosphoricons.bold.Check
-import com.adamglin.phosphoricons.bold.CheckSquare
-import com.adamglin.phosphoricons.bold.Square
-import com.adamglin.phosphoricons.bold.X
-import com.adamglin.phosphoricons.bold.Copy
-import com.adamglin.phosphoricons.bold.FolderSimple
-import com.adamglin.phosphoricons.bold.Heart
-import com.adamglin.phosphoricons.bold.ImageSquare
-import com.adamglin.phosphoricons.bold.WarningCircle
+import id.andreasmbngaol.agallery.R
+import id.andreasmbngaol.agallery.core.image.MediaStoreThumbnail
 import id.andreasmbngaol.agallery.core.ui.ConfirmDeleteDialog
 import id.andreasmbngaol.agallery.core.ui.FloatingTabBarHeight
 import id.andreasmbngaol.agallery.core.ui.SystemBarScrim
 import id.andreasmbngaol.agallery.core.ui.drawsBackdrop
 import id.andreasmbngaol.agallery.core.ui.rememberEffectiveComponentStyle
+import id.andreasmbngaol.agallery.core.ui.rememberEffectiveEdgeEffectMode
 import id.andreasmbngaol.agallery.core.ui.usesBlur
 import id.andreasmbngaol.agallery.core.ui.usesLens
-import id.andreasmbngaol.agallery.core.ui.rememberEffectiveEdgeEffectMode
 import id.andreasmbngaol.agallery.domain.model.ComponentStyle
 import id.andreasmbngaol.agallery.domain.model.GallerySortOrder
 import id.andreasmbngaol.agallery.domain.model.MediaItem
 import id.andreasmbngaol.agallery.domain.model.MediaScope
-import id.andreasmbngaol.agallery.domain.model.mediaScopeFromKey
 import id.andreasmbngaol.agallery.domain.model.MediaType
+import id.andreasmbngaol.agallery.domain.model.PerformanceMode
+import id.andreasmbngaol.agallery.domain.model.mediaScopeFromKey
 import id.andreasmbngaol.agallery.presentation.animation.sharedPhotoElement
 import id.andreasmbngaol.agallery.presentation.viewer.AlbumThumbnailPickerDialog
 import id.andreasmbngaol.agallery.presentation.viewer.HoldToDeleteButton
 import id.andreasmbngaol.agallery.presentation.viewer.MoveToTrashConfirmDialog
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import org.koin.androidx.compose.koinViewModel
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.Locale
+import kotlin.math.ceil
+import kotlin.time.Duration.Companion.milliseconds
 
 // Tinggi visual TopAppBar (sedikit di atas M3 default 64dp untuk
 // mengakomodasi judul 26sp SemiBold + FilledTonalIconButton 44dp).
@@ -212,13 +206,13 @@ private val ScrollbarEndPadding = 4.dp
 // menempel ke edge (susah diraih + kadang memicu gesture "back" sistem).
 private val ScrollbarEdgeInset = 4.dp
 
-private val TitleDateFormatter: DateTimeFormatter =
+private fun titleDateFormatter(): DateTimeFormatter =
     DateTimeFormatter.ofPattern("MMMM yyyy", Locale.getDefault())
 
 private fun formatTitleDate(epochSeconds: Long): String =
     Instant.ofEpochSecond(epochSeconds)
         .atZone(ZoneId.systemDefault())
-        .format(TitleDateFormatter)
+        .format(titleDateFormatter())
         .replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale.getDefault()) else it.toString() }
 
 /**
@@ -456,7 +450,7 @@ fun GalleryGridScreen(
                 items = items,
                 gridState = gridState,
                 contentPadding = gridContentPadding,
-                sourceModifier = sourceModifier,
+                modifier = sourceModifier,
                 gridColumns = gridColumns,
                 performanceMode = performanceMode,
                 onMediaClick = { id, index -> onMediaClick(id, index, sortOrder) },
@@ -714,7 +708,7 @@ private fun GalleryPagingContent(
     items: LazyPagingItems<MediaItem>,
     gridState: LazyGridState,
     contentPadding: PaddingValues,
-    sourceModifier: Modifier,
+    modifier: Modifier,
     gridColumns: Int,
     performanceMode: PerformanceMode,
     onMediaClick: (Long, Int) -> Unit,
@@ -723,19 +717,18 @@ private fun GalleryPagingContent(
     isSelected: (Long) -> Boolean = { false },
     onToggleSelect: (MediaItem) -> Unit = {},
 ) {
-    val refresh = items.loadState.refresh
-    when {
-        refresh is LoadState.Loading && items.itemCount == 0 -> {
+    when (val refresh = items.loadState.refresh) {
+        is LoadState.Loading if items.itemCount == 0 -> {
             LoadingState(contentPadding = contentPadding)
         }
 
-        refresh is LoadState.Error && items.itemCount == 0 -> {
+        is LoadState.Error if items.itemCount == 0 -> {
             // Error awal juga dibungkus pull-to-refresh: selain tombol Retry,
             // user bisa tarik-untuk-refresh seperti biasa.
             GalleryPullToRefresh(
                 items = items,
                 contentPadding = contentPadding,
-                sourceModifier = sourceModifier,
+                modifier = modifier,
             ) { contentOffset ->
                 ErrorState(
                     contentPadding = contentPadding,
@@ -747,14 +740,14 @@ private fun GalleryPagingContent(
             }
         }
 
-        refresh is LoadState.NotLoading && items.itemCount == 0 -> {
+        is LoadState.NotLoading if items.itemCount == 0 -> {
             // PENTING: empty state pun dibungkus pull-to-refresh. Ini kejadian
             // tepat setelah izin baru diberikan — galeri masih kosong sesaat,
             // dan user harus bisa menarik untuk memicu reload MediaStore.
             GalleryPullToRefresh(
                 items = items,
                 contentPadding = contentPadding,
-                sourceModifier = sourceModifier,
+                modifier = modifier,
             ) { contentOffset ->
                 EmptyState(
                     contentPadding = contentPadding,
@@ -767,7 +760,7 @@ private fun GalleryPagingContent(
             items = items,
             gridState = gridState,
             contentPadding = contentPadding,
-            sourceModifier = sourceModifier,
+            modifier = modifier,
             gridColumns = gridColumns,
             performanceMode = performanceMode,
             onMediaClick = onMediaClick,
@@ -785,7 +778,7 @@ private fun GalleryPagingContent(
  * galeri masih kosong (mis. tepat setelah izin diberikan, konten belum sempat
  * ke-load).
  *
- * [content] menerima sebuah Modifier `translationY` ([contentOffset]) yang
+ * [content] menerima sebuah Modifier `translationY` (contentOffset) yang
  * HARUS dipasang ke elemen scrollable-nya, supaya konten ikut ketarik turun
  * mengikuti jari dan indikator muncul di celah atasnya.
  *
@@ -808,7 +801,7 @@ private fun GalleryPagingContent(
 private fun GalleryPullToRefresh(
     items: LazyPagingItems<MediaItem>,
     contentPadding: PaddingValues,
-    sourceModifier: Modifier,
+    modifier: Modifier,
     content: @Composable (contentOffset: Modifier) -> Unit,
 ) {
     val isRefreshing = items.loadState.refresh is LoadState.Loading
@@ -831,7 +824,7 @@ private fun GalleryPullToRefresh(
         state = pullState,
         modifier = Modifier
             .fillMaxSize()
-            .then(sourceModifier),
+            .then(modifier),
         indicator = {
             // Indikator MENGAMBANG di TENGAH celah yang kebuka saat konten
             // ketarik turun — bukan nempel di pinggir gambar. Celah = dari
@@ -887,7 +880,7 @@ private fun GalleryGrid(
     items: LazyPagingItems<MediaItem>,
     gridState: LazyGridState,
     contentPadding: PaddingValues,
-    sourceModifier: Modifier,
+    modifier: Modifier,
     gridColumns: Int,
     performanceMode: PerformanceMode,
     onMediaClick: (Long, Int) -> Unit,
@@ -899,7 +892,7 @@ private fun GalleryGrid(
     GalleryPullToRefresh(
         items = items,
         contentPadding = contentPadding,
-        sourceModifier = sourceModifier,
+        modifier = modifier,
     ) { contentOffset ->
         val context = LocalContext.current
 
@@ -920,7 +913,7 @@ private fun GalleryGrid(
                     if (scrolling) return@collectLatest
                     // Jeda kecil biar benar-benar diam. Kalau user scroll lagi,
                     // collectLatest membatalkan blok ini (prefetch stale dibuang).
-                    delay(120)
+                    delay(120.milliseconds)
                     val info = gridState.layoutInfo.visibleItemsInfo
                     val firstVisible = info.firstOrNull()?.index ?: return@collectLatest
                     val lastVisible = info.lastOrNull()?.index ?: return@collectLatest
@@ -1344,7 +1337,7 @@ private fun PhotoPreviewOverlay(
  *  - FROSTED : haze putih tebal (drawBackdrop tanpa blur/lens).
  *  - GLASS   : blur + lens Kyant untuk efek kaca cair.
  *
- * Dipakai di TopBar Gallery HANYA saat [onBack] non-null (mode album-detail).
+ * Dipakai di TopBar Gallery HANYA saat onBack non-null (mode album-detail).
  */
 @Composable
 private fun StyledCircleBackButton(

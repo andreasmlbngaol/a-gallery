@@ -18,8 +18,8 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.asPaddingValues
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.calculateEndPadding
 import androidx.compose.foundation.layout.calculateStartPadding
 import androidx.compose.foundation.layout.fillMaxSize
@@ -28,7 +28,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyGridState
@@ -37,11 +36,7 @@ import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.ui.res.pluralStringResource
-import androidx.compose.ui.res.stringResource
-import id.andreasmbngaol.agallery.R
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -67,6 +62,8 @@ import androidx.compose.ui.input.pointer.positionChange
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
@@ -77,7 +74,6 @@ import com.adamglin.phosphoricons.bold.CaretRight
 import com.adamglin.phosphoricons.bold.PushPin
 import com.adamglin.phosphoricons.bold.PushPinSlash
 import com.adamglin.phosphoricons.bold.Trash
-import id.andreasmbngaol.agallery.domain.model.LOCKED_PIN_ALBUM_KEYS
 import com.kyant.backdrop.Backdrop
 import com.kyant.backdrop.backdrops.layerBackdrop
 import com.kyant.backdrop.backdrops.rememberLayerBackdrop
@@ -86,17 +82,18 @@ import com.kyant.backdrop.effects.blur
 import com.kyant.backdrop.effects.lens
 import com.kyant.backdrop.effects.vibrancy
 import com.kyant.shapes.Capsule
+import id.andreasmbngaol.agallery.R
 import id.andreasmbngaol.agallery.core.ui.EdgeEffectTopBarScaffold
 import id.andreasmbngaol.agallery.core.ui.FloatingTabBarHeight
 import id.andreasmbngaol.agallery.core.ui.ScreenTopBarHeight
 import id.andreasmbngaol.agallery.core.ui.drawsBackdrop
 import id.andreasmbngaol.agallery.core.ui.usesBlur
 import id.andreasmbngaol.agallery.core.ui.usesLens
-import id.andreasmbngaol.agallery.domain.model.ComponentStyle
 import id.andreasmbngaol.agallery.domain.model.Album
+import id.andreasmbngaol.agallery.domain.model.ComponentStyle
 import id.andreasmbngaol.agallery.domain.model.EdgeEffectMode
+import id.andreasmbngaol.agallery.domain.model.LOCKED_PIN_ALBUM_KEYS
 import id.andreasmbngaol.agallery.presentation.animation.sharedPhotoElement
-import kotlinx.coroutines.withTimeoutOrNull
 import org.koin.androidx.compose.koinViewModel
 
 /**
@@ -114,7 +111,6 @@ import org.koin.androidx.compose.koinViewModel
  *   yang ditahan mengikuti jari, kartu lain di section Pinned reflow. Lepas
  *   jari -> commit urutan baru ke VM. Tidak ada layar terpisah lagi.
  */
-@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun AlbumsScreen(
     edgeEffectMode: EdgeEffectMode?,
@@ -213,7 +209,7 @@ fun AlbumsScreen(
                     .then(if (previewOverlayActive) Modifier.blur(20.dp) else Modifier)
                     .graphicsLayer { alpha = if (previewOverlayActive) 0.9f else 1f },
             ) {
-                when (val current = effectiveState) {
+                when (effectiveState) {
                     is AlbumsUiState.Content -> {
                         // ---------- Pinned ----------
                         if (pinnedList.isNotEmpty()) {
@@ -225,7 +221,6 @@ fun AlbumsScreen(
                                 key = { "pin:${it.key}" },
                             ) { album ->
                                 val isDragging = album.key == draggingKey
-                                val isLocked = album.key in LOCKED_PIN_ALBUM_KEYS
                                 PinnedAlbumCard(
                                     album = album,
                                     isDragging = isDragging,
@@ -250,17 +245,16 @@ fun AlbumsScreen(
                                         setDragging(null)
                                         viewModel.setOrder(order)
                                     },
-                                    onDragCancel = { setDragging(null) },
                                 )
                             }
                         }
                         // ---------- More ----------
-                        if (current.more.isNotEmpty()) {
+                        if (effectiveState.more.isNotEmpty()) {
                             item(span = { GridItemSpan(maxLineSpan) }) {
                                 SectionHeader(stringResource(R.string.action_more))
                             }
                             items(
-                                items = current.more,
+                                items = effectiveState.more,
                                 key = { "more:${it.key}" },
                             ) { album ->
                                 MoreAlbumCard(
@@ -274,7 +268,7 @@ fun AlbumsScreen(
                             }
                         }
                         // ---------- Trash (row full-width, bukan kartu) ----------
-                        current.trash?.let { trashAlbum ->
+                        effectiveState.trash?.let { trashAlbum ->
                             item(
                                 span = { GridItemSpan(maxLineSpan) },
                                 key = "trash-row",
@@ -343,7 +337,7 @@ private fun MoreAlbumCard(
 
 /**
  * Kartu di section "Pinned". Selain tap & long-press biasa, kartu ini juga
- * mendengarkan gesture DRAG-setelah-long-press ([detectDragGesturesAfterLongPress])
+ * mendengarkan gesture DRAG-setelah-long-press (detectDragGesturesAfterLongPress)
  * -- kalau user menahan lalu MENGGESER, kartu ini pindah tempat langsung di
  * grid tanpa overlay reorder terpisah.
  */
@@ -357,7 +351,6 @@ private fun PinnedAlbumCard(
     onLongPressStart: () -> Unit,
     onDragEnter: () -> Unit,
     onDragCommit: () -> Unit,
-    onDragCancel: () -> Unit,
 ) {
     // Offset kumulatif jari selama drag (px). Reset tiap drag berakhir.
     var dragOffset by remember { mutableStateOf(Offset.Zero) }
@@ -368,7 +361,6 @@ private fun PinnedAlbumCard(
     val onLongPressStartLatest by rememberUpdatedState(onLongPressStart)
     val onDragEnterLatest by rememberUpdatedState(onDragEnter)
     val onDragCommitLatest by rememberUpdatedState(onDragCommit)
-    val onDragCancelLatest by rememberUpdatedState(onDragCancel)
 
     Column(
         modifier = Modifier
@@ -499,7 +491,7 @@ private suspend fun AwaitPointerEventScope.awaitLongPressOrTap(
         if (remaining <= 0) return LongPressOutcome.LongPress
         val event = try {
             withTimeoutOrNull(remaining) { awaitPointerEvent() }
-        } catch (t: Throwable) {
+        } catch (_: Throwable) {
             null
         } ?: return LongPressOutcome.LongPress
         val change = event.changes.firstOrNull { it.id == pointerId } ?: return LongPressOutcome.Cancel
@@ -761,7 +753,7 @@ private fun TrashRow(
     countText: String,
     onClick: () -> Unit,
 ) {
-    androidx.compose.foundation.layout.Column(
+    Column(
         modifier = Modifier.fillMaxWidth(),
     ) {
         androidx.compose.material3.HorizontalDivider(
@@ -813,5 +805,5 @@ private fun TrashRow(
 
 // SnapshotStateList<Album> factory (typed helper agar tak perlu inline
 // annotation di call site).
-private fun mutableStateListOfAlbums(): SnapshotStateList<Album> =
-    emptyList<Album>().toMutableStateList()
+//private fun mutableStateListOfAlbums(): SnapshotStateList<Album> =
+//    emptyList<Album>().toMutableStateList()

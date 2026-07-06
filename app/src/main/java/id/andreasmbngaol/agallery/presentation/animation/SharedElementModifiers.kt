@@ -1,7 +1,5 @@
 package id.andreasmbngaol.agallery.presentation.animation
 
-import androidx.compose.animation.BoundsTransform
-import androidx.compose.animation.ExperimentalSharedTransitionApi
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -44,7 +42,6 @@ private const val SharedPhotoFadeDurationMillis = 260
  * @param key key unik untuk mencocokkan elemen di dua layar. Pastikan sama
  * persis di grid thumbnail dan viewer page (mis. `"photo-$id"`).
  */
-@OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
 fun Modifier.sharedPhotoElement(key: Any): Modifier {
     if (LocalInspectionMode.current) return this
@@ -56,7 +53,7 @@ fun Modifier.sharedPhotoElement(key: Any): Modifier {
             animatedVisibilityScope = animatedScope,
             enter = fadeIn(tween(SharedPhotoFadeDurationMillis)),
             exit = fadeOut(tween(SharedPhotoFadeDurationMillis)),
-            boundsTransform = BoundsTransform { _, _ ->
+            boundsTransform = { _, _ ->
                 tween(SharedPhotoBoundsDurationMillis)
             },
         )

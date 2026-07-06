@@ -1,6 +1,5 @@
 package id.andreasmbngaol.agallery.presentation.animation
 
-import androidx.compose.animation.ExperimentalSharedTransitionApi
 import androidx.compose.animation.SharedTransitionScope
 import androidx.compose.runtime.compositionLocalOf
 
@@ -13,5 +12,4 @@ import androidx.compose.runtime.compositionLocalOf
  * akan no-op bila dipakai di luar `SharedTransitionLayout` (mis. di dalam
  * `@Preview` atau sebelum navigasi ter-inisialisasi).
  */
-@OptIn(ExperimentalSharedTransitionApi::class)
 val LocalSharedTransitionScope = compositionLocalOf<SharedTransitionScope?> { null }

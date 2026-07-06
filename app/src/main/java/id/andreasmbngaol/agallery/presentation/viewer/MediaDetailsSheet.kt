@@ -17,8 +17,9 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.SheetValue
 import androidx.compose.material3.Text
-import androidx.compose.material3.rememberModalBottomSheetState
+import androidx.compose.material3.rememberBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -65,7 +66,10 @@ fun MediaDetailsSheet(
     loadDetails: suspend (String) -> MediaDetails?,
     onDismiss: () -> Unit,
 ) {
-    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    val sheetState = rememberBottomSheetState(
+        initialValue = SheetValue.Hidden,
+        enabledValues = setOf(SheetValue.Hidden, SheetValue.Expanded), // skip PartiallyExpanded
+    )
     // key(item.id) -> reset state kalau sheet dipakai ulang utk item berbeda.
     var details by remember(item.id) { mutableStateOf<MediaDetails?>(null) }
     var loading by remember(item.id) { mutableStateOf(true) }

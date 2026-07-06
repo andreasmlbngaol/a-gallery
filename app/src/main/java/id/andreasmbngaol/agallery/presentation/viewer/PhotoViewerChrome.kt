@@ -7,19 +7,14 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DropdownMenu
@@ -77,7 +72,6 @@ import com.kyant.shapes.Capsule
 import id.andreasmbngaol.agallery.core.ui.drawsBackdrop
 import id.andreasmbngaol.agallery.core.ui.usesBlur
 import id.andreasmbngaol.agallery.core.ui.usesLens
-import id.andreasmbngaol.agallery.domain.model.Album
 import id.andreasmbngaol.agallery.domain.model.ComponentStyle
 
 // ---- Tuning liquid glass (samain dgn floating nav bar di GalleryTabScaffold) ----
@@ -619,59 +613,3 @@ fun MoveToTrashConfirmDialog(
     )
 }
 
-/**
- * Dialog pilih album untuk Copy/Move: ketik nama album baru, atau pilih salah
- * satu album yang sudah ada.
- */
-@Composable
-fun AlbumPickerDialog(
-    title: String,
-    actionLabel: String,
-    albums: List<Album>,
-    onPick: (String) -> Unit,
-    onDismiss: () -> Unit,
-) {
-    var newName by remember { mutableStateOf("") }
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text(title) },
-        text = {
-            Column {
-                OutlinedTextField(
-                    value = newName,
-                    onValueChange = { newName = it },
-                    singleLine = true,
-                    label = { Text(stringResource(R.string.new_album_name)) },
-                    modifier = Modifier.fillMaxWidth(),
-                )
-                if (albums.isNotEmpty()) {
-                    Spacer(Modifier.height(12.dp))
-                    Text(
-                        text = stringResource(R.string.or_pick_existing_album),
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                    Spacer(Modifier.height(4.dp))
-                    LazyColumn(modifier = Modifier.heightIn(max = 240.dp)) {
-                        items(albums) { album ->
-                            Text(
-                                text = stringResource(R.string.album_name_with_count, album.name, album.itemCount),
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .clickable { onPick(album.name) }
-                                    .padding(vertical = 12.dp),
-                            )
-                        }
-                    }
-                }
-            }
-        },
-        confirmButton = {
-            TextButton(
-                onClick = { onPick(newName.trim()) },
-                enabled = newName.isNotBlank(),
-            ) { Text(actionLabel) }
-        },
-        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_cancel)) } },
-    )
-}

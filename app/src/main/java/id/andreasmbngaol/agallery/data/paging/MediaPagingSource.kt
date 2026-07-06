@@ -24,7 +24,7 @@ import id.andreasmbngaol.agallery.domain.model.MediaScope
  * ## Konsistensi offset
  *
  * `key` = nomor halaman; `offset = page * PAGE_SIZE`. Ini hanya benar kalau
- * SEMUA load berukuran sama, makanya di [PagingConfig] `initialLoadSize`
+ * SEMUA load berukuran sama, makanya di [androidx.paging.PagingConfig] `initialLoadSize`
  * disetel = `pageSize` (= [PAGE_SIZE]).
  */
 class MediaPagingSource(

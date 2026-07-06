@@ -146,10 +146,10 @@ class GalleryViewModel(
         refreshMediaUseCase()
     }
 
-    fun setSortOrder(order: GallerySortOrder) {
-        if (sortOrder.value == order) return
-        viewModelScope.launch { setSortOrderPref(order) }
-    }
+//    fun setSortOrder(order: GallerySortOrder) {
+//        if (sortOrder.value == order) return
+//        viewModelScope.launch { setSortOrderPref(order) }
+//    }
 
     fun toggleSortOrder() {
         val next = when (sortOrder.value) {

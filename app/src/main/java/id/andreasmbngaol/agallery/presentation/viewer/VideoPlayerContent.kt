@@ -7,6 +7,7 @@ import android.os.Handler
 import android.os.Looper
 import android.provider.Settings
 import android.view.LayoutInflater
+import android.widget.FrameLayout
 import androidx.annotation.OptIn
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.tween
@@ -122,16 +123,16 @@ object VideoPlaybackPrefs {
  * - **Default MUTE** (volume 0) — user bisa unmute lewat tombol paling kanan.
  * - **Kontrol bawah** dalam container **liquid glass** (Kyant, API 33+;
  *   fallback frosted solid di bawahnya), urutan kiri->kanan:
- *   `[play/pause] [current time] [====slider====] [total time] [mute]`.
+ *   `[play/pause] [current time] [====slider====] [total time] mute`.
  * - **Gesture** ala TikTok: 1x tap = show/hide kontrol; 2x tap TENGAH =
  *   play/pause; 2x tap KIRI = mundur 5 detik (cap 0); 2x tap KANAN = maju
  *   5 detik; tahan sisi KIRI atau KANAN = maju cepat 2x.
  *
  * ## Fix bug slider
- * 1. **Loncat balik**: [pendingSeekMs] mengunci posisi yang DITAMPILKAN ke target
+ * 1. **Loncat balik**: pendingSeekMs mengunci posisi yang DITAMPILKAN ke target
  *    sampai player benar-benar nyusul (selisih <= 350ms), baru polling normal.
  * 2. **Video jalan saat masih menahan**: begitu scrub mulai, playback di-PAUSE
- *    (status disimpan di [wasPlayingBeforeScrub]) & baru lanjut saat jari lepas.
+ *    (status disimpan di wasPlayingBeforeScrub) & baru lanjut saat jari lepas.
  * 3. **Seek meleset ke keyframe jauh** (mis. 5s malah balik ke 0): scrub live
  *    pakai CLOSEST_SYNC (cepat), tapi saat dilepas pakai SeekParameters.EXACT
  *    supaya benar-benar mendarat presisi di detik yang dipilih.
@@ -303,8 +304,9 @@ fun VideoPlayerContent(
             modifier = videoModifier,
             factory = { ctx ->
                 // Inflate dari XML supaya surface_type=texture_view & controller off.
+                val tempParent = FrameLayout(ctx)
                 val view = LayoutInflater.from(ctx)
-                    .inflate(R.layout.view_video_player, null) as PlayerView
+                    .inflate(R.layout.view_video_player, tempParent, false) as PlayerView
                 view.player = exoPlayer
                 view
             },
