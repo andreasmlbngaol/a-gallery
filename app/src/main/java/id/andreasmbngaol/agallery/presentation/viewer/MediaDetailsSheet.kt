@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -65,6 +66,7 @@ fun MediaDetailsSheet(
     item: MediaItem,
     loadDetails: suspend (String) -> MediaDetails?,
     onDismiss: () -> Unit,
+    onRemoveMetadata: (() -> Unit)? = null,
 ) {
     val sheetState = rememberBottomSheetState(
         initialValue = SheetValue.Hidden,
@@ -168,6 +170,17 @@ fun MediaDetailsSheet(
                     d.bitrate?.let { DetailRow(stringResource(R.string.detail_bitrate), it) }
                     d.videoCodec?.let { DetailRow(stringResource(R.string.detail_video_codec), it) }
                     d.audioCodec?.let { DetailRow(stringResource(R.string.detail_audio_codec), it) }
+                }
+            }
+
+            // ---------- Hapus metadata (foto yg didukung; fitur 1.4.0) ----------
+            onRemoveMetadata?.let { onRemove ->
+                Spacer(Modifier.height(24.dp))
+                FilledTonalButton(
+                    onClick = onRemove,
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Text(stringResource(R.string.action_remove_metadata))
                 }
             }
         }

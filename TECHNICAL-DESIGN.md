@@ -233,9 +233,22 @@ already certain. Detailed design is done per-feature at build time.
   `MediaDetails` detail panel. **Location:** show the coordinates and offer
   "open in Google Maps" via an intent — **no in-app map** (keeps the app
   offline).
-- **Metadata Remover** (1.4.0) — *Viewer + multi-select.* Strip metadata before
-  sharing. **The user can choose what to remove** (e.g. everything, or location
-  only). Always writes a copy; never destroys the original.
+- **Metadata Remover** (1.4.0) — *Viewer (detail panel).* Strip metadata before
+  sharing, launched from the swipe-up detail panel (photos only). Implemented in
+  1.4.0:
+  - **Selective removal** — the user picks what to strip: **Location (GPS)**,
+    **Camera & settings**, or **All metadata**. Orientation is always preserved
+    so the photo never ends up rotated.
+  - **Output choice, asked every time** — **overwrite the original** or **save a
+    clean copy** (`*_clean`) in the same folder; the copy path never touches the
+    original.
+  - **Lossless** — uses `ExifInterface.saveAttributes()` (no re-encode) on
+    **JPEG / PNG / WebP**. **HEIC/HEIF is skipped** for now (read-only for
+    writing in the framework; lossless strip would need a native lib like
+    exiv2/libheif — out of scope). Unsupported formats show a friendly message.
+  - **Consent** reuses the existing write-request / `RecoverableSecurityException`
+    flow from rename/move (auto-retries after the user approves).
+  - **Bulk / multi-select** removal is a planned fast-follow (1.4.1).
 - **Format Converter** (1.5.0) — *Viewer + multi-select.* Convert between JPG,
   PNG, WEBP, HEIC, HEIF. Primary use case: rescue HEIC/HEIF into JPG/PNG.
   Supports batch. (HEIC/HEIF encoding depends on device hardware support —

@@ -193,4 +193,21 @@
     <string name="detail_bitrate">Bitrate</string>
     <string name="detail_video_codec">Codec video</string>
     <string name="detail_audio_codec">Codec audio</string>
+
+    <!-- Hapus metadata (1.4.0) -->
+    <string name="action_remove_metadata">Hapus metadata</string>
+    <string name="action_remove">Hapus</string>
+    <string name="remove_metadata_title">Hapus metadata</string>
+    <string name="remove_metadata_desc">Pilih yang mau dibuang dari foto ini. Nggak bisa di-undo, ya.</string>
+    <string name="remove_metadata_what">Yang mau dibuang</string>
+    <string name="remove_metadata_cat_all">Semua metadata</string>
+    <string name="remove_metadata_cat_location">Lokasi (GPS)</string>
+    <string name="remove_metadata_cat_camera">Kamera &amp; pengaturan</string>
+    <string name="remove_metadata_output_label">Simpan hasil</string>
+    <string name="remove_metadata_output_overwrite">Timpa file asli</string>
+    <string name="remove_metadata_output_copy">Simpan salinan bersih</string>
+    <string name="msg_metadata_removed">Metadata udah dibuang</string>
+    <string name="msg_metadata_copy_created">Salinan bersih tersimpan</string>
+    <string name="msg_metadata_unsupported">Format ini belum didukung buat hapus metadata</string>
+    <string name="msg_metadata_failed">Gagal hapus metadata</string>
 </resources>

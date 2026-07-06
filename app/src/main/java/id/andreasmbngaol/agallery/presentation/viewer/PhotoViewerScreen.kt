@@ -111,6 +111,7 @@ fun PhotoViewerScreen(
     var chromeVisible by rememberSaveable { mutableStateOf(true) }
     var showDetails by remember { mutableStateOf(false) }
     var showRename by remember { mutableStateOf(false) }
+    var showRemoveMeta by remember { mutableStateOf(false) }
     var showTrashConfirm by remember { mutableStateOf(false) }
     var pendingDeleteUri by remember { mutableStateOf<String?>(null) }
     var albumPickerMode by remember { mutableStateOf<AlbumPickerMode?>(null) }
@@ -324,6 +325,15 @@ fun PhotoViewerScreen(
                     item = item,
                     loadDetails = viewModel::loadDetails,
                     onDismiss = { showDetails = false },
+                    // Hapus metadata hanya untuk foto (video di-skip).
+                    onRemoveMetadata = if (item.type == MediaType.IMAGE) {
+                        {
+                            showDetails = false
+                            showRemoveMeta = true
+                        }
+                    } else {
+                        null
+                    },
                 )
             }
             if (showRename) {
@@ -334,6 +344,15 @@ fun PhotoViewerScreen(
                         showRename = false
                     },
                     onDismiss = { showRename = false },
+                )
+            }
+            if (showRemoveMeta) {
+                RemoveMetadataDialog(
+                    onConfirm = { categories, saveAsCopy ->
+                        viewModel.removeMetadata(item, categories, saveAsCopy)
+                        showRemoveMeta = false
+                    },
+                    onDismiss = { showRemoveMeta = false },
                 )
             }
             if (showTrashConfirm) {

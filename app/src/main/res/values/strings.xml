@@ -183,4 +183,21 @@
     <string name="detail_bitrate">Bitrate</string>
     <string name="detail_video_codec">Video codec</string>
     <string name="detail_audio_codec">Audio codec</string>
+
+    <!-- Remove metadata (1.4.0) -->
+    <string name="action_remove_metadata">Remove metadata</string>
+    <string name="action_remove">Remove</string>
+    <string name="remove_metadata_title">Remove metadata</string>
+    <string name="remove_metadata_desc">Choose what to strip from this photo. This can\'t be undone.</string>
+    <string name="remove_metadata_what">What to remove</string>
+    <string name="remove_metadata_cat_all">All metadata</string>
+    <string name="remove_metadata_cat_location">Location (GPS)</string>
+    <string name="remove_metadata_cat_camera">Camera &amp; settings</string>
+    <string name="remove_metadata_output_label">Save result</string>
+    <string name="remove_metadata_output_overwrite">Overwrite the original</string>
+    <string name="remove_metadata_output_copy">Save a clean copy</string>
+    <string name="msg_metadata_removed">Metadata removed</string>
+    <string name="msg_metadata_copy_created">Clean copy saved</string>
+    <string name="msg_metadata_unsupported">This format isn\'t supported yet for metadata removal</string>
+    <string name="msg_metadata_failed">Couldn\'t remove metadata</string>
 </resources>

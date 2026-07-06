@@ -16,6 +16,8 @@ import id.andreasmbngaol.agallery.domain.model.GallerySortOrder
 import id.andreasmbngaol.agallery.domain.model.MediaDetails
 import id.andreasmbngaol.agallery.domain.model.MediaItem
 import id.andreasmbngaol.agallery.domain.model.MediaScope
+import id.andreasmbngaol.agallery.domain.model.MetadataCategory
+import id.andreasmbngaol.agallery.domain.model.MetadataRemovalOutcome
 import id.andreasmbngaol.agallery.domain.model.TrashItem
 import id.andreasmbngaol.agallery.domain.repository.MediaRepository
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -245,4 +247,11 @@ class MediaRepositoryImpl(
 
     override suspend fun createWriteRequest(uris: List<String>): IntentSender? =
         mediaStore.buildWriteRequest(uris.map { it.toUri() })
+
+    override suspend fun removeMetadata(
+        uriString: String,
+        categories: Set<MetadataCategory>,
+        saveAsCopy: Boolean,
+    ): MetadataRemovalOutcome =
+        mediaStore.removeMetadata(uriString, categories, saveAsCopy)
 }

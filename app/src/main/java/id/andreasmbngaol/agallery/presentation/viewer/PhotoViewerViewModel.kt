@@ -12,6 +12,8 @@ import id.andreasmbngaol.agallery.domain.model.GallerySortOrder
 import id.andreasmbngaol.agallery.domain.model.MediaDetails
 import id.andreasmbngaol.agallery.domain.model.MediaItem
 import id.andreasmbngaol.agallery.domain.model.MediaScope
+import id.andreasmbngaol.agallery.domain.model.MetadataCategory
+import id.andreasmbngaol.agallery.domain.model.MetadataRemovalOutcome
 import id.andreasmbngaol.agallery.domain.usecase.CopyMediaToAlbumUseCase
 import id.andreasmbngaol.agallery.domain.usecase.DeleteMediaUseCase
 import id.andreasmbngaol.agallery.domain.usecase.GetAlbumsUseCase
@@ -21,6 +23,7 @@ import id.andreasmbngaol.agallery.domain.usecase.GetSettingsUseCase
 import id.andreasmbngaol.agallery.domain.usecase.MoveMediaToAlbumUseCase
 import id.andreasmbngaol.agallery.domain.usecase.MoveToTrashUseCase
 import id.andreasmbngaol.agallery.domain.usecase.ObserveFavoriteIdsUseCase
+import id.andreasmbngaol.agallery.domain.usecase.RemoveMetadataUseCase
 import id.andreasmbngaol.agallery.domain.usecase.RenameMediaUseCase
 import id.andreasmbngaol.agallery.domain.usecase.SetAlbumCoverUseCase
 import id.andreasmbngaol.agallery.domain.usecase.ToggleFavoriteUseCase
@@ -58,6 +61,7 @@ class PhotoViewerViewModel(
     private val renameMediaUseCase: RenameMediaUseCase,
     private val moveToAlbumUseCase: MoveMediaToAlbumUseCase,
     private val copyToAlbumUseCase: CopyMediaToAlbumUseCase,
+    private val removeMetadataUseCase: RemoveMetadataUseCase,
     private val setAlbumCoverUseCase: SetAlbumCoverUseCase,
 ) : ViewModel() {
 
@@ -213,6 +217,45 @@ class PhotoViewerViewModel(
         viewModelScope.launch {
             copyToAlbumUseCase(item, path)
             _messages.emit(appContext.getString(R.string.msg_copied_to_album, albumName))
+        }
+    }
+
+    /**
+     * Hapus metadata terpilih dari [item]. Kalau file bukan milik app, jalur
+     * consent tulis yang sudah ada dipakai ulang (pendingWriteAction) lalu
+     * operasi diulang otomatis setelah user setuju.
+     */
+    fun removeMetadata(
+        item: MediaItem,
+        categories: Set<MetadataCategory>,
+        saveAsCopy: Boolean,
+    ) {
+        viewModelScope.launch { runRemoveMetadata(item, categories, saveAsCopy) }
+    }
+
+    private suspend fun runRemoveMetadata(
+        item: MediaItem,
+        categories: Set<MetadataCategory>,
+        saveAsCopy: Boolean,
+    ) {
+        when (val outcome = removeMetadataUseCase(item.uri, categories, saveAsCopy)) {
+            is MetadataRemovalOutcome.Success -> {
+                refresh()
+                val msg = if (outcome.savedAsCopy) {
+                    R.string.msg_metadata_copy_created
+                } else {
+                    R.string.msg_metadata_removed
+                }
+                _messages.emit(appContext.getString(msg))
+            }
+            is MetadataRemovalOutcome.NeedsConsent -> {
+                pendingWriteAction = { runRemoveMetadata(item, categories, saveAsCopy) }
+                _writeRequests.emit(outcome.intentSender)
+            }
+            MetadataRemovalOutcome.UnsupportedFormat ->
+                _messages.emit(appContext.getString(R.string.msg_metadata_unsupported))
+            MetadataRemovalOutcome.Failed ->
+                _messages.emit(appContext.getString(R.string.msg_metadata_failed))
         }
     }
 

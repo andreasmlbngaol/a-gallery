@@ -7,6 +7,8 @@ import id.andreasmbngaol.agallery.domain.model.GallerySortOrder
 import id.andreasmbngaol.agallery.domain.model.MediaDetails
 import id.andreasmbngaol.agallery.domain.model.MediaItem
 import id.andreasmbngaol.agallery.domain.model.MediaScope
+import id.andreasmbngaol.agallery.domain.model.MetadataCategory
+import id.andreasmbngaol.agallery.domain.model.MetadataRemovalOutcome
 import id.andreasmbngaol.agallery.domain.model.TrashItem
 import kotlinx.coroutines.flow.Flow
 
@@ -123,4 +125,16 @@ interface MediaRepository {
      * access) atau perangkat < API 30.
      */
     suspend fun createWriteRequest(uris: List<String>): IntentSender?
+
+    /**
+     * Buang metadata terpilih ([categories]) dari sebuah foto. Kalau
+     * [saveAsCopy] true, hasil disimpan sebagai salinan bersih (asli utuh);
+     * kalau false, file asli ditimpa. Lihat [MetadataRemovalOutcome] utk hasil
+     * (termasuk NeedsConsent bila file bukan milik app).
+     */
+    suspend fun removeMetadata(
+        uriString: String,
+        categories: Set<MetadataCategory>,
+        saveAsCopy: Boolean,
+    ): MetadataRemovalOutcome
 }

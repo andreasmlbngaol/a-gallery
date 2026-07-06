@@ -32,6 +32,8 @@ import id.andreasmbngaol.agallery.domain.model.GallerySortOrder
 import id.andreasmbngaol.agallery.domain.model.MediaDetails
 import id.andreasmbngaol.agallery.domain.model.MediaItem
 import id.andreasmbngaol.agallery.domain.model.MediaScope
+import id.andreasmbngaol.agallery.domain.model.MetadataCategory
+import id.andreasmbngaol.agallery.domain.model.MetadataRemovalOutcome
 import id.andreasmbngaol.agallery.domain.model.bucketAlbumKey
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.awaitClose
@@ -802,6 +804,195 @@ class MediaStoreDataSource(
         } catch (_: Exception) {
             null to null
         }
+    }
+
+    // -----------------------------------------------------------------
+    //  Hapus metadata (fitur 1.4.0)
+    // -----------------------------------------------------------------
+
+    /**
+     * Buang metadata terpilih dari sebuah foto.
+     *
+     * Hanya format yang bisa di-strip LOSSLESS oleh ExifInterface (JPEG/PNG/WebP)
+     * yang didukung; HEIC/HEIF & video -> [MetadataRemovalOutcome.UnsupportedFormat].
+     *
+     * - [saveAsCopy]=false -> timpa file asli (butuh consent kalau file bukan
+     *   milik app & belum punya All-files access).
+     * - [saveAsCopy]=true  -> buat salinan di folder yg sama lalu strip salinan
+     *   itu (app pemilik salinan -> tak perlu consent). File asli tetap utuh.
+     */
+    suspend fun removeMetadata(
+        uriString: String,
+        categories: Set<MetadataCategory>,
+        saveAsCopy: Boolean,
+    ): MetadataRemovalOutcome = withContext(Dispatchers.IO) {
+        if (categories.isEmpty()) return@withContext MetadataRemovalOutcome.Failed
+        val uri = uriString.toUri()
+
+        val projection = arrayOf(
+            MediaStore.MediaColumns.MIME_TYPE,
+            MediaStore.MediaColumns.DISPLAY_NAME,
+            MediaStore.MediaColumns.RELATIVE_PATH,
+        )
+        val info = resolver.query(uri, projection, null, null, null)?.use { c ->
+            if (!c.moveToFirst()) null
+            else Triple(
+                c.getStringOrNull(0).orEmpty(),
+                c.getStringOrNull(1).orEmpty(),
+                c.getStringOrNull(2).orEmpty(),
+            )
+        } ?: return@withContext MetadataRemovalOutcome.Failed
+
+        val (mime, displayName, relativePath) = info
+        if (mime.lowercase(Locale.US) !in STRIP_SUPPORTED_MIME) {
+            return@withContext MetadataRemovalOutcome.UnsupportedFormat
+        }
+
+        val tags = tagsToRemove(categories)
+
+        if (saveAsCopy) {
+            val collection =
+                MediaStore.Images.Media.getContentUri(MediaStore.VOLUME_EXTERNAL_PRIMARY)
+            val values = ContentValues().apply {
+                put(MediaStore.MediaColumns.DISPLAY_NAME, cleanCopyName(displayName))
+                put(MediaStore.MediaColumns.MIME_TYPE, mime)
+                if (relativePath.isNotEmpty()) {
+                    put(MediaStore.MediaColumns.RELATIVE_PATH, relativePath)
+                }
+                put(MediaStore.MediaColumns.IS_PENDING, 1)
+            }
+            val destUri = resolver.insert(collection, values)
+                ?: return@withContext MetadataRemovalOutcome.Failed
+            return@withContext try {
+                resolver.openInputStream(uri)?.use { input ->
+                    resolver.openOutputStream(destUri)?.use { output -> input.copyTo(output) }
+                        ?: error("open output failed")
+                } ?: error("open input failed")
+                stripTags(destUri, tags)
+                val done = ContentValues().apply {
+                    put(MediaStore.MediaColumns.IS_PENDING, 0)
+                }
+                resolver.update(destUri, done, null, null)
+                MetadataRemovalOutcome.Success(savedAsCopy = true)
+            } catch (_: Throwable) {
+                runCatching { resolver.delete(destUri, null, null) }
+                MetadataRemovalOutcome.Failed
+            }
+        }
+
+        // Timpa file asli.
+        return@withContext try {
+            stripTags(uri, tags)
+            MetadataRemovalOutcome.Success(savedAsCopy = false)
+        } catch (e: SecurityException) {
+            val sender = when {
+                Build.VERSION.SDK_INT >= Build.VERSION_CODES.R ->
+                    MediaStore.createWriteRequest(resolver, listOf(uri)).intentSender
+                e is RecoverableSecurityException ->
+                    e.userAction.actionIntent.intentSender
+                else -> null
+            }
+            if (sender != null) MetadataRemovalOutcome.NeedsConsent(sender)
+            else MetadataRemovalOutcome.Failed
+        } catch (_: Throwable) {
+            MetadataRemovalOutcome.Failed
+        }
+    }
+
+    /** Buka fd read-write lalu null-kan [tags] & simpan (lossless, tanpa re-encode). */
+    private fun stripTags(uri: Uri, tags: List<String>) {
+        resolver.openFileDescriptor(uri, "rw")?.use { pfd ->
+            val exif = ExifInterface(pfd.fileDescriptor)
+            tags.forEach { exif.setAttribute(it, null) }
+            exif.saveAttributes()
+        } ?: error("open fd rw failed")
+    }
+
+    /** Sisipkan "_clean" sebelum ekstensi supaya salinan tak menimpa asli. */
+    private fun cleanCopyName(original: String): String {
+        val dot = original.lastIndexOf('.')
+        return if (dot > 0) {
+            original.substring(0, dot) + "_clean" + original.substring(dot)
+        } else {
+            original + "_clean"
+        }
+    }
+
+    /** Susun daftar tag EXIF yang mau di-null berdasarkan kategori terpilih. */
+    private fun tagsToRemove(categories: Set<MetadataCategory>): List<String> {
+        val out = LinkedHashSet<String>()
+        if (MetadataCategory.ALL in categories) {
+            out += LOCATION_EXIF_TAGS
+            out += CAMERA_EXIF_TAGS
+            out += MISC_EXIF_TAGS
+        } else {
+            if (MetadataCategory.LOCATION in categories) out += LOCATION_EXIF_TAGS
+            if (MetadataCategory.CAMERA in categories) out += CAMERA_EXIF_TAGS
+        }
+        return out.toList()
+    }
+
+    companion object {
+        /** Format yang bisa di-strip lossless oleh ExifInterface. */
+        private val STRIP_SUPPORTED_MIME = setOf(
+            "image/jpeg", "image/jpg", "image/png", "image/webp",
+        )
+
+        /** Semua tag GPS/lokasi. */
+        private val LOCATION_EXIF_TAGS = listOf(
+            ExifInterface.TAG_GPS_LATITUDE, ExifInterface.TAG_GPS_LATITUDE_REF,
+            ExifInterface.TAG_GPS_LONGITUDE, ExifInterface.TAG_GPS_LONGITUDE_REF,
+            ExifInterface.TAG_GPS_ALTITUDE, ExifInterface.TAG_GPS_ALTITUDE_REF,
+            ExifInterface.TAG_GPS_TIMESTAMP, ExifInterface.TAG_GPS_DATESTAMP,
+            ExifInterface.TAG_GPS_PROCESSING_METHOD, ExifInterface.TAG_GPS_AREA_INFORMATION,
+            ExifInterface.TAG_GPS_DOP, ExifInterface.TAG_GPS_MAP_DATUM,
+            ExifInterface.TAG_GPS_SPEED, ExifInterface.TAG_GPS_SPEED_REF,
+            ExifInterface.TAG_GPS_TRACK, ExifInterface.TAG_GPS_TRACK_REF,
+            ExifInterface.TAG_GPS_IMG_DIRECTION, ExifInterface.TAG_GPS_IMG_DIRECTION_REF,
+            ExifInterface.TAG_GPS_DEST_LATITUDE, ExifInterface.TAG_GPS_DEST_LATITUDE_REF,
+            ExifInterface.TAG_GPS_DEST_LONGITUDE, ExifInterface.TAG_GPS_DEST_LONGITUDE_REF,
+            ExifInterface.TAG_GPS_DEST_BEARING, ExifInterface.TAG_GPS_DEST_BEARING_REF,
+            ExifInterface.TAG_GPS_DEST_DISTANCE, ExifInterface.TAG_GPS_DEST_DISTANCE_REF,
+            ExifInterface.TAG_GPS_VERSION_ID, ExifInterface.TAG_GPS_SATELLITES,
+            ExifInterface.TAG_GPS_STATUS, ExifInterface.TAG_GPS_MEASURE_MODE,
+            ExifInterface.TAG_GPS_DIFFERENTIAL,
+        )
+
+        /** Tag perangkat + pengaturan pemotretan (termasuk kapan diambil). */
+        private val CAMERA_EXIF_TAGS = listOf(
+            ExifInterface.TAG_MAKE, ExifInterface.TAG_MODEL, ExifInterface.TAG_SOFTWARE,
+            ExifInterface.TAG_F_NUMBER, ExifInterface.TAG_APERTURE_VALUE,
+            ExifInterface.TAG_MAX_APERTURE_VALUE, ExifInterface.TAG_EXPOSURE_TIME,
+            ExifInterface.TAG_SHUTTER_SPEED_VALUE, ExifInterface.TAG_EXPOSURE_BIAS_VALUE,
+            ExifInterface.TAG_EXPOSURE_MODE, ExifInterface.TAG_EXPOSURE_PROGRAM,
+            ExifInterface.TAG_EXPOSURE_INDEX,
+            // Catatan: TAG_ISO_SPEED_RATINGS deprecated & 1:1 dgn tag di bawah
+            // (EXIF 0x8827), jadi cukup pakai TAG_PHOTOGRAPHIC_SENSITIVITY.
+            ExifInterface.TAG_PHOTOGRAPHIC_SENSITIVITY, ExifInterface.TAG_FOCAL_LENGTH,
+            ExifInterface.TAG_FOCAL_LENGTH_IN_35MM_FILM, ExifInterface.TAG_FLASH,
+            ExifInterface.TAG_FLASH_ENERGY, ExifInterface.TAG_METERING_MODE,
+            ExifInterface.TAG_WHITE_BALANCE, ExifInterface.TAG_LIGHT_SOURCE,
+            ExifInterface.TAG_DIGITAL_ZOOM_RATIO, ExifInterface.TAG_SCENE_CAPTURE_TYPE,
+            ExifInterface.TAG_SCENE_TYPE, ExifInterface.TAG_SENSING_METHOD,
+            ExifInterface.TAG_CONTRAST, ExifInterface.TAG_SATURATION,
+            ExifInterface.TAG_SHARPNESS, ExifInterface.TAG_BRIGHTNESS_VALUE,
+            ExifInterface.TAG_SUBJECT_DISTANCE, ExifInterface.TAG_SUBJECT_DISTANCE_RANGE,
+            ExifInterface.TAG_DATETIME_ORIGINAL, ExifInterface.TAG_DATETIME_DIGITIZED,
+            ExifInterface.TAG_OFFSET_TIME_ORIGINAL, ExifInterface.TAG_OFFSET_TIME_DIGITIZED,
+            ExifInterface.TAG_SUBSEC_TIME_ORIGINAL, ExifInterface.TAG_SUBSEC_TIME_DIGITIZED,
+        )
+
+        /**
+         * Info personal lain (hanya dipakai saat "Semua"). Orientasi SENGAJA
+         * tak dimasukkan supaya foto tak jadi miring setelah di-strip.
+         */
+        private val MISC_EXIF_TAGS = listOf(
+            ExifInterface.TAG_ARTIST, ExifInterface.TAG_COPYRIGHT,
+            ExifInterface.TAG_IMAGE_DESCRIPTION, ExifInterface.TAG_USER_COMMENT,
+            ExifInterface.TAG_MAKER_NOTE, ExifInterface.TAG_IMAGE_UNIQUE_ID,
+            ExifInterface.TAG_DATETIME, ExifInterface.TAG_OFFSET_TIME,
+            ExifInterface.TAG_SUBSEC_TIME,
+        )
     }
 
     // -----------------------------------------------------------------
