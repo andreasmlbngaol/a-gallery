@@ -33,8 +33,8 @@ android {
         applicationId = "id.andreasmbngaol.agallery"
         minSdk = 29
         targetSdk = 37
-        versionCode = 12
-        versionName = "1.2.0"
+        versionCode = 13
+        versionName = "1.3.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -147,6 +147,9 @@ dependencies {
 
     // WorkManager — auto-purge Trash 30 hari di background.
     implementation(libs.androidx.work.runtime)
+
+    // EXIF metadata reader (foto) — androidx.exifinterface
+    implementation(libs.androidx.exifinterface)
 
 
     testImplementation(libs.junit)

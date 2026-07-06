@@ -164,4 +164,23 @@
     <string name="permission_all_files_title">All files access</string>
     <string name="permission_all_files_message">To delete, rename and organize your photos directly — and empty Trash automatically — AGallery needs \"All files access\".</string>
     <string name="permission_grant_access">Grant access</string>
+    <!-- ===== Metadata viewer (sections) ===== -->
+    <string name="detail_section_camera">Camera</string>
+    <string name="detail_section_location">Location</string>
+    <string name="detail_section_video">Video</string>
+    <string name="detail_date_taken">Date taken</string>
+    <string name="detail_camera_model">Model</string>
+    <string name="detail_aperture">Aperture</string>
+    <string name="detail_shutter_speed">Shutter speed</string>
+    <string name="detail_iso">ISO</string>
+    <string name="detail_focal_length">Focal length</string>
+    <string name="detail_flash">Flash</string>
+    <string name="detail_flash_on">On</string>
+    <string name="detail_flash_off">Off</string>
+    <string name="detail_coordinates">Coordinates</string>
+    <string name="action_open_in_maps">Open in Maps</string>
+    <string name="detail_frame_rate">Frame rate</string>
+    <string name="detail_bitrate">Bitrate</string>
+    <string name="detail_video_codec">Video codec</string>
+    <string name="detail_audio_codec">Audio codec</string>
 </resources>

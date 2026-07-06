@@ -1,5 +1,6 @@
 package id.andreasmbngaol.agallery.presentation.viewer
 
+import android.content.Intent
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -9,12 +10,14 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.SheetValue
 import androidx.compose.material3.Text
-import androidx.compose.material3.rememberBottomSheetState
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -22,10 +25,16 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.core.net.toUri
+import com.adamglin.PhosphorIcons
+import com.adamglin.phosphoricons.Bold
+import com.adamglin.phosphoricons.bold.MapPin
 import id.andreasmbngaol.agallery.R
 import id.andreasmbngaol.agallery.domain.model.MediaDetails
 import id.andreasmbngaol.agallery.domain.model.MediaItem
@@ -37,14 +46,17 @@ import java.time.format.FormatStyle
 import java.util.Locale
 
 /**
- * Bottom sheet berisi metadata media, dibuka lewat swipe ke atas di viewer.
+ * Bottom sheet berisi metadata media, dibuka lewat swipe ke atas di viewer
+ * (dipakai foto & video).
  *
  * Sebagian data (nama, tipe, durasi, tanggal, folder) sudah ada di [item];
- * sisanya (ukuran file, dimensi piksel, path) dimuat on-demand lewat
- * [loadDetails] biar query grid tetap ringan. Berlaku untuk foto & video.
+ * sisanya (ukuran, dimensi, EXIF kamera, lokasi, teknis video) dimuat
+ * on-demand lewat [loadDetails] biar query grid tetap ringan.
  *
- * Selama data detail masih dimuat, field yang belum ada ditampilkan sebagai
- * "\u2026"; kalau gagal/nihil jadi "Unknown".
+ * Aturan tampilan (hybrid):
+ * - Field INTI (Umum) selalu tampil; kalau kosong -> "-" ("\u2026" saat loading).
+ * - Field OPSIONAL (Kamera / Lokasi / Video) hanya muncul kalau ada datanya,
+ *   dan header section-nya ikut hilang kalau semua isinya kosong.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -74,6 +86,7 @@ fun MediaDetailsSheet(
             modifier = Modifier
                 .fillMaxWidth()
                 .navigationBarsPadding()
+                .verticalScroll(rememberScrollState())
                 .padding(horizontal = 24.dp)
                 .padding(bottom = 24.dp),
         ) {
@@ -83,38 +96,90 @@ fun MediaDetailsSheet(
             )
             Spacer(Modifier.height(16.dp))
 
-            // Placeholder sementara data detail masih dimuat vs sudah gagal.
-            val unknownText = stringResource(R.string.value_unknown)
-            val placeholder = if (loading) "\u2026" else unknownText
+            val d = details
+            // Placeholder: "\u2026" selagi loading, "-" kalau field inti memang kosong.
+            val placeholder = if (loading) "\u2026" else "-"
 
-            DetailRow(label = stringResource(R.string.detail_name), value = item.displayName.ifEmpty { placeholder })
-            DetailRow(label = stringResource(R.string.detail_type), value = item.mimeType.ifEmpty { placeholder })
+            // ---------- Umum (selalu tampil) ----------
+            DetailRow(stringResource(R.string.detail_name), item.displayName.ifEmpty { placeholder })
+            DetailRow(stringResource(R.string.detail_type), item.mimeType.ifEmpty { placeholder })
             if (item.type == MediaType.VIDEO && item.durationMs > 0L) {
-                DetailRow(label = stringResource(R.string.detail_duration), value = formatDuration(item.durationMs))
+                DetailRow(stringResource(R.string.detail_duration), formatDuration(item.durationMs))
             }
             DetailRow(
-                label = stringResource(R.string.detail_size),
-                value = details?.let { formatFileSize(it.sizeBytes, unknownText) } ?: placeholder,
+                stringResource(R.string.detail_size),
+                d?.let { formatFileSize(it.sizeBytes) } ?: placeholder,
             )
             DetailRow(
-                label = stringResource(R.string.detail_dimensions),
-                value = details
-                    ?.takeIf { it.width > 0 && it.height > 0 }
+                stringResource(R.string.detail_dimensions),
+                d?.takeIf { it.width > 0 && it.height > 0 }
                     ?.let { stringResource(R.string.dimensions_format, it.width, it.height) }
                     ?: placeholder,
             )
+            DetailRow(stringResource(R.string.detail_date), formatDate(item.dateAddedEpochSeconds))
+            d?.dateTakenEpochSeconds?.let {
+                DetailRow(stringResource(R.string.detail_date_taken), formatDate(it))
+            }
             DetailRow(
-                label = stringResource(R.string.detail_date),
-                value = formatDate(item.dateAddedEpochSeconds, unknownText),
+                stringResource(R.string.detail_folder),
+                item.bucketName.ifEmpty { d?.relativePath.orEmpty() }.ifEmpty { placeholder },
             )
-            DetailRow(
-                label = stringResource(R.string.detail_folder),
-                value = item.bucketName
-                    .ifEmpty { details?.relativePath.orEmpty() }
-                    .ifEmpty { placeholder },
-            )
+
+            if (d != null) {
+                // ---------- Kamera (opsional) ----------
+                val device = cameraDevice(d.cameraMake, d.cameraModel)
+                val hasCamera = listOfNotNull(
+                    device, d.aperture, d.shutterSpeed,
+                    d.iso, d.focalLength, d.flashFired,
+                ).isNotEmpty()
+                if (hasCamera) {
+                    SectionHeader(stringResource(R.string.detail_section_camera))
+                    device?.let { DetailRow(stringResource(R.string.detail_camera_model), it) }
+                    d.aperture?.let { DetailRow(stringResource(R.string.detail_aperture), it) }
+                    d.shutterSpeed?.let { DetailRow(stringResource(R.string.detail_shutter_speed), it) }
+                    d.iso?.let { DetailRow(stringResource(R.string.detail_iso), it) }
+                    d.focalLength?.let { DetailRow(stringResource(R.string.detail_focal_length), it) }
+                    d.flashFired?.let {
+                        val v = if (it) stringResource(R.string.detail_flash_on)
+                        else stringResource(R.string.detail_flash_off)
+                        DetailRow(stringResource(R.string.detail_flash), v)
+                    }
+                }
+
+                // ---------- Lokasi (opsional) ----------
+                val lat = d.latitude
+                val lng = d.longitude
+                if (lat != null && lng != null) {
+                    SectionHeader(stringResource(R.string.detail_section_location))
+                    LocationRow(lat, lng)
+                }
+
+                // ---------- Video (opsional) ----------
+                val hasVideo = listOfNotNull(
+                    d.frameRate, d.bitrate, d.videoCodec, d.audioCodec,
+                ).isNotEmpty()
+                if (hasVideo) {
+                    SectionHeader(stringResource(R.string.detail_section_video))
+                    d.frameRate?.let { DetailRow(stringResource(R.string.detail_frame_rate), it) }
+                    d.bitrate?.let { DetailRow(stringResource(R.string.detail_bitrate), it) }
+                    d.videoCodec?.let { DetailRow(stringResource(R.string.detail_video_codec), it) }
+                    d.audioCodec?.let { DetailRow(stringResource(R.string.detail_audio_codec), it) }
+                }
+            }
         }
     }
+}
+
+/** Header kecil untuk memisahkan section metadata. */
+@Composable
+private fun SectionHeader(text: String) {
+    Spacer(Modifier.height(20.dp))
+    Text(
+        text = text,
+        style = MaterialTheme.typography.titleSmall,
+        color = MaterialTheme.colorScheme.primary,
+    )
+    Spacer(Modifier.height(4.dp))
 }
 
 /** Satu baris metadata: label kiri (lebar tetap) + value kanan (mengisi sisa). */
@@ -144,9 +209,62 @@ private fun DetailRow(
     }
 }
 
-/** Byte -> string ramah baca (B/KB/MB/GB/TB, basis 1024). */
-private fun formatFileSize(bytes: Long, unknown: String): String {
-    if (bytes <= 0L) return unknown
+/**
+ * Baris lokasi: koordinat + tombol ikon MapPin yang melempar ke aplikasi peta
+ * lewat intent geo: (aman utk app no-internet — app sendiri tak akses jaringan).
+ */
+@Composable
+private fun LocationRow(latitude: Double, longitude: Double) {
+    val context = LocalContext.current
+    val coords = String.format(Locale.US, "%.5f, %.5f", latitude, longitude)
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 6.dp),
+        horizontalArrangement = Arrangement.spacedBy(16.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            text = stringResource(R.string.detail_coordinates),
+            modifier = Modifier.width(110.dp),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Text(
+            text = coords,
+            modifier = Modifier.weight(1f),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurface,
+        )
+        IconButton(onClick = {
+            val geoUri = "geo:$latitude,$longitude?q=$latitude,$longitude".toUri()
+            runCatching { context.startActivity(Intent(Intent.ACTION_VIEW, geoUri)) }
+        }) {
+            Icon(
+                imageVector = PhosphorIcons.Bold.MapPin,
+                contentDescription = stringResource(R.string.action_open_in_maps),
+                tint = MaterialTheme.colorScheme.primary,
+            )
+        }
+    }
+}
+
+/** Gabungkan make + model kamera jadi satu string ramah, hindari duplikasi. */
+private fun cameraDevice(make: String?, model: String?): String? {
+    val mk = make?.trim().orEmpty()
+    val md = model?.trim().orEmpty()
+    return when {
+        mk.isEmpty() && md.isEmpty() -> null
+        md.isEmpty() -> mk
+        mk.isEmpty() -> md
+        md.startsWith(mk, ignoreCase = true) -> md
+        else -> "$mk $md"
+    }
+}
+
+/** Byte -> string ramah baca (B/KB/MB/GB/TB, basis 1024). "-" kalau kosong. */
+private fun formatFileSize(bytes: Long): String {
+    if (bytes <= 0L) return "-"
     val units = arrayOf("B", "KB", "MB", "GB", "TB")
     var value = bytes.toDouble()
     var unitIndex = 0
@@ -161,9 +279,9 @@ private fun formatFileSize(bytes: Long, unknown: String): String {
     }
 }
 
-/** Epoch detik -> tanggal-waktu lokal ramah baca. */
-private fun formatDate(epochSeconds: Long, unknown: String): String {
-    if (epochSeconds <= 0L) return unknown
+/** Epoch detik -> tanggal-waktu lokal ramah baca. "-" kalau kosong. */
+private fun formatDate(epochSeconds: Long): String {
+    if (epochSeconds <= 0L) return "-"
     val formatter = DateTimeFormatter
         .ofLocalizedDateTime(FormatStyle.MEDIUM, FormatStyle.SHORT)
         .withLocale(Locale.getDefault())

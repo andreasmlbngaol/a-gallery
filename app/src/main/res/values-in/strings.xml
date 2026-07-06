@@ -174,4 +174,23 @@
     <string name="permission_all_files_title">Akses semua file</string>
     <string name="permission_all_files_message">Biar bisa hapus, ganti nama, dan ngatur foto kamu langsung — plus ngosongin Sampah otomatis — AGallery butuh \"Akses semua file\".</string>
     <string name="permission_grant_access">Kasih akses</string>
+    <!-- ===== Metadata viewer (sections) ===== -->
+    <string name="detail_section_camera">Kamera</string>
+    <string name="detail_section_location">Lokasi</string>
+    <string name="detail_section_video">Video</string>
+    <string name="detail_date_taken">Tanggal diambil</string>
+    <string name="detail_camera_model">Model</string>
+    <string name="detail_aperture">Aperture</string>
+    <string name="detail_shutter_speed">Shutter speed</string>
+    <string name="detail_iso">ISO</string>
+    <string name="detail_focal_length">Focal length</string>
+    <string name="detail_flash">Flash</string>
+    <string name="detail_flash_on">Nyala</string>
+    <string name="detail_flash_off">Mati</string>
+    <string name="detail_coordinates">Koordinat</string>
+    <string name="action_open_in_maps">Buka di Maps</string>
+    <string name="detail_frame_rate">Frame rate</string>
+    <string name="detail_bitrate">Bitrate</string>
+    <string name="detail_video_codec">Codec video</string>
+    <string name="detail_audio_codec">Codec audio</string>
 </resources>
