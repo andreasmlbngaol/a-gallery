@@ -64,6 +64,8 @@ import id.andreasmbngaol.agallery.core.ui.rememberEffectiveComponentStyle
 import id.andreasmbngaol.agallery.core.ui.rememberEffectiveEdgeEffectMode
 import id.andreasmbngaol.agallery.core.ui.usesBlur
 import id.andreasmbngaol.agallery.core.ui.usesLens
+import androidx.compose.ui.res.stringResource
+import id.andreasmbngaol.agallery.R
 import id.andreasmbngaol.agallery.domain.model.Album
 import id.andreasmbngaol.agallery.domain.model.ComponentStyle
 import id.andreasmbngaol.agallery.domain.model.MediaItem
@@ -107,8 +109,8 @@ fun CreateAlbumScreen(
     if (name == null) {
         // Gate nama dulu; batal di sini = keluar tanpa membuat apa pun.
         NewAlbumNameDialog(
-            title = "New album",
-            confirmLabel = "Next",
+            title = stringResource(R.string.new_album),
+            confirmLabel = stringResource(R.string.action_next),
             onConfirm = { albumName = it },
             onDismiss = onBack,
         )
@@ -140,7 +142,7 @@ fun CreateAlbumScreen(
             ) {
                 GlassIconButton(
                     onClick = { goBack() },
-                    contentDescription = "Back",
+                    contentDescription = stringResource(R.string.action_back),
                     style = componentStyle,
                     backdrop = backdrop,
                 ) {
@@ -161,8 +163,8 @@ fun CreateAlbumScreen(
                         overflow = TextOverflow.Ellipsis,
                     )
                     Text(
-                        text = if (openedAlbum == null) "Pilih album sumber foto"
-                        else "${selected.size} dipilih",
+                        text = if (openedAlbum == null) stringResource(R.string.create_album_pick_source)
+                        else stringResource(R.string.selected_count, selected.size),
                         style = MaterialTheme.typography.labelMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         maxLines = 1,
@@ -282,12 +284,12 @@ private fun CreateFab(
     ) {
         Icon(
             imageVector = PhosphorIcons.Bold.Check,
-            contentDescription = "Create",
+            contentDescription = stringResource(R.string.action_create),
             tint = tint,
             modifier = Modifier.size(20.dp),
         )
         Text(
-            text = "Create ($count)",
+            text = stringResource(R.string.create_album_create_count, count),
             style = MaterialTheme.typography.labelLarge,
             fontWeight = FontWeight.SemiBold,
             color = tint,
@@ -333,7 +335,7 @@ private fun SourceAlbumTile(
             modifier = Modifier.padding(horizontal = 2.dp),
         )
         Text(
-            text = "${album.itemCount} item",
+            text = stringResource(R.string.album_item_count, album.itemCount),
             style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             maxLines = 1,

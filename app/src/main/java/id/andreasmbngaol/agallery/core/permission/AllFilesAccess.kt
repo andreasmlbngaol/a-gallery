@@ -6,6 +6,7 @@ import android.net.Uri
 import android.os.Build
 import android.os.Environment
 import android.provider.Settings
+import androidx.annotation.RequiresApi
 
 /**
  * Helper "All files access" (MANAGE_EXTERNAL_STORAGE).
@@ -30,6 +31,7 @@ object AllFilesAccess {
      * Intent menuju layar "All files access" khusus app ini. Kalau layar khusus
      * tak tersedia di perangkat, fallback ke daftar umum semua app.
      */
+    @RequiresApi(Build.VERSION_CODES.R)
     fun settingsIntent(context: Context): Intent {
         return try {
             Intent(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION).apply {

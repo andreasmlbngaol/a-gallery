@@ -126,16 +126,18 @@ milestone, not strictly an API break — this is an app, not a library).
 
 ### 3.1 Release map
 
-**`1.x` — the offline-utilities era (no `INTERNET` permission, no AI).**
+**`1.x` — the localization & offline-utilities era (no `INTERNET` permission, no AI).**
 
 | Version | Scope |
 |---|---|
-| `1.1.0` | **Metadata Viewer** |
-| `1.2.0` | **Metadata Remover** |
-| `1.3.0` | **Format Converter** (JPG/PNG/WEBP/HEIC/HEIF) |
-| `1.4.0` | **Tools hub** + **QR Code Generator** |
-| `1.5.0` | **QR Detection** (classic computer vision via a library — not AI) |
-| `1.6.0` | **Watermark** (the final non-AI feature) |
+| `1.1.0` | **Localization foundation** — externalize every hardcoded UI string into Android string resources (no visible behavior change) |
+| `1.2.0` | **Bahasa Indonesia support** — full `id` translation (`values-id/`); English stays the default |
+| `1.3.0` | **Metadata Viewer** |
+| `1.4.0` | **Metadata Remover** |
+| `1.5.0` | **Format Converter** (JPG/PNG/WEBP/HEIC/HEIF) |
+| `1.6.0` | **Tools hub** + **QR Code Generator** |
+| `1.7.0` | **QR Detection** (classic computer vision via a library — not AI) |
+| `1.8.0` | **Watermark** (the final non-AI feature) |
 
 **`2.0.0` — the on-device AI era.** Introduces the AI model framework
 (Section 7) and the first AI feature. AI stays offline (models are
@@ -170,12 +172,14 @@ operate on a photo that already exists?*
 
 | Feature | Starts from existing photo? | Home | Version |
 |---|---|---|---|
-| Metadata Viewer | Yes | Viewer (detail panel) | 1.1.0 |
-| Metadata Remover | Yes (single / batch) | Viewer + multi-select | 1.2.0 |
-| Format Converter | Yes (single / batch) | Viewer + multi-select | 1.3.0 |
-| QR Code Generator | No (creates) | Tools hub | 1.4.0 |
-| QR Detection | Yes | Viewer | 1.5.0 |
-| Watermark | Yes (single / batch) | Viewer + multi-select | 1.6.0 |
+| Localization foundation | No (app-wide) | Codebase-wide (string resources) | 1.1.0 |
+| Bahasa Indonesia support | No (app-wide) | `res/values-id/` | 1.2.0 |
+| Metadata Viewer | Yes | Viewer (detail panel) | 1.3.0 |
+| Metadata Remover | Yes (single / batch) | Viewer + multi-select | 1.4.0 |
+| Format Converter | Yes (single / batch) | Viewer + multi-select | 1.5.0 |
+| QR Code Generator | No (creates) | Tools hub | 1.6.0 |
+| QR Detection | Yes | Viewer | 1.7.0 |
+| Watermark | Yes (single / batch) | Viewer + multi-select | 1.8.0 |
 | Background Remover | Yes | Viewer | 2.0.0 |
 | Smart Scanner | Mixed (photo or capture) | Tools hub (+ viewer surfacing) | 2.1.0 |
 | OCR → PDF | Mixed (capture / scan) | Tools hub | 2.2.0 |
@@ -209,26 +213,39 @@ operate on a photo that already exists?*
 Each spec is deliberately brief — Goal, Placement, Version — plus only what is
 already certain. Detailed design is done per-feature at build time.
 
+### Localization (1.x)
+
+- **Localization foundation** (1.1.0) — *Codebase-wide.* Externalize every
+  hardcoded, user-facing string into `res/values/strings.xml` and replace call
+  sites with `stringResource(...)` (Compose) or a resource-backed string
+  provider (ViewModels / workers). No behavior or copy change — this is the
+  groundwork that makes translation possible. English (`values/`) is the
+  default locale. Recommended: a lint/CI guard against new hardcoded UI strings.
+- **Bahasa Indonesia support** (1.2.0) — *`res/values-id/`.* Add a complete
+  Indonesian translation of every string key introduced in 1.1.0. The app
+  follows the system locale; English remains the fallback. An in-app language
+  switcher is out of scope for now (may come later).
+
 ### Non-AI utilities (1.x)
 
-- **Metadata Viewer** (1.1.0) — *Viewer.* Show richer metadata (e.g. date
+- **Metadata Viewer** (1.3.0) — *Viewer.* Show richer metadata (e.g. date
   taken, camera, ISO, dimensions, location, etc.) by extending the existing
   `MediaDetails` detail panel. **Location:** show the coordinates and offer
   "open in Google Maps" via an intent — **no in-app map** (keeps the app
   offline).
-- **Metadata Remover** (1.2.0) — *Viewer + multi-select.* Strip metadata before
+- **Metadata Remover** (1.4.0) — *Viewer + multi-select.* Strip metadata before
   sharing. **The user can choose what to remove** (e.g. everything, or location
   only). Always writes a copy; never destroys the original.
-- **Format Converter** (1.3.0) — *Viewer + multi-select.* Convert between JPG,
+- **Format Converter** (1.5.0) — *Viewer + multi-select.* Convert between JPG,
   PNG, WEBP, HEIC, HEIF. Primary use case: rescue HEIC/HEIF into JPG/PNG.
   Supports batch. (HEIC/HEIF encoding depends on device hardware support —
   handle at build time.)
-- **QR Code Generator** (1.4.0) — *Tools hub.* Create a customizable, modern QR
+- **QR Code Generator** (1.6.0) — *Tools hub.* Create a customizable, modern QR
   code, optionally with a title/subtitle and a center logo or photo.
-- **QR Detection** (1.5.0) — *Viewer.* Detect and read a QR/barcode in a photo.
+- **QR Detection** (1.7.0) — *Viewer.* Detect and read a QR/barcode in a photo.
   **Not AI** — done with a classic computer-vision library, fully offline, no
   model download.
-- **Watermark** (1.6.0, final non-AI feature) — *Viewer + multi-select.* Overlay
+- **Watermark** (1.8.0, final non-AI feature) — *Viewer + multi-select.* Overlay
   a text or image watermark on a photo. **No default preset.**
 
 ### AI utilities (2.x)

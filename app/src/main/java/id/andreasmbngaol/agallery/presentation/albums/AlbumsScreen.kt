@@ -39,6 +39,9 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.res.stringResource
+import id.andreasmbngaol.agallery.R
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -185,7 +188,7 @@ fun AlbumsScreen(
     val overlayBackdrop = rememberLayerBackdrop()
 
     EdgeEffectTopBarScaffold(
-        title = "Albums",
+        title = stringResource(R.string.tab_albums),
         edgeEffectMode = edgeEffectMode,
     ) { contentModifier ->
         Box(modifier = contentModifier.fillMaxSize()) {
@@ -215,7 +218,7 @@ fun AlbumsScreen(
                         // ---------- Pinned ----------
                         if (pinnedList.isNotEmpty()) {
                             item(span = { GridItemSpan(maxLineSpan) }) {
-                                SectionHeader("Pinned")
+                                SectionHeader(stringResource(R.string.albums_pinned))
                             }
                             items(
                                 items = pinnedList,
@@ -254,7 +257,7 @@ fun AlbumsScreen(
                         // ---------- More ----------
                         if (current.more.isNotEmpty()) {
                             item(span = { GridItemSpan(maxLineSpan) }) {
-                                SectionHeader("More")
+                                SectionHeader(stringResource(R.string.action_more))
                             }
                             items(
                                 items = current.more,
@@ -277,8 +280,8 @@ fun AlbumsScreen(
                                 key = "trash-row",
                             ) {
                                 TrashRow(
-                                    countText = if (trashAlbum.photoCount == 0) "Empty"
-                                        else "${trashAlbum.photoCount} items",
+                                    countText = if (trashAlbum.photoCount == 0) stringResource(R.string.albums_trash_empty)
+                                        else pluralStringResource(R.plurals.item_count, trashAlbum.photoCount, trashAlbum.photoCount),
                                     onClick = onOpenTrash,
                                 )
                             }
@@ -565,14 +568,15 @@ private fun SectionHeader(text: String) {
  * ada, tampilkan DUA BARIS. Dipadu `maxLines = 2` pada Text pemakainya
  * supaya seluruh info muat tanpa ellipsis.
  */
+@Composable
 private fun albumSubtitle(album: Album): String {
     val p = album.photoCount
     val v = album.videoCount
     return when {
-        p > 0 && v > 0 -> "$p photos\n$v videos"
-        p > 0 -> "$p photos"
-        v > 0 -> "$v videos"
-        else -> "0 photos"
+        p > 0 && v > 0 -> stringResource(R.string.album_photos_videos, p, v)
+        p > 0 -> stringResource(R.string.album_photos_only, p)
+        v > 0 -> stringResource(R.string.album_videos_only, v)
+        else -> stringResource(R.string.album_no_photos)
     }
 }
 
@@ -585,7 +589,7 @@ private fun EmptyState() {
         contentAlignment = Alignment.Center,
     ) {
         Text(
-            text = "No albums yet",
+            text = stringResource(R.string.albums_empty),
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
     }
@@ -734,7 +738,7 @@ private fun HoldPreviewOverlay(
                         modifier = Modifier.size(20.dp),
                     )
                     Text(
-                        text = if (isPinned) "Unpin" else "Pin to top",
+                        text = if (isPinned) stringResource(R.string.action_unpin) else stringResource(R.string.action_pin_to_top),
                         color = Color.White,
                         fontWeight = FontWeight.Medium,
                     )
@@ -787,7 +791,7 @@ private fun TrashRow(
                 )
             }
             Text(
-                text = "Trash",
+                text = stringResource(R.string.trash_title),
                 style = MaterialTheme.typography.bodyLarge,
                 fontWeight = FontWeight.Medium,
                 modifier = Modifier.weight(1f, fill = true),

@@ -48,6 +48,9 @@ import androidx.compose.ui.semantics.disabled
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
+import androidx.annotation.StringRes
+import androidx.compose.ui.res.stringResource
+import id.andreasmbngaol.agallery.R
 import id.andreasmbngaol.agallery.core.ui.EdgeEffectTopBarScaffold
 import id.andreasmbngaol.agallery.core.ui.FloatingTabBarHeight
 import id.andreasmbngaol.agallery.core.ui.ScreenTopBarHeight
@@ -105,15 +108,15 @@ fun SettingsScreen(
  */
 private data class EdgeEffectChoice(
     val mode: EdgeEffectMode,
-    val label: String,
+    @StringRes val labelRes: Int,
 )
 
 // Urutan sengaja ringan -> berat (kiri -> kanan), konsisten dengan
 // PerformanceMode (Low -> High): makin ke kanan = makin "berat"/intens.
 private val EdgeEffectChoices = listOf(
-    EdgeEffectChoice(EdgeEffectMode.OFF, "Off"),
-    EdgeEffectChoice(EdgeEffectMode.DARKEN, "Darken"),
-    EdgeEffectChoice(EdgeEffectMode.BLURRY, "Blurry"),
+    EdgeEffectChoice(EdgeEffectMode.OFF, R.string.edge_off),
+    EdgeEffectChoice(EdgeEffectMode.DARKEN, R.string.edge_darken),
+    EdgeEffectChoice(EdgeEffectMode.BLURRY, R.string.edge_blurry),
 )
 
 @Composable
@@ -140,7 +143,7 @@ private fun SettingsContent(
     // Topbar "Settings" seragam ala Gallery. Efek tepi (Off/Darken/Blurry) yang
     // dipilih user ikut diterapkan ke area topbar lewat SystemBarScrim.
     EdgeEffectTopBarScaffold(
-        title = "Settings",
+        title = stringResource(R.string.tab_settings),
         edgeEffectMode = chosenMode,
     ) { contentModifier ->
     Column(
@@ -158,11 +161,11 @@ private fun SettingsContent(
             ),
     ) {
         // ===== Section: Gallery =====
-        SettingsSectionHeader(title = "Gallery")
+        SettingsSectionHeader(title = stringResource(R.string.tab_gallery))
         SettingsCard {
             SettingsItem(
-                title = "Grid columns",
-                description = "How many photos per row in the gallery grid.",
+                title = stringResource(R.string.settings_grid_columns_title),
+                description = stringResource(R.string.settings_grid_columns_desc),
             ) {
                 GridColumnsSegmentedControl(
                     selected = gridColumns,
@@ -174,11 +177,11 @@ private fun SettingsContent(
         Spacer(Modifier.height(SettingsSectionGap))
 
         // ===== Section: Performance =====
-        SettingsSectionHeader(title = "Performance")
+        SettingsSectionHeader(title = stringResource(R.string.settings_section_performance))
         SettingsCard {
             SettingsItem(
-                title = "Loading behavior",
-                description = "How aggressively thumbnails are preloaded while scrolling.",
+                title = stringResource(R.string.settings_loading_title),
+                description = stringResource(R.string.settings_loading_desc),
                 helperText = performanceModeDescription(performanceMode),
                 selectionKey = performanceMode,
             ) {
@@ -192,15 +195,15 @@ private fun SettingsContent(
         Spacer(Modifier.height(SettingsSectionGap))
 
         // ===== Section: Appearance (SATU island, dua setting sekategori) =====
-        SettingsSectionHeader(title = "Appearance")
+        SettingsSectionHeader(title = stringResource(R.string.settings_section_appearance))
         SettingsCard {
             SettingsItem(
-                title = "Component style",
-                description = "Look of the floating bars, buttons & viewer islands across the app.",
+                title = stringResource(R.string.settings_component_style_title),
+                description = stringResource(R.string.settings_component_style_desc),
                 helperText = componentStyleDescription(shownComponentStyle, glassSupported),
                 selectionKey = shownComponentStyle,
                 footnote = if (!glassSupported) {
-                    "Glass needs Android 13+ \u2014 unavailable on this device."
+                    stringResource(R.string.settings_glass_unavailable)
                 } else {
                     null
                 },
@@ -215,12 +218,12 @@ private fun SettingsContent(
             SettingsItemDivider()
 
             SettingsItem(
-                title = "Screen edge effect",
-                description = "Effect over the status bar & navigation bar when photos scroll behind them.",
+                title = stringResource(R.string.settings_edge_effect_title),
+                description = stringResource(R.string.settings_edge_effect_desc),
                 helperText = edgeEffectDescription(shownSelection, blurrySupported),
                 selectionKey = shownSelection,
                 footnote = if (!blurrySupported) {
-                    "Blurry needs Android 12+ \u2014 unavailable on this device."
+                    stringResource(R.string.settings_blurry_unavailable)
                 } else {
                     null
                 },
@@ -377,7 +380,7 @@ private fun EdgeEffectSegmentedControl(
             // BLURRY butuh API 32; di bawah itu di-nonaktifkan (bukan disembunyikan).
             val enabled = choice.mode != EdgeEffectMode.BLURRY || blurrySupported
             SegmentedGlassItem(
-                label = choice.label,
+                label = stringResource(choice.labelRes),
                 selected = selected == choice.mode,
                 onClick = { onSelect(choice.mode) },
                 enabled = enabled,
@@ -411,13 +414,13 @@ private fun GridColumnsSegmentedControl(
  */
 private data class PerformanceChoice(
     val mode: PerformanceMode,
-    val label: String,
+    @StringRes val labelRes: Int,
 )
 
 private val PerformanceChoices = listOf(
-    PerformanceChoice(PerformanceMode.LOW, "Low"),
-    PerformanceChoice(PerformanceMode.BALANCED, "Balanced"),
-    PerformanceChoice(PerformanceMode.HIGH, "High"),
+    PerformanceChoice(PerformanceMode.LOW, R.string.perf_low),
+    PerformanceChoice(PerformanceMode.BALANCED, R.string.perf_balanced),
+    PerformanceChoice(PerformanceMode.HIGH, R.string.perf_high),
 )
 
 /** Segmented control untuk mode performa (Low/Balanced/High), gaya frosted glass. */
@@ -429,7 +432,7 @@ private fun PerformanceModeSegmentedControl(
     SegmentedGlassTrack {
         PerformanceChoices.forEach { choice ->
             SegmentedGlassItem(
-                label = choice.label,
+                label = stringResource(choice.labelRes),
                 selected = selected == choice.mode,
                 onClick = { onSelect(choice.mode) },
                 modifier = Modifier.weight(1f),
@@ -438,25 +441,23 @@ private fun PerformanceModeSegmentedControl(
     }
 }
 
+@Composable
 private fun performanceModeDescription(mode: PerformanceMode): String = when (mode) {
-    PerformanceMode.LOW ->
-        "Lightest on RAM, CPU & GPU. Thumbnails load only as you reach them, so scrolling stays cheap on low-end devices \u2014 images may pop in slightly later."
-    PerformanceMode.BALANCED ->
-        "Balanced RAM, CPU & GPU use. Preloads a few rows ahead for smooth scrolling without decoding too much in the background."
-    PerformanceMode.HIGH ->
-        "Uses more RAM (bigger cache) plus more CPU & GPU to decode many rows ahead (and above) so scrolling rarely waits. Best on powerful devices; cache size changes apply after restart."
+    PerformanceMode.LOW -> stringResource(R.string.perf_desc_low)
+    PerformanceMode.BALANCED -> stringResource(R.string.perf_desc_balanced)
+    PerformanceMode.HIGH -> stringResource(R.string.perf_desc_high)
 }
 
 private data class ComponentStyleChoice(
     val style: ComponentStyle,
-    val label: String,
+    @StringRes val labelRes: Int,
 )
 
 // Urutan ringan -> berat (kiri -> kanan), konsisten dgn PerformanceMode.
 private val ComponentStyleChoices = listOf(
-    ComponentStyleChoice(ComponentStyle.SOLID, "Solid"),
-    ComponentStyleChoice(ComponentStyle.FROSTED, "Frosted"),
-    ComponentStyleChoice(ComponentStyle.GLASS, "Glass"),
+    ComponentStyleChoice(ComponentStyle.SOLID, R.string.style_solid),
+    ComponentStyleChoice(ComponentStyle.FROSTED, R.string.style_frosted),
+    ComponentStyleChoice(ComponentStyle.GLASS, R.string.style_glass),
 )
 
 /** Segmented control gaya komponen (Solid/Frosted/Glass), gaya frosted glass. */
@@ -471,7 +472,7 @@ private fun ComponentStyleSegmentedControl(
             // GLASS butuh API 33; di bawah itu di-nonaktifkan (bukan disembunyikan).
             val enabled = choice.style != ComponentStyle.GLASS || glassSupported
             SegmentedGlassItem(
-                label = choice.label,
+                label = stringResource(choice.labelRes),
                 selected = selected == choice.style,
                 onClick = { onSelect(choice.style) },
                 enabled = enabled,
@@ -481,18 +482,17 @@ private fun ComponentStyleSegmentedControl(
     }
 }
 
+@Composable
 private fun componentStyleDescription(
     style: ComponentStyle,
     glassSupported: Boolean,
 ): String = when (style) {
-    ComponentStyle.SOLID ->
-        "Solid semi-transparent bars. Lightest \u2014 no blur, smoothest on any device."
-    ComponentStyle.FROSTED ->
-        "Frosted translucent glass. Smooth and still glassy \u2014 recommended for most devices."
+    ComponentStyle.SOLID -> stringResource(R.string.style_desc_solid)
+    ComponentStyle.FROSTED -> stringResource(R.string.style_desc_frosted)
     ComponentStyle.GLASS -> if (glassSupported) {
-        "Live liquid glass that refracts the photo behind it. Looks best but is the HEAVIEST: it drives the GPU every frame and can cause lag on some devices."
+        stringResource(R.string.style_desc_glass)
     } else {
-        "Needs Android 13+ \u2014 falls back to Frosted on this device."
+        stringResource(R.string.style_desc_glass_unsupported)
     }
 }
 
@@ -569,15 +569,16 @@ private fun SegmentedGlassItem(
     }
 }
 
+@Composable
 private fun edgeEffectDescription(
     mode: EdgeEffectMode,
     blurrySupported: Boolean,
 ): String = when (mode) {
     EdgeEffectMode.BLURRY -> if (blurrySupported) {
-        "Blurred glass behind the system bars."
+        stringResource(R.string.edge_desc_blurry)
     } else {
-        "Needs Android 12+ \u2014 falls back to Darken on this device."
+        stringResource(R.string.edge_desc_blurry_unsupported)
     }
-    EdgeEffectMode.DARKEN -> "Subtle dark gradient, light on every device."
-    EdgeEffectMode.OFF -> "No effect at the screen edges."
+    EdgeEffectMode.DARKEN -> stringResource(R.string.edge_desc_darken)
+    EdgeEffectMode.OFF -> stringResource(R.string.edge_desc_off)
 }

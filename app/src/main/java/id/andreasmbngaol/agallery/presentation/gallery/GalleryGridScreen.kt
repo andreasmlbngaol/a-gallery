@@ -91,6 +91,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -98,6 +99,7 @@ import androidx.compose.ui.unit.sp
 import androidx.paging.LoadState
 import androidx.paging.compose.LazyPagingItems
 import coil3.SingletonImageLoader
+import id.andreasmbngaol.agallery.R
 import id.andreasmbngaol.agallery.core.image.MediaStoreThumbnail
 import id.andreasmbngaol.agallery.domain.model.PerformanceMode
 import kotlinx.coroutines.Dispatchers
@@ -195,9 +197,6 @@ private fun PerformanceMode.prefetchRows(): Pair<Int, Int> = when (this) {
     PerformanceMode.HIGH -> 12 to 4
 }
 
-// Judul default saat grid di posisi paling atas.
-private const val DefaultTitle = "Gallery"
-
 // Fast-scroll scrollbar (grip di tepi kanan grid).
 // Lebar area sentuh drag (lebih lebar dari thumb biar gampang ditangkap jari).
 private val ScrollbarTouchWidth = 32.dp
@@ -274,7 +273,8 @@ fun GalleryGridScreen(
             .collectLatest { onScrollStateChange(it) }
     }
 
-    val topBarTitle by remember(items, staticTitle) {
+    val defaultTitle = stringResource(R.string.gallery_title)
+    val topBarTitle by remember(items, staticTitle, defaultTitle) {
         derivedStateOf {
             if (staticTitle != null) {
                 staticTitle
@@ -282,13 +282,13 @@ fun GalleryGridScreen(
                 val isAtTop = gridState.firstVisibleItemIndex == 0 &&
                         gridState.firstVisibleItemScrollOffset == 0
                 if (isAtTop || items.itemCount == 0) {
-                    DefaultTitle
+                    defaultTitle
                 } else {
                     items.peek(gridState.firstVisibleItemIndex)
                         ?.dateAddedEpochSeconds
                         ?.takeIf { it > 0L }
                         ?.let(::formatTitleDate)
-                        ?: DefaultTitle
+                        ?: defaultTitle
                 }
             }
         }
@@ -525,7 +525,7 @@ fun GalleryGridScreen(
                     // membuka menu preview (Favorite / Trash / Delete) seperti semula.
                     IslandAction(
                         icon = PhosphorIcons.Bold.CheckSquare,
-                        label = "Select",
+                        label = stringResource(R.string.action_select),
                         tint = tint,
                         onClick = { selectionMode = true },
                     )
@@ -534,7 +534,7 @@ fun GalleryGridScreen(
                     IslandAction(
                         icon = if (allSelected) PhosphorIcons.Bold.Square
                         else PhosphorIcons.Bold.CheckSquare,
-                        label = if (allSelected) "Select none" else "Select all",
+                        label = if (allSelected) stringResource(R.string.action_select_none) else stringResource(R.string.action_select_all),
                         tint = tint,
                         onClick = {
                             if (allSelected) {
@@ -550,7 +550,7 @@ fun GalleryGridScreen(
                         if (!isSpecialAlbum) {
                             IslandAction(
                                 icon = PhosphorIcons.Bold.Copy,
-                                label = "Copy to album",
+                                label = stringResource(R.string.action_copy_to_album),
                                 tint = tint,
                                 onClick = {
                                     viewModel.loadAlbums()
@@ -559,7 +559,7 @@ fun GalleryGridScreen(
                             )
                             IslandAction(
                                 icon = PhosphorIcons.Bold.FolderSimple,
-                                label = "Move to album",
+                                label = stringResource(R.string.action_move_to_album),
                                 tint = tint,
                                 onClick = {
                                     viewModel.loadAlbums()
@@ -577,7 +577,7 @@ fun GalleryGridScreen(
                     }
                     IslandAction(
                         icon = PhosphorIcons.Bold.X,
-                        label = "Cancel",
+                        label = stringResource(R.string.action_cancel),
                         tint = tint,
                         onClick = { exitSelection() },
                     )
@@ -587,7 +587,7 @@ fun GalleryGridScreen(
             // Picker album (grid thumbnail) utk Copy/Move batch.
             batchAlbumMode?.let { mode ->
                 AlbumThumbnailPickerDialog(
-                    title = if (mode == BatchAlbumMode.COPY) "Copy to album" else "Move to album",
+                    title = if (mode == BatchAlbumMode.COPY) stringResource(R.string.action_copy_to_album) else stringResource(R.string.action_move_to_album),
                     albums = albums,
                     onPick = { name ->
                         val picked = selected.values.toList()
@@ -740,7 +740,7 @@ private fun GalleryPagingContent(
                 ErrorState(
                     contentPadding = contentPadding,
                     message = refresh.error.localizedMessage
-                        ?: "Something went wrong while loading your gallery.",
+                        ?: stringResource(R.string.gallery_load_error),
                     onRetry = { items.retry() },
                     modifier = contentOffset,
                 )
@@ -1159,12 +1159,12 @@ private fun EmptyState(
                 )
                 Spacer(Modifier.height(16.dp))
                 Text(
-                    text = "No photos yet",
+                    text = stringResource(R.string.gallery_empty_title),
                     style = MaterialTheme.typography.titleMedium,
                 )
                 Spacer(Modifier.height(4.dp))
                 Text(
-                    text = "Photos & videos on your device will appear here.",
+                    text = stringResource(R.string.gallery_empty_subtitle),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     textAlign = TextAlign.Center,
@@ -1202,7 +1202,7 @@ private fun ErrorState(
                 )
                 Spacer(Modifier.height(16.dp))
                 Text(
-                    text = "Couldn’t load",
+                    text = stringResource(R.string.gallery_error_title),
                     style = MaterialTheme.typography.titleMedium,
                 )
                 Spacer(Modifier.height(4.dp))
@@ -1214,7 +1214,7 @@ private fun ErrorState(
                 )
                 Spacer(Modifier.height(16.dp))
                 Button(onClick = onRetry) {
-                    Text("Try again")
+                    Text(stringResource(R.string.action_try_again))
                 }
             }
         }
@@ -1400,7 +1400,7 @@ private fun StyledCircleBackButton(
     ) {
         Icon(
             imageVector = PhosphorIcons.Bold.ArrowLeft,
-            contentDescription = "Back",
+            contentDescription = stringResource(R.string.action_back),
             // Ikon ikut theme (onBackground): di light-mode gelap, di dark-mode
             // terang -- tidak lagi "selalu putih" (yg invisible di light mode).
             tint = onBg,
@@ -1468,19 +1468,19 @@ private fun PhotoContextMenu(
     ) {
         MenuAction(
             icon = if (isFavorite) PhosphorIcons.Fill.Heart else PhosphorIcons.Bold.Heart,
-            label = if (isFavorite) "Favorited" else "Favorite",
+            label = if (isFavorite) stringResource(R.string.action_favorited) else stringResource(R.string.action_favorite),
             tint = if (isFavorite) favoriteColor else neutralColor,
             onClick = onFavoriteClick,
         )
         MenuAction(
             icon = PhosphorIcons.Bold.Trash,
-            label = "Trash",
+            label = stringResource(R.string.trash_title),
             tint = neutralColor,
             onClick = onTrashClick,
         )
         MenuAction(
             icon = PhosphorIcons.Fill.Trash,
-            label = "Delete",
+            label = stringResource(R.string.action_delete),
             tint = deleteColor,
             onClick = onDeleteClick,
         )

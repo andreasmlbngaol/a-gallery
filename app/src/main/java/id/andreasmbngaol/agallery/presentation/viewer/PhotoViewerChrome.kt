@@ -49,7 +49,9 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import id.andreasmbngaol.agallery.R
 import com.adamglin.PhosphorIcons
 import com.adamglin.phosphoricons.Fill
 import com.adamglin.phosphoricons.Bold
@@ -223,7 +225,7 @@ fun ViewerTopBar(
     ) {
         GlassIconButton(
             onClick = onBack,
-            contentDescription = "Back",
+            contentDescription = stringResource(R.string.action_back),
             style = style,
             backdrop = backdrop,
         ) {
@@ -231,7 +233,7 @@ fun ViewerTopBar(
         }
         GlassIconButton(
             onClick = onInfo,
-            contentDescription = "Details",
+            contentDescription = stringResource(R.string.action_details),
             style = style,
             backdrop = backdrop,
         ) {
@@ -275,13 +277,13 @@ fun ViewerActionBar(
         // Island A: Share · Delete(tahan) · Favorite (urutan sesuai permintaan).
         GlassIsland(style, backdrop) {
             IconButton(onClick = onShare) {
-                Icon(PhosphorIcons.Bold.ShareNetwork, contentDescription = "Share", tint = tint)
+                Icon(PhosphorIcons.Bold.ShareNetwork, contentDescription = stringResource(R.string.action_share), tint = tint)
             }
             HoldToDeleteButton(onTap = onTrashTap, onHoldComplete = onHoldDelete, tint = tint)
             IconButton(onClick = onFavorite) {
                 Icon(
                     imageVector = if (isFavorite) PhosphorIcons.Fill.Heart else PhosphorIcons.Bold.Heart,
-                    contentDescription = if (isFavorite) "Remove from favorites" else "Add to favorites",
+                    contentDescription = if (isFavorite) stringResource(R.string.action_remove_from_favorites) else stringResource(R.string.action_add_to_favorites),
                     tint = if (isFavorite) FavoritePink else tint,
                 )
             }
@@ -329,13 +331,13 @@ fun ViewerVideoActionRow(
         verticalAlignment = Alignment.CenterVertically,
     ) {
         IconButton(onClick = onShare) {
-            Icon(PhosphorIcons.Bold.ShareNetwork, contentDescription = "Share", tint = tint)
+            Icon(PhosphorIcons.Bold.ShareNetwork, contentDescription = stringResource(R.string.action_share), tint = tint)
         }
         HoldToDeleteButton(onTap = onTrashTap, onHoldComplete = onHoldDelete, tint = tint)
         IconButton(onClick = onFavorite) {
             Icon(
                 imageVector = if (isFavorite) PhosphorIcons.Fill.Heart else PhosphorIcons.Bold.Heart,
-                contentDescription = if (isFavorite) "Remove from favorites" else "Add to favorites",
+                contentDescription = if (isFavorite) stringResource(R.string.action_remove_from_favorites) else stringResource(R.string.action_add_to_favorites),
                 tint = if (isFavorite) FavoritePink else tint,
             )
         }
@@ -369,7 +371,7 @@ private fun GlassMoreButton(
     Box {
         GlassIconButton(
             onClick = { expanded = true },
-            contentDescription = "More",
+            contentDescription = stringResource(R.string.action_more),
             style = style,
             backdrop = backdrop,
         ) {
@@ -403,7 +405,7 @@ private fun PlainMoreButton(
     var expanded by remember { mutableStateOf(false) }
     Box {
         IconButton(onClick = { expanded = true }) {
-            Icon(PhosphorIcons.Bold.DotsThreeVertical, contentDescription = "More", tint = tint)
+            Icon(PhosphorIcons.Bold.DotsThreeVertical, contentDescription = stringResource(R.string.action_more), tint = tint)
         }
         // Video: TANPA "Set as wallpaper" (wallpaper hanya relevan utk gambar).
         ViewerMoreDropdown(
@@ -436,7 +438,7 @@ private fun ViewerMoreDropdown(
 ) {
     DropdownMenu(expanded = expanded, onDismissRequest = onDismiss) {
         DropdownMenuItem(
-            text = { Text("Rename") },
+            text = { Text(stringResource(R.string.action_rename)) },
             leadingIcon = { Icon(PhosphorIcons.Bold.PencilSimple, contentDescription = null) },
             onClick = {
                 onDismiss()
@@ -444,7 +446,7 @@ private fun ViewerMoreDropdown(
             },
         )
         DropdownMenuItem(
-            text = { Text("Set as cover") },
+            text = { Text(stringResource(R.string.action_set_as_cover)) },
             leadingIcon = { Icon(PhosphorIcons.Bold.Image, contentDescription = null) },
             onClick = {
                 onDismiss()
@@ -453,7 +455,7 @@ private fun ViewerMoreDropdown(
         )
         if (showSetAs) {
             DropdownMenuItem(
-                text = { Text("Set as wallpaper") },
+                text = { Text(stringResource(R.string.action_set_as_wallpaper)) },
                 leadingIcon = { Icon(PhosphorIcons.Bold.Image, contentDescription = null) },
                 onClick = {
                     onDismiss()
@@ -462,7 +464,7 @@ private fun ViewerMoreDropdown(
             )
         }
         DropdownMenuItem(
-            text = { Text("Open with") },
+            text = { Text(stringResource(R.string.action_open_with)) },
             leadingIcon = { Icon(PhosphorIcons.Bold.ArrowSquareOut, contentDescription = null) },
             onClick = {
                 onDismiss()
@@ -470,7 +472,7 @@ private fun ViewerMoreDropdown(
             },
         )
         DropdownMenuItem(
-            text = { Text("Copy to album") },
+            text = { Text(stringResource(R.string.action_copy_to_album)) },
             leadingIcon = { Icon(PhosphorIcons.Bold.Copy, contentDescription = null) },
             onClick = {
                 onDismiss()
@@ -478,7 +480,7 @@ private fun ViewerMoreDropdown(
             },
         )
         DropdownMenuItem(
-            text = { Text("Move to album") },
+            text = { Text(stringResource(R.string.action_move_to_album)) },
             leadingIcon = { Icon(PhosphorIcons.Bold.FolderSimple, contentDescription = null) },
             onClick = {
                 onDismiss()
@@ -486,7 +488,7 @@ private fun ViewerMoreDropdown(
             },
         )
         DropdownMenuItem(
-            text = { Text("Delete", color = DangerRed) },
+            text = { Text(stringResource(R.string.action_delete), color = DangerRed) },
             leadingIcon = { Icon(PhosphorIcons.Fill.Trash, contentDescription = null, tint = DangerRed) },
             onClick = {
                 onDismiss()
@@ -563,7 +565,7 @@ fun HoldToDeleteButton(
         }
         Icon(
             imageVector = PhosphorIcons.Bold.Trash,
-            contentDescription = "Move to Trash (hold to delete permanently)",
+            contentDescription = stringResource(R.string.move_to_trash_hold_hint),
             tint = tint,
         )
     }
@@ -578,13 +580,13 @@ fun RenameDialog(
     var text by remember { mutableStateOf(initialName) }
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Rename") },
+        title = { Text(stringResource(R.string.action_rename)) },
         text = {
             OutlinedTextField(
                 value = text,
                 onValueChange = { text = it },
                 singleLine = true,
-                label = { Text("File name") },
+                label = { Text(stringResource(R.string.viewer_file_name)) },
                 modifier = Modifier.fillMaxWidth(),
             )
         },
@@ -592,9 +594,9 @@ fun RenameDialog(
             TextButton(
                 onClick = { onConfirm(text.trim()) },
                 enabled = text.isNotBlank(),
-            ) { Text("Rename") }
+            ) { Text(stringResource(R.string.action_rename)) }
         },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_cancel)) } },
     )
 }
 
@@ -610,10 +612,10 @@ fun MoveToTrashConfirmDialog(
     AlertDialog(
         onDismissRequest = onDismiss,
         icon = { Icon(PhosphorIcons.Bold.Trash, contentDescription = null) },
-        title = { Text("Move to Trash?") },
-        text = { Text("This item will be moved to Trash. You can restore it later from Trash.") },
-        confirmButton = { TextButton(onClick = onConfirm) { Text("Move to Trash") } },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
+        title = { Text(stringResource(R.string.move_to_trash_title)) },
+        text = { Text(stringResource(R.string.move_to_trash_message)) },
+        confirmButton = { TextButton(onClick = onConfirm) { Text(stringResource(R.string.action_move_to_trash)) } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_cancel)) } },
     )
 }
 
@@ -639,13 +641,13 @@ fun AlbumPickerDialog(
                     value = newName,
                     onValueChange = { newName = it },
                     singleLine = true,
-                    label = { Text("New album name") },
+                    label = { Text(stringResource(R.string.new_album_name)) },
                     modifier = Modifier.fillMaxWidth(),
                 )
                 if (albums.isNotEmpty()) {
                     Spacer(Modifier.height(12.dp))
                     Text(
-                        text = "Or pick an existing album",
+                        text = stringResource(R.string.or_pick_existing_album),
                         style = MaterialTheme.typography.labelMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -653,7 +655,7 @@ fun AlbumPickerDialog(
                     LazyColumn(modifier = Modifier.heightIn(max = 240.dp)) {
                         items(albums) { album ->
                             Text(
-                                text = "${album.name}  (${album.itemCount})",
+                                text = stringResource(R.string.album_name_with_count, album.name, album.itemCount),
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .clickable { onPick(album.name) }
@@ -670,6 +672,6 @@ fun AlbumPickerDialog(
                 enabled = newName.isNotBlank(),
             ) { Text(actionLabel) }
         },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_cancel)) } },
     )
 }

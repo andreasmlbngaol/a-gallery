@@ -3,11 +3,11 @@ package id.andreasmbngaol.agallery.presentation.viewer
 import android.content.Context
 import android.database.ContentObserver
 import android.media.AudioManager
-import android.os.Build
 import android.os.Handler
 import android.os.Looper
 import android.provider.Settings
 import android.view.LayoutInflater
+import androidx.annotation.OptIn
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
@@ -23,9 +23,9 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -52,9 +52,11 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.media3.common.Player
+import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.SeekParameters
 import androidx.media3.ui.PlayerView
@@ -79,8 +81,8 @@ import id.andreasmbngaol.agallery.domain.model.ComponentStyle
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withTimeoutOrNull
 import kotlin.math.abs
+import kotlin.time.Duration.Companion.milliseconds
 import androidx.media3.common.MediaItem as ExoMediaItem
 
 // ---- Tuning liquid glass (samain dengan floating nav bar) ----
@@ -139,6 +141,7 @@ object VideoPlaybackPrefs {
  * view_video_player.xml) supaya frame video ikut ter-render di view hierarchy
  * dan bisa di-capture sebagai [layerBackdrop] untuk dibiaskan panel kaca.
  */
+@OptIn(UnstableApi::class)
 @Composable
 fun VideoPlayerContent(
     uri: String,
@@ -146,8 +149,8 @@ fun VideoPlayerContent(
     controlsVisible: Boolean,
     onToggleControls: () -> Unit,
     style: ComponentStyle,
-    actionsSlot: (@Composable () -> Unit)? = null,
     modifier: Modifier = Modifier,
+    actionsSlot: (@Composable () -> Unit)? = null,
 ) {
     val context = LocalContext.current
     val backdrop = rememberLayerBackdrop()
@@ -270,7 +273,7 @@ fun VideoPlayerContent(
                 else -> positionMs = pos
             }
             if (durationMs <= 0L) durationMs = exoPlayer.duration.coerceAtLeast(0L)
-            delay(200)
+            delay(200.milliseconds)
         }
     }
 
@@ -373,7 +376,7 @@ fun VideoPlayerContent(
                                         skipFeedbackVisible = true
                                         skipFeedbackJob?.cancel()
                                         skipFeedbackJob = scope.launch {
-                                            delay(600)
+                                            delay(600.milliseconds)
                                             skipFeedbackVisible = false
                                         }
                                     }
@@ -389,7 +392,7 @@ fun VideoPlayerContent(
                                         skipFeedbackVisible = true
                                         skipFeedbackJob?.cancel()
                                         skipFeedbackJob = scope.launch {
-                                            delay(600)
+                                            delay(600.milliseconds)
                                             skipFeedbackVisible = false
                                         }
                                     }
@@ -422,7 +425,7 @@ fun VideoPlayerContent(
                     .padding(horizontal = 16.dp, vertical = 8.dp),
             ) {
                 Text(
-                    text = "2x  \u25B6\u25B6",
+                    text = stringResource(R.string.video_speed_2x),
                     color = Color.White,
                     style = MaterialTheme.typography.labelLarge,
                 )
@@ -450,7 +453,7 @@ fun VideoPlayerContent(
                     .padding(horizontal = 16.dp, vertical = 8.dp),
             ) {
                 Text(
-                    text = if (skipFeedbackForward) "5s  \u25B6\u25B6" else "\u25C0\u25C0  5s",
+                    text = if (skipFeedbackForward) stringResource(R.string.video_skip_forward) else stringResource(R.string.video_skip_backward),
                     color = Color.White,
                     style = MaterialTheme.typography.labelLarge,
                 )
@@ -531,7 +534,7 @@ fun VideoPlayerContent(
                         } else {
                             PhosphorIcons.Bold.Play
                         },
-                        contentDescription = if (isPlaying) "Pause" else "Play",
+                        contentDescription = if (isPlaying) stringResource(R.string.action_pause) else stringResource(R.string.action_play),
                         tint = contentColor,
                     )
                 }
@@ -594,7 +597,7 @@ fun VideoPlayerContent(
                         } else {
                             PhosphorIcons.Bold.SpeakerHigh
                         },
-                        contentDescription = if (isMuted) "Unmute" else "Mute",
+                        contentDescription = if (isMuted) stringResource(R.string.action_unmute) else stringResource(R.string.action_mute),
                         tint = contentColor,
                     )
                 }

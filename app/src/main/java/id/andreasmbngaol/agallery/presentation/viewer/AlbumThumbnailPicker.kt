@@ -40,6 +40,9 @@ import coil3.compose.AsyncImage
 import com.adamglin.PhosphorIcons
 import com.adamglin.phosphoricons.Bold
 import com.adamglin.phosphoricons.bold.Plus
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.res.stringResource
+import id.andreasmbngaol.agallery.R
 import id.andreasmbngaol.agallery.domain.model.Album
 
 /**
@@ -102,7 +105,7 @@ fun AlbumThumbnailPickerDialog(
                     }
                 }
                 Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.CenterEnd) {
-                    TextButton(onClick = onDismiss) { Text("Cancel") }
+                    TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_cancel)) }
                 }
             }
         }
@@ -155,7 +158,7 @@ private fun AlbumPickTile(
             modifier = Modifier.padding(top = 6.dp),
         )
         Text(
-            text = if (album.itemCount == 1) "1 item" else "${album.itemCount} items",
+            text = pluralStringResource(R.plurals.item_count, album.itemCount, album.itemCount),
             style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             maxLines = 1,
@@ -182,13 +185,13 @@ private fun NewAlbumTile(
         ) {
             Icon(
                 imageVector = PhosphorIcons.Bold.Plus,
-                contentDescription = "New album",
+                contentDescription = stringResource(R.string.new_album),
                 tint = MaterialTheme.colorScheme.onPrimaryContainer,
                 modifier = Modifier.size(32.dp),
             )
         }
         Text(
-            text = "New album",
+            text = stringResource(R.string.new_album),
             style = MaterialTheme.typography.bodyMedium,
             fontWeight = FontWeight.Medium,
             color = MaterialTheme.colorScheme.onSurface,
@@ -206,8 +209,8 @@ private fun NewAlbumTile(
 fun NewAlbumNameDialog(
     onConfirm: (String) -> Unit,
     onDismiss: () -> Unit,
-    title: String = "New album",
-    confirmLabel: String = "Create",
+    title: String = stringResource(R.string.new_album),
+    confirmLabel: String = stringResource(R.string.action_create),
     initialName: String = "",
 ) {
     var name by rememberSaveable { mutableStateOf(initialName) }
@@ -221,7 +224,7 @@ fun NewAlbumNameDialog(
                 onValueChange = { name = it },
                 singleLine = true,
                 shape = RoundedCornerShape(16.dp),
-                label = { Text("Album name") },
+                label = { Text(stringResource(R.string.album_name)) },
             )
         },
         confirmButton = {
@@ -231,7 +234,7 @@ fun NewAlbumNameDialog(
             ) { Text(confirmLabel) }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) { Text("Cancel") }
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_cancel)) }
         },
     )
 }

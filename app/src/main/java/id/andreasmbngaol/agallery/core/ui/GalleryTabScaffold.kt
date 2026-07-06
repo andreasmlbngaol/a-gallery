@@ -38,6 +38,8 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.ui.res.stringResource
+import id.andreasmbngaol.agallery.R
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -277,7 +279,7 @@ private fun FloatingTabBar(
         if (selectedTab == GalleryTab.Gallery) {
             CircularFloatingButton(
                 onClick = onToggleSort,
-                contentDescription = "Change sort order",
+                contentDescription = stringResource(R.string.action_change_sort_order),
                 backdrop = backdrop,
                 componentStyle = componentStyle,
                 glassTint = glassTint,
@@ -318,7 +320,7 @@ private fun FloatingTabBar(
         if (selectedTab == GalleryTab.Albums) {
             CircularFloatingButton(
                 onClick = onCreateAlbum,
-                contentDescription = "New album",
+                contentDescription = stringResource(R.string.new_album),
                 backdrop = backdrop,
                 componentStyle = componentStyle,
                 glassTint = glassTint,
@@ -354,9 +356,9 @@ private fun TabSwitcher(
     modifier: Modifier = Modifier,
 ) {
     val entries = listOf(
-        GalleryTab.Settings to "Settings",
-        GalleryTab.Gallery to "Gallery",
-        GalleryTab.Albums to "Albums",
+        GalleryTab.Settings to stringResource(R.string.tab_settings),
+        GalleryTab.Gallery to stringResource(R.string.tab_gallery),
+        GalleryTab.Albums to stringResource(R.string.tab_albums),
     )
     val selectedIndex = entries.indexOfFirst { it.first == selectedTab }.coerceAtLeast(0)
     val scrollState = rememberScrollState()

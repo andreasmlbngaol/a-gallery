@@ -5,6 +5,8 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.res.stringResource
+import id.andreasmbngaol.agallery.R
 
 /**
  * Dialog konfirmasi hapus permanen in-app. Dipakai TERUTAMA saat All-files
@@ -19,23 +21,23 @@ fun ConfirmDeleteDialog(
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Delete permanently?") },
+        title = { Text(stringResource(R.string.delete_permanently_title)) },
         text = {
             Text(
                 if (count <= 1) {
-                    "This item will be permanently deleted from your device. This can't be undone."
+                    stringResource(R.string.delete_permanently_single)
                 } else {
-                    "These $count items will be permanently deleted from your device. This can't be undone."
+                    stringResource(R.string.delete_permanently_multiple, count)
                 },
             )
         },
         confirmButton = {
             TextButton(onClick = onConfirm) {
-                Text("Delete", color = MaterialTheme.colorScheme.error)
+                Text(stringResource(R.string.action_delete), color = MaterialTheme.colorScheme.error)
             }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) { Text("Cancel") }
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_cancel)) }
         },
     )
 }

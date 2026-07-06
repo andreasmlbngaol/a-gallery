@@ -37,6 +37,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -45,6 +46,7 @@ import com.adamglin.phosphoricons.Bold
 import com.adamglin.phosphoricons.bold.FolderSimple
 import com.adamglin.phosphoricons.bold.Image
 import com.adamglin.phosphoricons.bold.WarningCircle
+import id.andreasmbngaol.agallery.R
 
 /**
  * Gate izin WAJIB yang membungkus SELURUH aplikasi (dipasang di MainActivity).
@@ -123,16 +125,13 @@ private fun MediaStep(
     PermissionBlockingScreen(
         modifier = modifier,
         icon = if (denied) PhosphorIcons.Bold.WarningCircle else PhosphorIcons.Bold.Image,
-        title = if (denied) "Full access needed" else "Photos & videos",
+        title = if (denied) stringResource(R.string.permission_media_title_denied) else stringResource(R.string.permission_media_title),
         message = if (denied) {
-            "AGallery needs access to ALL your photos and videos. " +
-                "\"Selected photos\" isn't enough.\n\nOpen app settings → Permissions → " +
-                "Photos and videos → choose \"Allow all\"."
+            stringResource(R.string.permission_media_message_denied)
         } else {
-            "AGallery shows and organizes the photos and videos on your device. " +
-                "Allow access to get started."
+            stringResource(R.string.permission_media_message)
         },
-        primaryLabel = if (denied) "Open app settings" else "Allow access",
+        primaryLabel = if (denied) stringResource(R.string.permission_open_settings) else stringResource(R.string.permission_allow_access),
         onPrimary = {
             if (denied) {
                 settingsLauncher.launch(appSettingsIntent(context))
@@ -161,10 +160,9 @@ private fun AllFilesStep(
     PermissionBlockingScreen(
         modifier = modifier,
         icon = PhosphorIcons.Bold.FolderSimple,
-        title = "All files access",
-        message = "To delete, rename and organize your photos directly — and empty " +
-            "Trash automatically — AGallery needs \"All files access\".",
-        primaryLabel = "Grant access",
+        title = stringResource(R.string.permission_all_files_title),
+        message = stringResource(R.string.permission_all_files_message),
+        primaryLabel = stringResource(R.string.permission_grant_access),
         onPrimary = {
             if (AllFilesAccess.isSupported()) {
                 launcher.launch(AllFilesAccess.settingsIntent(context))
@@ -250,7 +248,7 @@ private fun PermissionBlockingScreen(
         Spacer(Modifier.height(6.dp))
         TextButton(onClick = onExit) {
             Text(
-                text = "Exit",
+                text = stringResource(R.string.action_exit),
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }

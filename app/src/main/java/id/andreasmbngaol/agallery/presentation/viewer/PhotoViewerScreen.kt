@@ -6,6 +6,7 @@ import android.content.Intent
 import androidx.core.net.toUri
 import android.os.Build
 import android.widget.Toast
+import id.andreasmbngaol.agallery.R
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.IntentSenderRequest
@@ -492,7 +493,7 @@ private fun shareMedia(context: Context, item: MediaItem) {
         putExtra(Intent.EXTRA_STREAM, item.uri.toUri())
         addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
     }
-    context.startActivity(Intent.createChooser(intent, "Share"))
+    context.startActivity(Intent.createChooser(intent, context.getString(R.string.action_share)))
 }
 
 /** Set as wallpaper / contact photo dll via ACTION_ATTACH_DATA. */
@@ -503,7 +504,7 @@ private fun setAsMedia(context: Context, item: MediaItem) {
         putExtra("mimeType", mime)
         addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
     }
-    context.startActivity(Intent.createChooser(intent, "Set as"))
+    context.startActivity(Intent.createChooser(intent, context.getString(R.string.action_set_as)))
 }
 
 /** Buka di aplikasi lain via ACTION_VIEW. */
@@ -513,5 +514,5 @@ private fun openWithMedia(context: Context, item: MediaItem) {
         setDataAndType(item.uri.toUri(), mime)
         addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
     }
-    context.startActivity(Intent.createChooser(intent, "Open with"))
+    context.startActivity(Intent.createChooser(intent, context.getString(R.string.action_open_with)))
 }

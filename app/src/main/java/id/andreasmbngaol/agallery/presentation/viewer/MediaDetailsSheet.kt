@@ -24,7 +24,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import id.andreasmbngaol.agallery.R
 import id.andreasmbngaol.agallery.domain.model.MediaDetails
 import id.andreasmbngaol.agallery.domain.model.MediaItem
 import id.andreasmbngaol.agallery.domain.model.MediaType
@@ -76,36 +78,37 @@ fun MediaDetailsSheet(
                 .padding(bottom = 24.dp),
         ) {
             Text(
-                text = "Details",
+                text = stringResource(R.string.action_details),
                 style = MaterialTheme.typography.titleLarge,
             )
             Spacer(Modifier.height(16.dp))
 
             // Placeholder sementara data detail masih dimuat vs sudah gagal.
-            val placeholder = if (loading) "\u2026" else "Unknown"
+            val unknownText = stringResource(R.string.value_unknown)
+            val placeholder = if (loading) "\u2026" else unknownText
 
-            DetailRow(label = "Name", value = item.displayName.ifEmpty { placeholder })
-            DetailRow(label = "Type", value = item.mimeType.ifEmpty { placeholder })
+            DetailRow(label = stringResource(R.string.detail_name), value = item.displayName.ifEmpty { placeholder })
+            DetailRow(label = stringResource(R.string.detail_type), value = item.mimeType.ifEmpty { placeholder })
             if (item.type == MediaType.VIDEO && item.durationMs > 0L) {
-                DetailRow(label = "Duration", value = formatDuration(item.durationMs))
+                DetailRow(label = stringResource(R.string.detail_duration), value = formatDuration(item.durationMs))
             }
             DetailRow(
-                label = "Size",
-                value = details?.let { formatFileSize(it.sizeBytes) } ?: placeholder,
+                label = stringResource(R.string.detail_size),
+                value = details?.let { formatFileSize(it.sizeBytes, unknownText) } ?: placeholder,
             )
             DetailRow(
-                label = "Dimensions",
+                label = stringResource(R.string.detail_dimensions),
                 value = details
                     ?.takeIf { it.width > 0 && it.height > 0 }
-                    ?.let { "${it.width} \u00d7 ${it.height}" }
+                    ?.let { stringResource(R.string.dimensions_format, it.width, it.height) }
                     ?: placeholder,
             )
             DetailRow(
-                label = "Date",
-                value = formatDate(item.dateAddedEpochSeconds),
+                label = stringResource(R.string.detail_date),
+                value = formatDate(item.dateAddedEpochSeconds, unknownText),
             )
             DetailRow(
-                label = "Folder",
+                label = stringResource(R.string.detail_folder),
                 value = item.bucketName
                     .ifEmpty { details?.relativePath.orEmpty() }
                     .ifEmpty { placeholder },
@@ -142,8 +145,8 @@ private fun DetailRow(
 }
 
 /** Byte -> string ramah baca (B/KB/MB/GB/TB, basis 1024). */
-private fun formatFileSize(bytes: Long): String {
-    if (bytes <= 0L) return "Unknown"
+private fun formatFileSize(bytes: Long, unknown: String): String {
+    if (bytes <= 0L) return unknown
     val units = arrayOf("B", "KB", "MB", "GB", "TB")
     var value = bytes.toDouble()
     var unitIndex = 0
@@ -159,8 +162,8 @@ private fun formatFileSize(bytes: Long): String {
 }
 
 /** Epoch detik -> tanggal-waktu lokal ramah baca. */
-private fun formatDate(epochSeconds: Long): String {
-    if (epochSeconds <= 0L) return "Unknown"
+private fun formatDate(epochSeconds: Long, unknown: String): String {
+    if (epochSeconds <= 0L) return unknown
     val formatter = DateTimeFormatter
         .ofLocalizedDateTime(FormatStyle.MEDIUM, FormatStyle.SHORT)
         .withLocale(Locale.getDefault())

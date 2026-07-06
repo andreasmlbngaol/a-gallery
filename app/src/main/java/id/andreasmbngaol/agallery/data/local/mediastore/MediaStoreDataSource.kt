@@ -222,12 +222,8 @@ class MediaStoreDataSource(
             putString(ContentResolver.QUERY_ARG_SQL_SORT_ORDER, "$orderByCol $dir")
             putInt(ContentResolver.QUERY_ARG_LIMIT, limit)
             putInt(ContentResolver.QUERY_ARG_OFFSET, offset)
-            if (finalSel != null) {
-                putString(ContentResolver.QUERY_ARG_SQL_SELECTION, finalSel)
-            }
-            if (finalArgs != null) {
-                putStringArray(ContentResolver.QUERY_ARG_SQL_SELECTION_ARGS, finalArgs)
-            }
+            putString(ContentResolver.QUERY_ARG_SQL_SELECTION, finalSel)
+            putStringArray(ContentResolver.QUERY_ARG_SQL_SELECTION_ARGS, finalArgs)
         }
 
         val items = mutableListOf<MediaItem>()
@@ -392,13 +388,13 @@ class MediaStoreDataSource(
                     smartCamera.add(uri, isVideo)
                     cameraBucketIds.add(bucketId)
                 }
-                if (isVideo) smartVideos.add(uri, isVideo)
+                if (isVideo) smartVideos.add(uri, true)
                 if ("screenshots/" in path) {
                     smartScreenshots.add(uri, isVideo)
                     screenshotBucketIds.add(bucketId)
                 }
                 if (isVideo && ("screen recordings/" in path || "screenrecorder/" in path)) {
-                    smartRecordings.add(uri, isVideo)
+                    smartRecordings.add(uri, true)
                     recordingBucketIds.add(bucketId)
                 }
                 if (id in favoriteIds) smartFavorites.add(uri, isVideo)

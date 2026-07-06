@@ -1,8 +1,10 @@
 package id.andreasmbngaol.agallery.presentation.viewer
 
+import android.content.Context
 import android.content.IntentSender
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import id.andreasmbngaol.agallery.R
 import id.andreasmbngaol.agallery.domain.model.Album
 import id.andreasmbngaol.agallery.domain.model.ComponentStyle
 import id.andreasmbngaol.agallery.domain.model.EdgeEffectMode
@@ -44,6 +46,7 @@ import kotlinx.coroutines.launch
  * Screenshots, Favorites) selain dari folder biasa.
  */
 class PhotoViewerViewModel(
+    private val appContext: Context,
     getAllMedia: GetAllMediaUseCase,
     observeFavoriteIds: ObserveFavoriteIdsUseCase,
     getSettings: GetSettingsUseCase,
@@ -146,7 +149,7 @@ class PhotoViewerViewModel(
     fun setAlbumCover(albumKey: String, mediaId: Long) {
         viewModelScope.launch {
             setAlbumCoverUseCase(albumKey, mediaId)
-            _messages.emit("Album cover updated")
+            _messages.emit(appContext.getString(R.string.msg_album_cover_updated))
         }
     }
 
@@ -154,7 +157,7 @@ class PhotoViewerViewModel(
         viewModelScope.launch {
             moveToTrashUseCase(item)
             refresh()
-            _messages.emit("Moved to Trash")
+            _messages.emit(appContext.getString(R.string.msg_moved_to_trash))
         }
     }
 
@@ -165,7 +168,7 @@ class PhotoViewerViewModel(
                 _deleteRequests.emit(sender)
             } else {
                 refresh()
-                _messages.emit("Deleted")
+                _messages.emit(appContext.getString(R.string.msg_deleted))
             }
         }
     }
@@ -177,12 +180,12 @@ class PhotoViewerViewModel(
                 pendingWriteAction = {
                     renameMediaUseCase(uri, newName)
                     refresh()
-                    _messages.emit("Renamed")
+                    _messages.emit(appContext.getString(R.string.msg_renamed))
                 }
                 _writeRequests.emit(sender)
             } else {
                 refresh()
-                _messages.emit("Renamed")
+                _messages.emit(appContext.getString(R.string.msg_renamed))
             }
         }
     }
@@ -195,12 +198,12 @@ class PhotoViewerViewModel(
                 pendingWriteAction = {
                     moveToAlbumUseCase(uri, path)
                     refresh()
-                    _messages.emit("Moved to $albumName")
+                    _messages.emit(appContext.getString(R.string.msg_moved_to_album, albumName))
                 }
                 _writeRequests.emit(sender)
             } else {
                 refresh()
-                _messages.emit("Moved to $albumName")
+                _messages.emit(appContext.getString(R.string.msg_moved_to_album, albumName))
             }
         }
     }
@@ -209,7 +212,7 @@ class PhotoViewerViewModel(
         val path = albumRelativePath(albumName)
         viewModelScope.launch {
             copyToAlbumUseCase(item, path)
-            _messages.emit("Copied to $albumName")
+            _messages.emit(appContext.getString(R.string.msg_copied_to_album, albumName))
         }
     }
 

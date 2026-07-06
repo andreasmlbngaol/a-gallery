@@ -69,6 +69,8 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.res.stringResource
+import id.andreasmbngaol.agallery.R
 import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
 import coil3.request.crossfade
@@ -227,7 +229,7 @@ fun TrashScreen(
             ) {
                 GlassIconButton(
                     onClick = { if (selectionMode) exitSelection() else onBack() },
-                    contentDescription = "Back",
+                    contentDescription = stringResource(R.string.action_back),
                     style = componentStyle,
                     backdrop = backdrop,
                 ) {
@@ -239,7 +241,7 @@ fun TrashScreen(
                 }
                 Spacer(Modifier.width(16.dp))
                 Text(
-                    text = if (selectionMode) "${selectedIds.size} selected" else "Trash",
+                    text = if (selectionMode) stringResource(R.string.selected_count, selectedIds.size) else stringResource(R.string.trash_title),
                     style = MaterialTheme.typography.headlineSmall,
                     fontWeight = FontWeight.SemiBold,
                     color = MaterialTheme.colorScheme.onSurface,
@@ -298,7 +300,7 @@ fun TrashScreen(
                     contentAlignment = Alignment.Center,
                 ) {
                     Text(
-                        text = "Trash is empty",
+                        text = stringResource(R.string.trash_empty),
                         style = MaterialTheme.typography.bodyLarge,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -498,7 +500,7 @@ private fun DaysLeftBadge(
             .padding(horizontal = 6.dp, vertical = 3.dp),
     ) {
         Text(
-            text = formatDaysLeft(trashedAt),
+            text = stringResource(R.string.trash_days_left, daysLeftCount(trashedAt)),
             color = Color.White,
             style = MaterialTheme.typography.labelMedium,
         )
@@ -581,13 +583,13 @@ private fun TrashActionIsland(
     ) {
         if (!selectionMode) {
             IslandAction(
-                label = "Select",
+                label = stringResource(R.string.action_select),
                 tint = tint,
                 onClick = onEnterSelection,
             ) { SelectGlyph(color = tint, modifier = Modifier.size(24.dp)) }
         } else {
             IslandAction(
-                label = if (allSelected) "Select none" else "Select all",
+                label = if (allSelected) stringResource(R.string.action_select_none) else stringResource(R.string.action_select_all),
                 tint = tint,
                 onClick = onToggleSelectAll,
             ) {
@@ -600,19 +602,19 @@ private fun TrashActionIsland(
             if (selectedCount > 0) {
                 IslandAction(
                     icon = PhosphorIcons.Bold.ArrowClockwise,
-                    label = "Restore",
+                    label = stringResource(R.string.action_restore),
                     tint = MaterialTheme.colorScheme.primary,
                     onClick = onRestore,
                 )
                 IslandAction(
                     icon = PhosphorIcons.Bold.Trash,
-                    label = "Delete",
+                    label = stringResource(R.string.action_delete),
                     tint = MaterialTheme.colorScheme.error,
                     onClick = onDelete,
                 )
             }
             IslandAction(
-                label = "Cancel",
+                label = stringResource(R.string.action_cancel),
                 tint = tint,
                 onClick = onCancel,
             ) { CloseGlyph(color = tint, modifier = Modifier.size(24.dp)) }
@@ -799,7 +801,7 @@ private fun TrashViewer(
             ) {
                 GlassIconButton(
                     onClick = onClose,
-                    contentDescription = "Back",
+                    contentDescription = stringResource(R.string.action_back),
                     style = style,
                     backdrop = viewerBackdrop,
                 ) {
@@ -827,19 +829,19 @@ private fun TrashViewer(
                 ) {
                     IslandAction(
                         icon = PhosphorIcons.Bold.ArrowClockwise,
-                        label = "Restore",
+                        label = stringResource(R.string.action_restore),
                         tint = MaterialTheme.colorScheme.primary,
                         onClick = { onRestore(current) },
                     )
                     IslandAction(
                         icon = PhosphorIcons.Bold.Trash,
-                        label = "Delete",
+                        label = stringResource(R.string.action_delete),
                         tint = MaterialTheme.colorScheme.error,
                         onClick = { onDelete(current) },
                     )
                     IslandAction(
                         icon = PhosphorIcons.Bold.Info,
-                        label = "Details",
+                        label = stringResource(R.string.action_details),
                         tint = tint,
                         onClick = { showDetails = true },
                     )
@@ -876,19 +878,19 @@ private fun TrashActionRow(
     ) {
         IslandAction(
             icon = PhosphorIcons.Bold.ArrowClockwise,
-            label = "Restore",
+            label = stringResource(R.string.action_restore),
             tint = MaterialTheme.colorScheme.primary,
             onClick = onRestore,
         )
         IslandAction(
             icon = PhosphorIcons.Bold.Trash,
-            label = "Delete",
+            label = stringResource(R.string.action_delete),
             tint = MaterialTheme.colorScheme.error,
             onClick = onDelete,
         )
         IslandAction(
             icon = PhosphorIcons.Bold.Info,
-            label = "Details",
+            label = stringResource(R.string.action_details),
             tint = MaterialTheme.colorScheme.onSurface,
             onClick = onDetails,
         )
@@ -922,25 +924,25 @@ private fun TrashDetailsSheet(
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             Text(
-                text = "Details",
+                text = stringResource(R.string.action_details),
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.SemiBold,
                 color = MaterialTheme.colorScheme.onSurface,
             )
-            DetailRow("Type", if (item.isVideo) "Video" else "Photo")
+            DetailRow(stringResource(R.string.detail_type), if (item.isVideo) stringResource(R.string.media_type_video) else stringResource(R.string.media_type_photo))
             if (item.isVideo) {
-                DetailRow("Duration", formatVideoDuration(item.durationMs))
+                DetailRow(stringResource(R.string.detail_duration), formatVideoDuration(item.durationMs))
             }
             val d = details
             if (d != null) {
-                DetailRow("Size", formatFileSize(d.sizeBytes))
-                DetailRow("Dimensions", "${d.width} x ${d.height}")
+                DetailRow(stringResource(R.string.detail_size), formatFileSize(d.sizeBytes, stringResource(R.string.value_unknown)))
+                DetailRow(stringResource(R.string.detail_dimensions), stringResource(R.string.dimensions_format, d.width, d.height))
                 if (d.relativePath.isNotBlank()) {
-                    DetailRow("Folder", d.relativePath)
+                    DetailRow(stringResource(R.string.detail_folder), d.relativePath)
                 }
             }
-            DetailRow("Deleted", formatTrashedDate(item.trashedAt))
-            DetailRow("Auto-delete in", formatDaysLeft(item.trashedAt))
+            DetailRow(stringResource(R.string.detail_deleted), formatTrashedDate(item.trashedAt, stringResource(R.string.value_unknown)))
+            DetailRow(stringResource(R.string.trash_auto_delete_in), stringResource(R.string.trash_days_left, daysLeftCount(item.trashedAt)))
         }
     }
 }
@@ -1082,16 +1084,15 @@ private fun formatVideoDuration(durationMs: Long): String {
 }
 
 /** Sisa hari sebelum auto-delete (30 hari sejak di-trash). Mis. "12d". */
-private fun formatDaysLeft(trashedAtMs: Long): String {
+private fun daysLeftCount(trashedAtMs: Long): Long {
     val diffMs = (System.currentTimeMillis() - trashedAtMs).coerceAtLeast(0L)
     val days = diffMs / 86_400_000L
-    val daysLeft = (30L - days).coerceAtLeast(0L)
-    return "${daysLeft}d"
+    return (30L - days).coerceAtLeast(0L)
 }
 
 /** Byte -> string ramah baca (B/KB/MB/GB/TB, basis 1024). */
-private fun formatFileSize(bytes: Long): String {
-    if (bytes <= 0L) return "Unknown"
+private fun formatFileSize(bytes: Long, unknown: String): String {
+    if (bytes <= 0L) return unknown
     val units = arrayOf("B", "KB", "MB", "GB", "TB")
     var value = bytes.toDouble()
     var unitIndex = 0
@@ -1107,8 +1108,8 @@ private fun formatFileSize(bytes: Long): String {
 }
 
 /** Epoch millis -> tanggal-waktu lokal ramah baca (kapan item di-trash). */
-private fun formatTrashedDate(epochMillis: Long): String {
-    if (epochMillis <= 0L) return "Unknown"
+private fun formatTrashedDate(epochMillis: Long, unknown: String): String {
+    if (epochMillis <= 0L) return unknown
     val formatter = DateTimeFormatter
         .ofLocalizedDateTime(FormatStyle.MEDIUM, FormatStyle.SHORT)
         .withLocale(Locale.getDefault())
