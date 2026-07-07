@@ -8,7 +8,12 @@ import id.andreasmbngaol.agallery.presentation.settings.di.settingsModule
 import id.andreasmbngaol.agallery.presentation.tools.qr.di.qrModule
 import id.andreasmbngaol.agallery.presentation.viewer.di.viewerModule
 
-/** Semua Koin module dikumpulkan di sini, dipakai di AGalleryApp. */
+/**
+ * Aggregated list of every Koin module in the app, in load order.
+ *
+ * Started once from `AGalleryApp` to wire the data, domain, and per-feature
+ * presentation layers into the dependency graph.
+ */
 val appModules = listOf(
     dataModule,
     domainModule,

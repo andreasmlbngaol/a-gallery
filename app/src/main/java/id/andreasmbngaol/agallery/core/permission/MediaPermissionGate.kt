@@ -49,22 +49,26 @@ import com.adamglin.phosphoricons.bold.WarningCircle
 import id.andreasmbngaol.agallery.R
 
 /**
- * Gate izin WAJIB yang membungkus SELURUH aplikasi (dipasang di MainActivity).
- * Dijalankan berurutan tiap app dibuka:
+ * Mandatory permission gate that wraps the entire app (installed in
+ * `MainActivity`) and runs two steps in order each time the app opens.
  *
- * 1. **Izin media (foto & video)** — TIDAK langsung memunculkan dialog sistem;
- *    ditampilkan dulu layar penjelasan + tombol "Allow access" supaya user
- *    paham konteksnya & tidak asal menolak. Setelah ditekan barulah dialog izin
- *    standar ("Allow all / Select photos / Don't allow") muncul. Kalau belum
- *    diberi PENUH, app TIDAK ditutup — diarahkan ke App Settings untuk memilih
- *    "Allow all" (batasan Android: dialog tak bisa dipaksa muncul lagi setelah
- *    ditolak). App cuma tertutup kalau user menekan "Exit".
- * 2. **All-files access (MANAGE_EXTERNAL_STORAGE)** — layar penjelasan + tombol
- *    "Grant access" yang mengarah ke Settings sistem. WAJIB supaya hapus/rename/
- *    pindah berjalan LANGSUNG tanpa dialog konfirmasi sistem tiap kali, plus
- *    auto-purge Trash 30 hari di background.
+ * 1. **Media access (photos & videos).** Instead of showing the system dialog
+ *    immediately, an explanation screen with an "Allow access" button is shown
+ *    first so the user understands the context and is less likely to decline.
+ *    Pressing it triggers the standard permission dialog ("Allow all / Select
+ *    photos / Don't allow"). If full access is not granted, the app is not
+ *    closed — the user is routed to App Settings to choose "Allow all", because
+ *    Android will not re-show the dialog after a denial. The app only closes if
+ *    the user taps "Exit".
+ * 2. **All-files access (`MANAGE_EXTERNAL_STORAGE`).** An explanation screen
+ *    with a "Grant access" button that opens system Settings. Required so that
+ *    delete/rename/move happen directly without a per-action system dialog, plus
+ *    the 30-day background Trash auto-purge.
  *
- * [content] hanya tampil setelah KEDUA izin terpenuhi.
+ * [content] is shown only once both permissions are granted.
+ *
+ * @param modifier the modifier applied to each step and to [content].
+ * @param content the app UI, displayed after both permissions are satisfied.
  */
 @Composable
 fun MediaPermissionGate(
@@ -82,7 +86,6 @@ fun MediaPermissionGate(
             modifier = modifier,
             onGranted = {
                 mediaGranted = true
-                // Bisa saja all-files sudah pernah diberikan di sesi sebelumnya.
                 filesGranted = AllFilesAccess.isGranted()
             },
             onExit = { activity?.finishAndRemoveTask() },
@@ -98,6 +101,17 @@ fun MediaPermissionGate(
     }
 }
 
+/**
+ * First gate step: requests full media access.
+ *
+ * A limited, selected, or denied result does not close the app; instead the
+ * screen switches to a denied state that explains the situation and routes the
+ * user to App Settings, the reliable path to choose "Allow all".
+ *
+ * @param modifier the modifier applied to the step.
+ * @param onGranted invoked once full media access is granted.
+ * @param onExit invoked when the user chooses to exit the app.
+ */
 @Composable
 private fun MediaStep(
     modifier: Modifier,
@@ -105,20 +119,16 @@ private fun MediaStep(
     onExit: () -> Unit,
 ) {
     val context = LocalContext.current
-    // `denied` = sudah diminta tapi akses PENUH belum diberi.
     var denied by rememberSaveable { mutableStateOf(false) }
 
     val permissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions(),
     ) { result ->
-        // Limited/selected/deny -> JANGAN tutup app; tampilkan penjelasan +
-        // arahkan ke App Settings (jalur andal untuk memilih "Allow all").
         if (MediaPermissions.essentialGranted(result)) onGranted() else denied = true
     }
     val settingsLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.StartActivityForResult(),
     ) {
-        // Balik dari App Settings -> cek ulang status izin.
         if (MediaPermissions.hasEssential(context)) onGranted() else denied = true
     }
 
@@ -143,6 +153,16 @@ private fun MediaStep(
     )
 }
 
+/**
+ * Second gate step: requests All-files access.
+ *
+ * On returning from system Settings the grant is re-checked; if it is still not
+ * granted the step stays in place rather than closing the app.
+ *
+ * @param modifier the modifier applied to the step.
+ * @param onGranted invoked once All-files access is granted (or not required).
+ * @param onExit invoked when the user chooses to exit the app.
+ */
 @Composable
 private fun AllFilesStep(
     modifier: Modifier,
@@ -153,8 +173,6 @@ private fun AllFilesStep(
     val launcher = rememberLauncherForActivityResult(
         ActivityResultContracts.StartActivityForResult(),
     ) {
-        // Balik dari layar Settings sistem -> cek ulang status izinnya.
-        // Kalau belum diberi, TETAP di layar ini (tidak menutup app).
         if (AllFilesAccess.isGranted()) onGranted()
     }
     PermissionBlockingScreen(
@@ -175,9 +193,16 @@ private fun AllFilesStep(
 }
 
 /**
- * Layar blocking izin bergaya sesuai tema app (Material You): ikon dalam
- * lingkaran ber-warna primaryContainer, judul, penjelasan, tombol utama
- * filled, lalu "Exit" yang halus.
+ * Themed blocking screen (Material You): a circular primary-container icon, a
+ * title, an explanatory message, a filled primary button, and a subtle "Exit".
+ *
+ * @param modifier the modifier applied to the root column.
+ * @param icon the icon shown in the circular badge.
+ * @param title the screen title.
+ * @param message the explanatory body text.
+ * @param primaryLabel the label of the filled primary button.
+ * @param onPrimary invoked when the primary button is tapped.
+ * @param onExit invoked when the "Exit" button is tapped.
  */
 @Composable
 private fun PermissionBlockingScreen(
@@ -255,12 +280,24 @@ private fun PermissionBlockingScreen(
     }
 }
 
+/**
+ * Builds an intent to this app's system settings details page.
+ *
+ * @param context the context whose package name targets the page.
+ * @return the intent to launch.
+ */
 private fun appSettingsIntent(context: Context): Intent =
     Intent(
         Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
         Uri.fromParts("package", context.packageName, null),
     )
 
+/**
+ * Finds the nearest [Activity] by unwrapping [ContextWrapper]s, or `null` if
+ * none is found.
+ *
+ * @return the enclosing activity, or `null`.
+ */
 private fun Context.findActivity(): Activity? {
     var ctx: Context = this
     while (ctx is ContextWrapper) {

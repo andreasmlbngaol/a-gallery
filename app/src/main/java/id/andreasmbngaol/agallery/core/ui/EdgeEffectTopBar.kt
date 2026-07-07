@@ -20,22 +20,27 @@ import androidx.compose.ui.unit.sp
 import id.andreasmbngaol.agallery.domain.model.EdgeEffectMode
 
 /**
- * Tinggi visual topbar antar-layar tab (Settings & Albums). Disamakan dengan
- * TopAppBar Gallery (72dp) supaya seragam.
+ * Shared visual height of the top bar across tab screens (Settings & Albums),
+ * matched to the Gallery `TopAppBar` (72dp) for consistency.
  */
 val ScreenTopBarHeight = 72.dp
 
 /**
- * Scaffold topbar seragam untuk layar tab (Settings & Albums) yang meniru
- * topbar Gallery: judul 26sp SemiBold TRANSPARAN yang digambar DI ATAS
- * [SystemBarScrim]. Karena memakai SystemBarScrim yang sama, efek tepi yang
- * dipilih di Settings (Off / Darken / Blurry) IKUT diterapkan pada area topbar
- * (dan navigation bar) layar ini \u2014 persis seperti di Gallery.
+ * Uniform top-bar scaffold for tab screens (Settings & Albums) that mirrors the
+ * Gallery top bar: a transparent 26sp SemiBold title drawn on top of
+ * [SystemBarScrim].
  *
- * [content] menerima `contentModifier` yang WAJIB dipasang ke elemen konten
- * (idealnya yang scrollable) supaya mode BLURRY bisa mengambil sumber blur
- * (hazeSource). Konten juga harus diberi padding atas minimal status bar +
- * [ScreenTopBarHeight] agar tidak tertutup topbar.
+ * Because it reuses the same [SystemBarScrim], the edge effect chosen in
+ * Settings (Off / Darken / Blurry) is also applied to this screen's top-bar and
+ * navigation-bar areas — exactly as in Gallery.
+ *
+ * @param title the title text shown in the top bar.
+ * @param edgeEffectMode the chosen edge effect, or `null` to use the default.
+ * @param modifier the modifier applied to the scaffold.
+ * @param content the screen content; it must apply the provided
+ *   `contentModifier` to its (ideally scrollable) content so the BLURRY mode can
+ *   sample its blur source, and pad the top by at least the status bar plus
+ *   [ScreenTopBarHeight] so it is not covered by the top bar.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -55,7 +60,12 @@ fun EdgeEffectTopBarScaffold(
     )
 }
 
-/** Judul topbar transparan (crisp di atas scrim), identik gaya dengan Gallery. */
+/**
+ * The transparent top-bar title, drawn crisply above the scrim with the same
+ * style as Gallery.
+ *
+ * @param title the title text to display.
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun BoxScope.ScreenTopBarTitle(title: String) {

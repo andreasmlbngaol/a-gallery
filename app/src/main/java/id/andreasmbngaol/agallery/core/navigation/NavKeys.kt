@@ -5,20 +5,28 @@ import id.andreasmbngaol.agallery.domain.model.GallerySortOrder
 import kotlinx.serialization.Serializable
 
 /**
- * Nav3 route keys. Tiap layar = satu NavKey.
+ * Type-safe Nav3 route keys; one [Screen] per destination.
  *
- * @Serializable diperlukan supaya backstack bisa di-save/restore (selamat dari
- * process death) lewat rememberNavBackStack.
+ * Every route is [Serializable] so the back stack can be saved and restored
+ * across process death via `rememberNavBackStack`.
  */
 sealed interface Screen : NavKey {
-    /** Root tunggal (tab pager Settings/Gallery/Albums). */
+
+    /**
+     * The single root destination hosting the Settings/Gallery/Albums/Tools tab
+     * pager.
+     */
     @Serializable
     data object Home : Screen
 
     /**
-     * [initialIndex] = posisi item saat di-tap di grid.
-     * [albumKey] = kunci album sumber (mis. "camera", "recent", "favorites",
-     * atau "bucket:12345"). null = tab Gallery utama (folder kamera).
+     * Full-screen photo/video viewer for a media item.
+     *
+     * @property mediaId the id of the tapped media item.
+     * @property initialIndex the position of the item in the source grid.
+     * @property sortOrder the sort order of the source list, so paging matches.
+     * @property albumKey the source album key (e.g. `"camera"`, `"recent"`,
+     *   `"favorites"`, or `"bucket:12345"`); `null` means the main Gallery tab.
      */
     @Serializable
     data class PhotoViewer(
@@ -28,7 +36,12 @@ sealed interface Screen : NavKey {
         val albumKey: String? = null,
     ) : Screen
 
-    /** Isi satu album (folder atau cerdas), ditampilkan sebagai grid ter-scope. */
+    /**
+     * Contents of a single album (folder or smart), shown as a scoped grid.
+     *
+     * @property albumKey the key identifying the album to display.
+     * @property albumName the album's display name for the title.
+     */
     @Serializable
     data class AlbumDetail(
         val albumKey: String,
@@ -36,23 +49,26 @@ sealed interface Screen : NavKey {
     ) : Screen
 
     /**
-     * Layar app-level Trash. Item-nya di-observe dari tabel Room `trashed`;
-     * bukan bagian dari AlbumDetail karena punya aksi khusus (Restore &
-     * Delete forever) dan bukan MediaStore scope biasa.
+     * App-level Trash screen.
+     *
+     * Items are observed from the Room `trashed` table. This is separate from
+     * [AlbumDetail] because it has dedicated actions (restore and delete
+     * forever) and is not a regular MediaStore scope.
      */
     @Serializable
     data object Trash : Screen
 
     /**
-     * Alur "buat album baru": user diminta nama dulu, lalu memilih foto dari
-     * album yang sudah ada untuk di-COPY ke folder album baru. Cancel = tak ada
-     * folder yang dibuat (folder hanya lahir saat foto pertama benar-benar
-     * disalin), jadi tak ada folder kosong yang perlu dihapus.
+     * The "create new album" flow: the user names the album, then picks photos
+     * from existing albums to copy into it.
+     *
+     * Cancelling creates no folder — the folder is only created when the first
+     * photo is actually copied — so there is never an empty folder to clean up.
      */
     @Serializable
     data object CreateAlbum : Screen
 
-    /** Layar QR Code Generator (dibuka dari tab Tools). */
+    /** QR code generator screen, opened from the Tools tab. */
     @Serializable
     data object QrGenerator : Screen
 }

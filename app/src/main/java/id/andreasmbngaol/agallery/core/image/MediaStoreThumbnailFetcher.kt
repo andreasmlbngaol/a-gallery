@@ -15,15 +15,16 @@ import coil3.request.Options
 import coil3.size.pxOrElse
 
 /**
- * Model ringan yang dikirim ke Coil sebagai `data` untuk thumbnail GRID.
+ * Lightweight model handed to Coil as the `data` for a grid thumbnail request.
  *
- * Dengan tipe khusus ini (bukan String/Uri biasa), request grid diarahkan ke
- * [MediaStoreThumbnailFetcher] alih-alih fetcher default Coil yang membuka &
- * men-decode file foto penuh.
+ * Using a dedicated type (instead of a plain `String` or `Uri`) routes grid
+ * requests to [MediaStoreThumbnailFetcher] rather than Coil's default fetcher,
+ * which would open and decode the full-resolution photo.
  *
- * @property uri content:// uri item (foto atau video).
- * @property isVideo penanda video; loadThumbnail otomatis ambil 1 frame video,
- *   jadi tidak butuh decoder frame terpisah untuk grid.
+ * @property uri the `content://` uri of the item (photo or video).
+ * @property isVideo whether the item is a video; `loadThumbnail` extracts a
+ *   single frame automatically, so no separate video-frame decoder is needed
+ *   for the grid.
  */
 data class MediaStoreThumbnail(
     val uri: String,
@@ -31,16 +32,21 @@ data class MediaStoreThumbnail(
 )
 
 /**
- * Fetcher yang mengambil thumbnail lewat [ContentResolver.loadThumbnail]
- * (tersedia sejak API 29 = minSdk app ini).
+ * Coil [Fetcher] that loads thumbnails via [ContentResolver.loadThumbnail],
+ * available since API 29 (this app's minSdk).
  *
- * ## Kenapa ini jauh lebih cepat
- * `loadThumbnail` mengembalikan thumbnail berukuran kecil yang umumnya sudah
- * di-generate & di-cache oleh sistem (MediaStore). Jadi kita TIDAK perlu:
- *  - membuka file foto asli (belasan MP),
- *  - men-decode + downsample seluruh file di tiap cell saat scroll.
+ * ## Why this is much faster
+ * `loadThumbnail` returns a small thumbnail that the system (MediaStore) has
+ * usually already generated and cached, so the fetcher never has to:
+ * - open the original multi-megapixel photo file, or
+ * - decode and downsample the whole file for every cell while scrolling.
  *
- * Ini menghilangkan sumber utama "berat" & "lama load" saat scroll galeri besar.
+ * This removes the main source of jank and slow loads when scrolling a large
+ * gallery.
+ *
+ * @property contentResolver resolver used to load system thumbnails.
+ * @property model the requested thumbnail descriptor.
+ * @property options the Coil request options, including the target size.
  */
 class MediaStoreThumbnailFetcher(
     private val contentResolver: ContentResolver,
@@ -48,9 +54,16 @@ class MediaStoreThumbnailFetcher(
     private val options: Options,
 ) : Fetcher {
 
+    /**
+     * Loads the thumbnail and returns it as an already-sampled bitmap.
+     *
+     * The bitmap is converted to [Bitmap.Config.RGB_565] (2 bytes per pixel
+     * versus 4 for `ARGB_8888`), halving cache memory and per-frame GPU upload
+     * bandwidth. Gallery photos rarely need an alpha channel, so grid quality is
+     * unaffected; the conversion runs on Coil's background thread. The result is
+     * flagged sampled so Coil does not treat it as a full-resolution image.
+     */
     override suspend fun fetch(): FetchResult {
-        // Ukuran target dari request (mis. 400x400). Kalau tak terdefinisi,
-        // pakai default yang aman untuk cell grid.
         val width = options.size.width.pxOrElse { DEFAULT_THUMBNAIL_PX }
             .coerceAtLeast(1)
         val height = options.size.height.pxOrElse { DEFAULT_THUMBNAIL_PX }
@@ -62,11 +75,6 @@ class MediaStoreThumbnailFetcher(
             null,
         )
 
-        // RGB_565: 2 byte/pixel (vs 4 byte ARGB_8888) -> setengah memori cache &
-        // setengah bandwidth upload tekstur ke GPU tiap frame. loadThumbnail
-        // mengembalikan ARGB_8888; convert sekali di sini (di thread background
-        // Coil, bukan main thread). Foto galeri praktis tak butuh alpha, jadi
-        // kualitas visual di grid sama saja.
         val bitmap = if (raw.config == Bitmap.Config.RGB_565) {
             raw
         } else {
@@ -81,13 +89,17 @@ class MediaStoreThumbnailFetcher(
 
         return ImageFetchResult(
             image = bitmap.asImage(),
-            // Sudah berupa thumbnail kecil -> tandai sampled biar Coil tidak
-            // coba memperlakukannya sebagai gambar resolusi penuh.
             isSampled = true,
             dataSource = DataSource.DISK,
         )
     }
 
+    /**
+     * Factory that creates a [MediaStoreThumbnailFetcher] for each
+     * [MediaStoreThumbnail] request.
+     *
+     * @property contentResolver resolver passed to every created fetcher.
+     */
     class Factory(
         private val contentResolver: ContentResolver,
     ) : Fetcher.Factory<MediaStoreThumbnail> {
@@ -99,18 +111,18 @@ class MediaStoreThumbnailFetcher(
     }
 
     companion object {
-        /** Fallback ukuran thumbnail (px) kalau request tak menetapkan size. */
+        /** Fallback thumbnail size in pixels when a request omits its size. */
         private const val DEFAULT_THUMBNAIL_PX = 400
     }
 }
 
 /**
- * Keyer untuk [MediaStoreThumbnail] supaya hasil fetch bisa masuk memory &
- * disk cache. Tanpa keyer, Coil tidak tahu cara membuat cache key dari tipe
- * kustom sehingga setiap tampil akan fetch ulang (percuma).
+ * Coil [Keyer] for [MediaStoreThumbnail] so fetch results can enter the memory
+ * and disk caches.
  *
- * Cache key = uri + ukuran target, jadi thumbnail yang sama tidak di-decode
- * berkali-kali saat scroll bolak-balik.
+ * Without a keyer Coil cannot derive a cache key from the custom type and would
+ * refetch on every display. The key combines the uri and the target size, so
+ * the same thumbnail is not decoded repeatedly while scrolling back and forth.
  */
 class MediaStoreThumbnailKeyer : Keyer<MediaStoreThumbnail> {
     override fun key(data: MediaStoreThumbnail, options: Options): String {

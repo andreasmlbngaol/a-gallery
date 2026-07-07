@@ -5,14 +5,27 @@ import com.google.zxing.qrcode.decoder.ErrorCorrectionLevel
 import com.google.zxing.qrcode.encoder.Encoder
 
 /**
- * Matriks QR pada level MODUL (bukan piksel). Tiap sel true = modul gelap.
- * Tidak menyertakan quiet zone -- margin digambar sendiri oleh renderer supaya
- * kita bebas mengatur gaya titik (kotak/titik/membulat) & logo tengah.
+ * A QR code as a grid of *modules* (not pixels); each dark module is `true`.
+ *
+ * The quiet zone is intentionally excluded — the renderer draws its own margin
+ * — so callers are free to style the dots (square, round, or rounded) and place
+ * a center logo.
+ *
+ * @property size the side length of the matrix in modules.
+ * @property cells the row-major module grid, `true` for dark modules.
  */
 class QrMatrix(
     val size: Int,
     private val cells: BooleanArray,
 ) {
+    /**
+     * Returns whether the module at ([x], [y]) is dark, treating out-of-bounds
+     * coordinates as light.
+     *
+     * @param x the column index.
+     * @param y the row index.
+     * @return `true` if the module is dark and within bounds.
+     */
     fun isDark(x: Int, y: Int): Boolean {
         if (x < 0 || y < 0 || x >= size || y >= size) return false
         return cells[y * size + x]
@@ -20,15 +33,22 @@ class QrMatrix(
 }
 
 /**
- * Pembungkus tipis di atas ZXing (`com.google.zxing:core`). Sengaja memakai API
- * level rendah [Encoder.encode] (bukan QRCodeWriter) supaya dapat akses ke
- * matriks per-modul -> bisa render titik bulat / kotak membulat sendiri di
- * Compose Canvas.
+ * Thin wrapper over ZXing (`com.google.zxing:core`).
  *
- * ECC dipatok ke level H (toleransi ~30%) supaya QR TETAP terbaca walau bagian
- * tengahnya ditutup logo.
+ * Uses the low-level [Encoder.encode] API (rather than `QRCodeWriter`) to gain
+ * access to the per-module matrix, so rounded or dot-style modules can be drawn
+ * directly on a Compose canvas. Error correction is pinned to level H (~30%
+ * tolerance) so the code stays readable even when its center is covered by a
+ * logo.
  */
 object QrEncoder {
+    /**
+     * Encodes [content] into a [QrMatrix].
+     *
+     * @param content the text to encode.
+     * @return the module matrix, or `null` if [content] is blank or encoding
+     *   fails.
+     */
     fun encode(content: String): QrMatrix? {
         if (content.isBlank()) return null
         return try {

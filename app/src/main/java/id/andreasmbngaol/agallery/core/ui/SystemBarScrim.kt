@@ -29,30 +29,36 @@ import dev.chrisbanes.haze.hazeSource
 import id.andreasmbngaol.agallery.domain.model.EdgeEffectMode
 
 /**
- * Menggambar efek di area status bar (atas) & navigation bar (bawah) DI ATAS [content].
+ * Draws an effect over the status-bar (top) and navigation-bar (bottom) areas,
+ * on top of [content].
  *
- * - BLURRY  : blur kaca (Haze) + gradasi tint theme yang MENGUAT ke tepi.
- *             Blur meng-obscure detail, gradasi menambah kontras supaya
- *             teks/ikon overlay (TopAppBar) tetap terbaca meski di atas
- *             foto terang di light mode / foto gelap di dark mode.
- * - DARKEN  : gradasi tint theme saja (tanpa blur).
- * - OFF     : tanpa efek.
+ * - **BLURRY**: a glass blur (Haze) plus a theme-tinted gradient that
+ *   intensifies toward the edge. The blur obscures detail while the gradient
+ *   adds contrast so overlay text/icons (a `TopAppBar`) stay readable over a
+ *   bright photo in light mode or a dark photo in dark mode.
+ * - **DARKEN**: the theme-tinted gradient only (no blur).
+ * - **OFF**: no effect.
  *
- * ## Z-order (penting untuk BLURRY)
+ * ## Z-order (important for BLURRY)
  *
- * Urutan menggambar (bawah → atas):
- * 1. [content]  — di-tag `hazeSource` saat mode BLURRY. Ini yang di-blur.
- * 2. Top & bottom [EdgeScrim] — dua sub-layer:
- *    a. hazeEffect  : sample warna dari layer 1, blur bertingkat.
- *    b. gradient   : tint theme (surface color) semi-transparan yang menguat
- *                    ke arah tepi. Menambah "matte" / darkening.
- * 3. [topOverlay] — slot untuk elemen yang HARUS tampil crisp DI ATAS scrim,
- *    mis. TopAppBar transparan. Karena digambar setelah scrim, konten
- *    overlay ini TIDAK ikut kena blur.
+ * Draw order (bottom to top):
+ * 1. [content] — tagged as `hazeSource` in BLURRY mode; this is what gets
+ *    blurred.
+ * 2. The top and bottom [EdgeScrim]s, each with two sub-layers:
+ *    a. `hazeEffect`: samples color from layer 1 and blurs it progressively;
+ *    b. gradient: a semi-transparent theme (surface) tint that strengthens
+ *       toward the edge, adding a matte/darkening.
+ * 3. [topOverlay] — a slot for elements that must stay crisp above the scrim
+ *    (e.g. a transparent `TopAppBar`). Drawn after the scrim, so it is not
+ *    blurred.
  *
- * @param topExtraHeight tambahan tinggi strip scrim atas di luar status bar
- * (biasanya = tinggi TopAppBar).
- * @param topOverlay slot yang digambar paling akhir, di atas scrim.
+ * @param mode the edge effect to apply.
+ * @param modifier the modifier applied to the root box.
+ * @param topExtraHeight extra height for the top scrim strip beyond the status
+ *   bar (typically the `TopAppBar` height).
+ * @param topOverlay a slot drawn last, above the scrim.
+ * @param content the screen content, receiving the modifier to apply as the
+ *   blur source.
  */
 @Composable
 fun SystemBarScrim(
@@ -70,12 +76,10 @@ fun SystemBarScrim(
             .fillMaxSize()
             .background(surfaceColor),
     ) {
-        // Layer 1: konten yang di-tag hazeSource (kalau FROSTED).
         val sourceModifier =
             if (mode == EdgeEffectMode.BLURRY) Modifier.hazeSource(hazeState) else Modifier
         content(sourceModifier)
 
-        // Layer 2: scrim atas & bawah.
         if (mode != EdgeEffectMode.OFF) {
             val topModifier = Modifier
                 .align(Alignment.TopCenter)
@@ -111,22 +115,41 @@ fun SystemBarScrim(
             )
         }
 
-        // Layer 3: overlay crisp di atas scrim (mis. TopAppBar transparan).
         topOverlay?.invoke(this)
     }
 }
 
-// Blur maksimum di ujung tepi layar (tipis saja), lalu memudar ke 0 ke arah konten.
+/** Maximum blur radius at the very screen edge, fading to 0 toward the content. */
 private val BlurryBlurRadius = 8.dp
 
-// Alpha maksimum gradasi tint theme di tepi (mode BLURRY). Cukup besar buat menambah
-// kontras teks TopAppBar di atas foto terang/gelap, tapi tidak sampai
-// menutup foto sepenuhnya (blur masih terlihat).
+/**
+ * Maximum tint-gradient alpha at the edge in BLURRY mode — enough to add
+ * contrast for `TopAppBar` text over bright/dark photos, without fully hiding
+ * the photo (the blur remains visible).
+ */
 private const val BlurryGradientAlpha = 0.22f
-// Alpha gradasi pada mode DARKEN (tanpa blur) — lebih pekat, karena
-// gradient adalah satu-satunya sumber kontras.
+
+/**
+ * Gradient alpha in DARKEN mode (no blur); denser, since the gradient is the
+ * only source of contrast.
+ */
 private const val DarkenGradientAlpha = 0.55f
 
+/**
+ * A single edge scrim (top or bottom) rendered according to [mode].
+ *
+ * In BLURRY mode it stacks a progressive `hazeEffect` blur under a theme-tint
+ * gradient that strengthens toward the edge; in DARKEN mode it draws the
+ * gradient only; in OFF mode it draws nothing. The caller-provided [modifier]
+ * sizes and positions the scrim, while the sub-layers use `matchParentSize` to
+ * fill it without affecting measurement.
+ *
+ * @param mode the edge effect to apply.
+ * @param hazeState the shared haze state sampling the content.
+ * @param scrimColor the theme surface color used for the tint and background.
+ * @param top whether this is the top scrim; controls the gradient direction.
+ * @param modifier the modifier that sizes and positions the scrim.
+ */
 @Composable
 private fun EdgeScrim(
     mode: EdgeEffectMode,
@@ -137,13 +160,6 @@ private fun EdgeScrim(
 ) {
     when (mode) {
         EdgeEffectMode.BLURRY -> {
-            // Bungkus 2 sub-layer:
-            // - hazeEffect (blur)
-            // - gradient tint theme (menguat ke tepi, memudar ke konten)
-            //
-            // Modifier caller (align/fillMaxWidth/height) dipakai OUTER Box.
-            // Sub-layer memakai matchParentSize supaya menutupi seluruh area
-            // scrim tanpa ikut kontribusi ke pengukuran ulang.
             Box(modifier = modifier) {
                 Box(
                     modifier = Modifier
@@ -152,10 +168,6 @@ private fun EdgeScrim(
                             blurRadius = BlurryBlurRadius
                             backgroundColor = scrimColor
                             tints = listOf(HazeTint(scrimColor.copy(alpha = 0.15f)))
-                            // Intensitas blur bergradasi. verticalGradient: startIntensity di
-                            // tepi ATAS strip, endIntensity di tepi BAWAH strip.
-                            // Scrim atas  : kuat di atas (1f) -> 0 di bawah (arah konten).
-                            // Scrim bawah : 0 di atas (arah konten) -> kuat di bawah (1f).
                             progressive = HazeProgressive.verticalGradient(
                                 startIntensity = if (top) 1f else 0f,
                                 endIntensity = if (top) 0f else 1f,

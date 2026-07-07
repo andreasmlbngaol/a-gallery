@@ -21,8 +21,13 @@ import id.andreasmbngaol.agallery.presentation.trash.TrashScreen
 import id.andreasmbngaol.agallery.presentation.viewer.PhotoViewerScreen
 
 /**
- * Host navigasi Nav3 untuk AGallery. Lihat commit sebelumnya untuk detail
- * pager tab + shared element + predictive back.
+ * Nav3 navigation host for AGallery.
+ *
+ * Wraps the back stack in a [SharedTransitionLayout] so destinations can run
+ * shared-element transitions, and defines the fade/scale specs for forward,
+ * pop, and predictive-back navigation. The [androidx.navigation3.runtime.entryProvider] maps each
+ * [Screen] key to its destination composable and threads the navigation
+ * callbacks that push or pop entries on the back stack.
  */
 @OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
@@ -100,9 +105,6 @@ fun AGalleryNavDisplay() {
                         }
 
                         is Screen.Trash -> NavEntry(key) {
-                            // TrashScreen kini membaca componentStyle & edgeEffectMode
-                            // sendiri dari TrashViewModel (via GetSettingsUseCase),
-                            // jadi styling-nya konsisten dgn layar lain.
                             TrashScreen(
                                 onBack = { backStack.removeLastOrNull() },
                             )

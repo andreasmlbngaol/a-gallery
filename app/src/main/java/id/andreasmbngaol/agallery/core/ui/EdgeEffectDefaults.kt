@@ -6,16 +6,24 @@ import androidx.compose.runtime.remember
 import id.andreasmbngaol.agallery.domain.model.EdgeEffectMode
 
 /**
- * Ambang perangkat yang bisa blur beneran lewat RenderEffect. Mode BLURRY butuh
- * API >= 32; di bawah itu turun otomatis ke DARKEN.
+ * Minimum SDK level for a real blur via `RenderEffect`. The
+ * [EdgeEffectMode.BLURRY] mode requires API 32+; below that it degrades
+ * automatically to [EdgeEffectMode.DARKEN].
  */
 const val BLURRY_EDGE_MIN_SDK = 32
 
 /**
- * Resolusi default:
- * - chosen null -> DARKEN (default "rata tengah": ringan & jalan di semua perangkat).
- * - chosen BLURRY di perangkat < 32 -> auto turun ke DARKEN (fallback, RenderEffect absen).
- * - selain itu -> pakai pilihan user apa adanya.
+ * Resolves the effective [EdgeEffectMode] for the given device.
+ *
+ * Two fallbacks are applied:
+ * - a `null` choice defaults to [EdgeEffectMode.DARKEN], a light option that
+ *   works on every device;
+ * - [EdgeEffectMode.BLURRY] on a device below [BLURRY_EDGE_MIN_SDK] degrades to
+ *   [EdgeEffectMode.DARKEN], since `RenderEffect` is unavailable there.
+ *
+ * @param chosen the mode selected by the user, or `null` when unset.
+ * @param sdkInt the device's SDK level, typically [Build.VERSION.SDK_INT].
+ * @return the mode that should actually be applied.
  */
 fun resolveEdgeEffectMode(chosen: EdgeEffectMode?, sdkInt: Int): EdgeEffectMode {
     val base = chosen ?: EdgeEffectMode.DARKEN
@@ -26,10 +34,23 @@ fun resolveEdgeEffectMode(chosen: EdgeEffectMode?, sdkInt: Int): EdgeEffectMode 
     }
 }
 
+/**
+ * Remembers the effective [EdgeEffectMode] for the current device, recomputing
+ * only when [chosen] changes.
+ *
+ * @param chosen the mode selected by the user, or `null` when unset.
+ * @return the resolved mode, stable across recompositions.
+ */
 @Composable
 fun rememberEffectiveEdgeEffectMode(chosen: EdgeEffectMode?): EdgeEffectMode =
     remember(chosen) { resolveEdgeEffectMode(chosen, Build.VERSION.SDK_INT) }
 
-/** True kalau perangkat sanggup efek BLURRY (blur RenderEffect) beneran. */
+/**
+ * Returns whether the device can render a real [EdgeEffectMode.BLURRY] effect
+ * (a `RenderEffect` blur).
+ *
+ * @param sdkInt the device's SDK level, typically [Build.VERSION.SDK_INT].
+ * @return `true` when [sdkInt] is at least [BLURRY_EDGE_MIN_SDK].
+ */
 fun isBlurryEdgeSupported(sdkInt: Int = Build.VERSION.SDK_INT): Boolean =
     sdkInt >= BLURRY_EDGE_MIN_SDK

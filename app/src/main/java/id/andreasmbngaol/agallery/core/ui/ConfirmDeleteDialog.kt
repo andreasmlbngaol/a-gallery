@@ -9,9 +9,14 @@ import androidx.compose.ui.res.stringResource
 import id.andreasmbngaol.agallery.R
 
 /**
- * Dialog konfirmasi hapus permanen in-app. Dipakai TERUTAMA saat All-files
- * access aktif: dialog konfirmasi sistem tidak lagi muncul, jadi tanpa ini
- * hapus jadi instan tanpa jaring pengaman.
+ * In-app confirmation dialog for permanent deletion.
+ *
+ * Used mainly when All-files access is active: the system confirmation dialog no
+ * longer appears, so without this deletion would be instant with no safety net.
+ *
+ * @param count the number of items to be deleted, controlling the message copy.
+ * @param onConfirm invoked when the user confirms deletion.
+ * @param onDismiss invoked when the dialog is dismissed or cancelled.
  */
 @Composable
 fun ConfirmDeleteDialog(

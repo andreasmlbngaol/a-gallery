@@ -14,16 +14,22 @@ import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 
 /**
- * Pembungkus ML Kit Barcode Scanning (bundled, on-device, offline — tanpa izin
- * INTERNET). Men-scan foto yang sedang dibuka lalu mengubah tiap QR jadi
- * [QrContent] terstruktur (URL/WiFi/Kontak/Email/Telepon/SMS/Geo/Teks).
+ * Wrapper around ML Kit Barcode Scanning (bundled, on-device, offline — no
+ * `INTERNET` permission).
  *
- * Dipakai fitur QR Detection 1.7.0 di photo viewer.
+ * Scans the currently open photo and converts each detected QR code into a
+ * structured [QrContent] (URL, Wi-Fi, contact, email, phone, SMS, geo, or
+ * plain text). Used by the QR Detection feature in the photo viewer.
+ *
+ * @property context context used to build [InputImage]s and the scanner client.
  */
 class QrDetector(private val context: Context) {
 
-    // Batasi ke FORMAT_QR_CODE: fokus fitur = QR, sekaligus lebih cepat & minim
-    // false-positive dari barcode 1D.
+    /**
+     * Lazily created scanner limited to [Barcode.FORMAT_QR_CODE]: the feature
+     * targets QR only, which is also faster and avoids false positives from 1D
+     * barcodes.
+     */
     private val scanner by lazy {
         val options = BarcodeScannerOptions.Builder()
             .setBarcodeFormats(Barcode.FORMAT_QR_CODE)
@@ -32,9 +38,14 @@ class QrDetector(private val context: Context) {
     }
 
     /**
-     * Deteksi semua QR di [uri] (content:// atau file://). Mengembalikan list
-     * kosong kalau tidak ada QR / gambar gagal dibaca (TIDAK pernah throw).
-     * Rotasi EXIF ditangani otomatis oleh [InputImage.fromFilePath].
+     * Detects every QR code in the image at [uri] (`content://` or `file://`).
+     *
+     * EXIF rotation is handled automatically by [InputImage.fromFilePath]. This
+     * never throws: an empty list is returned when no QR code is found or the
+     * image cannot be read.
+     *
+     * @param uri the image location to scan.
+     * @return the structured contents of each detected QR code, possibly empty.
      */
     suspend fun detect(uri: String): List<QrContent> = withContext(Dispatchers.IO) {
         val image = try {
@@ -50,6 +61,12 @@ class QrDetector(private val context: Context) {
         barcodes.mapNotNull { it.toQrContent() }
     }
 
+    /**
+     * Suspends until the ML Kit scanner finishes processing [image].
+     *
+     * @param image the image to scan.
+     * @return the raw barcodes detected by ML Kit.
+     */
     private suspend fun awaitScan(image: InputImage): List<Barcode> =
         suspendCancellableCoroutine { cont ->
             scanner.process(image)
@@ -57,6 +74,10 @@ class QrDetector(private val context: Context) {
                 .addOnFailureListener { cont.resumeWithException(it) }
         }
 
+    /**
+     * Maps an ML Kit [Barcode] to the app's [QrContent], or `null` when it has
+     * no readable value. Unrecognized value types fall back to [QrContent.Text].
+     */
     private fun Barcode.toQrContent(): QrContent? {
         val text = rawValue ?: displayValue ?: return null
         return when (valueType) {
@@ -104,6 +125,13 @@ class QrDetector(private val context: Context) {
         }
     }
 
+    /**
+     * Converts an ML Kit Wi-Fi encryption type constant to a display label, or
+     * `null` when unknown.
+     *
+     * @param type the ML Kit `Barcode.WiFi` encryption type constant.
+     * @return the human-readable label, or `null` if unrecognized.
+     */
     private fun encryptionLabel(type: Int?): String? = when (type) {
         Barcode.WiFi.TYPE_OPEN -> "Open"
         Barcode.WiFi.TYPE_WPA -> "WPA"

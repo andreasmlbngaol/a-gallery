@@ -9,27 +9,37 @@ import android.provider.Settings
 import androidx.annotation.RequiresApi
 
 /**
- * Helper "All files access" (MANAGE_EXTERNAL_STORAGE).
+ * Helper for the "All files access" permission (`MANAGE_EXTERNAL_STORAGE`).
  *
- * Dengan izin ini app bisa hapus/rename/pindah file media milik app LAIN
- * secara LANGSUNG tanpa dialog konfirmasi sistem (scoped storage di-bypass),
- * dan bisa menghapus di background (dipakai auto-purge Trash 30 hari via
- * WorkManager, yang mustahil lewat dialog SAF).
+ * With this permission the app can delete, rename, and move media owned by
+ * other apps directly, without a per-action system confirmation dialog (scoped
+ * storage is bypassed), and can delete in the background — required by the
+ * 30-day Trash auto-purge run through WorkManager, which cannot use the SAF
+ * dialog.
  *
- * Di bawah Android 11 (API 30) konsep ini tidak ada -> anggap sudah "granted"
- * karena READ/WRITE_EXTERNAL_STORAGE lama sudah cukup.
+ * The concept does not exist below Android 11 (API 30), where the legacy
+ * `READ`/`WRITE_EXTERNAL_STORAGE` permissions suffice, so it is treated as
+ * already granted there.
  */
 object AllFilesAccess {
-    /** True bila app boleh akses seluruh file (atau OS < 11 yg tak butuh). */
+
+    /**
+     * Returns whether the app may access all files, or is running on an OS below
+     * API 30 that does not require this permission.
+     */
     fun isGranted(): Boolean =
         Build.VERSION.SDK_INT < Build.VERSION_CODES.R || Environment.isExternalStorageManager()
 
-    /** Apakah OS ini punya konsep All-files access (API 30+). */
+    /** Returns whether this OS has the All-files access concept (API 30+). */
     fun isSupported(): Boolean = Build.VERSION.SDK_INT >= Build.VERSION_CODES.R
 
     /**
-     * Intent menuju layar "All files access" khusus app ini. Kalau layar khusus
-     * tak tersedia di perangkat, fallback ke daftar umum semua app.
+     * Builds an intent to this app's "All files access" settings screen, falling
+     * back to the general list of all apps if the app-specific screen is
+     * unavailable on the device.
+     *
+     * @param context the context whose package name targets the settings screen.
+     * @return the intent to launch.
      */
     @RequiresApi(Build.VERSION_CODES.R)
     fun settingsIntent(context: Context): Intent {
