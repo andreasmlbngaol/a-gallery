@@ -33,8 +33,8 @@ android {
         applicationId = "id.andreasmbngaol.agallery"
         minSdk = 29
         targetSdk = 37
-        versionCode = 17
-        versionName = "1.7.0"
+        versionCode = 18
+        versionName = "1.7.1"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -70,6 +70,23 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro",
             )
+        }
+    }
+    // ABI splits — hasilkan APK terpisah per arsitektur, biar tiap file cuma
+    // memuat native lib (.so) untuk arsitekturnya sendiri. ML Kit (bundled)
+    // bawa .so besar per-ABI; tanpa split, APK universal mengemas SEMUA ABI
+    // sekaligus (itu yang bikin 1.7 membengkak ke ~26MB).
+    //   arm64-v8a = (hampir) semua HP Android modern (64-bit ARM)
+    //   x86_64    = emulator / sebagian ChromeOS & perangkat Intel
+    // armeabi-v7a (ARM 32-bit lawas) sengaja TIDAK diikutkan; tambahkan di
+    // include(...) kalau mau menjangkau HP 32-bit lama.
+    // isUniversalApk=false -> tidak ada APK gabungan, hanya per-ABI.
+    splits {
+        abi {
+            isEnable = true
+            reset()
+            include("arm64-v8a", "x86_64")
+            isUniversalApk = false
         }
     }
     compileOptions {

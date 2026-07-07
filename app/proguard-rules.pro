@@ -29,3 +29,31 @@
 # Kalau nanti build R8 ngeluh soal kelas tertentu, tambahin
 # -keep / -dontwarn spesifik di bawah ini.
 # ------------------------------------------------------------
+
+# ------------------------------------------------------------
+# ML Kit Barcode Scanning (bundled) — QR Detection 1.7.0
+# ------------------------------------------------------------
+# ML Kit barcode-scanning (bundled) SUDAH membawa consumer R8 rules sendiri di
+# dalam AAR-nya, jadi TIDAK butuh -keep manual. Blanket keep seperti
+# `-keep class com.google.mlkit.** { *; }` justru anti-pattern (mematikan
+# shrink/optimize R8 utk seluruh paket) dan itulah yang memicu warning
+# "Overly broad keep rule affecting more than 100 classes".
+# (Rule `native <methods>` juga sudah ada di proguard-android-optimize.txt.)
+#
+# Penyebab bug "scan QR gagal HANYA di release": R8 full mode (default AGP 8/9)
+# kadang tetap men-strip kelas internal ML Kit yang diakses via refleksi/JNI
+# walau consumer rules ada. Mitigasinya BUKAN blanket keep, melainkan
+# `android.enableR8.fullMode=false` di gradle.properties.
+# Kalau kelak mau balik ke full mode: jalankan build release, baca nama kelas
+# persis dari crash logcat, lalu tambahkan SATU keep sempit mengikuti pola
+# ML Kit Known Issues, contoh:
+#   -keep class com.google.mlkit.<...>.internal.<KelasDariLogcat> { *; }
+-dontwarn com.google.mlkit.**
+
+# ------------------------------------------------------------
+# ZXing core — QR Generator 1.6.0 (pure-Java, offline)
+# ------------------------------------------------------------
+# Hanya modul `core` (encoder) yang dipakai; ZXing core aman untuk R8.
+# Cukup redam warning opsional bila muncul; jangan blanket-keep supaya
+# kelas yang tak terpakai tetap bisa di-shrink.
+-dontwarn com.google.zxing.**

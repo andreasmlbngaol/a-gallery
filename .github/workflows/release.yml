@@ -1,7 +1,5 @@
 name: Release Build
 
-# Build & publish a signed release APK whenever a version tag (v*) is pushed.
-# Can also be triggered manually from the Actions tab.
 on:
   push:
     tags:
@@ -9,7 +7,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write # needed to create the GitHub Release
+  contents: write
 
 jobs:
   release:
@@ -49,11 +47,21 @@ jobs:
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
         run: ./gradlew :app:assembleRelease --no-configuration-cache --stacktrace
 
-      - name: Stage APK artifact
+      - name: Stage split APKs
         run: |
           mkdir -p artifacts
           VERSION="${GITHUB_REF_NAME:-manual}"
-          cp app/build/outputs/apk/release/app-release.apk "artifacts/AGallery-${VERSION}.apk"
+          cp app/build/outputs/apk/release/app-arm64-v8a-release.apk "artifacts/AGallery-${VERSION}-arm64.apk"
+          cp app/build/outputs/apk/release/app-x86_64-release.apk "artifacts/AGallery-${VERSION}-x86_64.apk"
+          cat > artifacts/NOTES.md <<EOF
+          ## AGallery ${VERSION}
+
+          ### 📥 Which file should you download?
+          - **\`AGallery-${VERSION}-arm64.apk\`** — for (almost) every Android phone (64-bit ARM). **If in doubt, pick this one.**
+          - **\`AGallery-${VERSION}-x86_64.apk\`** — only for emulators / Intel x86 devices & some ChromeOS. Regular phones **do not need** this file.
+
+          > Both files are the same app; they only differ in CPU architecture. Just install one.
+          EOF
           ls -la artifacts
 
       - name: Upload APK as workflow artifact
@@ -69,3 +77,5 @@ jobs:
         with:
           files: artifacts/*.apk
           generate_release_notes: true
+          body_path: artifacts/NOTES.md
+
