@@ -69,6 +69,8 @@
     <string name="qr_style_dots">Titik</string>
     <string name="qr_logo_none">Tanpa logo</string>
     <string name="qr_logo_photo">Pilih foto</string>
+    <string name="qr_logo_pick_title">Pilih foto</string>
+    <string name="qr_logo_pick_empty">Tidak ada foto</string>
     <string name="qr_export_card">Kartu penuh</string>
     <string name="qr_export_qr_only">QR saja</string>
     <string name="qr_action_save">Simpan</string>
@@ -79,6 +81,34 @@
     <string name="qr_need_content">Masukkan tautan atau teks dulu</string>
     <string name="qr_share_title">Bagikan kode QR</string>
     <string name="qr_preview_placeholder">Masukkan tautan atau teks untuk pratinjau QR</string>
+    <!-- QR Detection (1.7.0) -->
+    <string name="qr_detect_chip">Kode QR</string>
+    <string name="qr_detect_chip_multi">%1$d kode QR</string>
+    <string name="qr_detect_sheet_title">QR ditemukan</string>
+    <string name="qr_detect_sheet_title_multi">%1$d QR ditemukan</string>
+    <string name="qr_detect_copy">Salin</string>
+    <string name="qr_detect_open">Buka</string>
+    <string name="qr_detect_copied">Disalin ke clipboard</string>
+    <string name="qr_detect_no_app">Tidak ada aplikasi yang bisa membuka ini</string>
+    <string name="qr_type_url">Tautan</string>
+    <string name="qr_type_email">Email</string>
+    <string name="qr_type_phone">Telepon</string>
+    <string name="qr_type_sms">SMS</string>
+    <string name="qr_type_wifi">Wi-Fi</string>
+    <string name="qr_type_contact">Kontak</string>
+    <string name="qr_type_geo">Lokasi</string>
+    <string name="qr_type_text">Teks</string>
+    <string name="qr_open_link">Buka tautan</string>
+    <string name="qr_open_email">Kirim email</string>
+    <string name="qr_open_dial">Telepon</string>
+    <string name="qr_open_sms">Kirim SMS</string>
+    <string name="qr_open_maps">Buka di Peta</string>
+    <string name="qr_wifi_password">Kata sandi</string>
+    <string name="qr_wifi_security">Keamanan</string>
+    <string name="qr_contact_phone">Telepon</string>
+    <string name="qr_contact_email">Email</string>
+    <string name="qr_contact_org">Organisasi</string>
+    <string name="qr_email_subject">Subjek</string>
 
     <!-- ===== Gallery ===== -->
     <string name="gallery_title">Galeri</string>

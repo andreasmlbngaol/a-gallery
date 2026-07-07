@@ -5,6 +5,7 @@ import android.content.IntentSender
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import id.andreasmbngaol.agallery.R
+import id.andreasmbngaol.agallery.core.qr.QrDetector
 import id.andreasmbngaol.agallery.domain.model.Album
 import id.andreasmbngaol.agallery.domain.model.ComponentStyle
 import id.andreasmbngaol.agallery.domain.model.ConversionOutcome
@@ -14,8 +15,10 @@ import id.andreasmbngaol.agallery.domain.model.GallerySortOrder
 import id.andreasmbngaol.agallery.domain.model.MediaDetails
 import id.andreasmbngaol.agallery.domain.model.MediaItem
 import id.andreasmbngaol.agallery.domain.model.MediaScope
+import id.andreasmbngaol.agallery.domain.model.MediaType
 import id.andreasmbngaol.agallery.domain.model.MetadataCategory
 import id.andreasmbngaol.agallery.domain.model.MetadataRemovalOutcome
+import id.andreasmbngaol.agallery.domain.model.QrContent
 import id.andreasmbngaol.agallery.domain.usecase.ConvertImageFormatUseCase
 import id.andreasmbngaol.agallery.domain.usecase.CopyMediaToAlbumUseCase
 import id.andreasmbngaol.agallery.domain.usecase.DeleteMediaUseCase
@@ -44,6 +47,7 @@ import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 /**
@@ -67,6 +71,7 @@ class PhotoViewerViewModel(
     private val removeMetadataUseCase: RemoveMetadataUseCase,
     private val convertImageFormatUseCase: ConvertImageFormatUseCase,
     private val setAlbumCoverUseCase: SetAlbumCoverUseCase,
+    private val qrDetector: QrDetector,
 ) : ViewModel() {
 
     private data class ViewerParams(
@@ -126,6 +131,28 @@ class PhotoViewerViewModel(
     val messages: SharedFlow<String> = _messages.asSharedFlow()
 
     private var pendingWriteAction: (suspend () -> Unit)? = null
+
+    // --- QR Detection (1.7.0) ---
+    // Hasil scan QR per media-id (cache): tiap foto cukup di-scan sekali.
+    private val _qrDetections = MutableStateFlow<Map<Long, List<QrContent>>>(emptyMap())
+    val qrDetections: StateFlow<Map<Long, List<QrContent>>> = _qrDetections.asStateFlow()
+    private val qrInFlight = mutableSetOf<Long>()
+
+    /**
+     * Scan QR pada [item] (khusus foto), sekali per media-id lalu hasilnya
+     * di-cache. Dipanggil dari viewer setelah halaman diam beberapa saat
+     * (debounce di UI). Aman dipanggil berulang — dedup lewat cache + inFlight.
+     */
+    fun detectQr(item: MediaItem) {
+        if (item.type != MediaType.IMAGE) return
+        if (_qrDetections.value.containsKey(item.id) || item.id in qrInFlight) return
+        qrInFlight += item.id
+        viewModelScope.launch {
+            val result = qrDetector.detect(item.uri)
+            _qrDetections.update { it + (item.id to result) }
+            qrInFlight -= item.id
+        }
+    }
 
     fun setParams(sortOrder: GallerySortOrder, scope: MediaScope) {
         val next = ViewerParams(sortOrder, scope)

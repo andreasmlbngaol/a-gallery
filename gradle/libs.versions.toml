@@ -33,6 +33,7 @@ workmanager = "2.11.2"
 exifinterface = "1.4.2"
 heifwriter = "1.1.0"           # encoder HEIC/HEIF (AndroidX) utk Format Converter 1.5.0
 zxing = "3.5.4"                # ZXing core: encoder QR (pure-Java, offline) utk QR Generator 1.6.0
+mlkitBarcode = "17.3.0"        # ML Kit Barcode Scanning (bundled, on-device, offline, tanpa izin INTERNET) utk QR Detection 1.7.0
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -99,6 +100,7 @@ androidx-work-runtime = { group = "androidx.work", name = "work-runtime-ktx", ve
 androidx-exifinterface = { group = "androidx.exifinterface", name = "exifinterface", version.ref = "exifinterface" }
 androidx-heifwriter = { group = "androidx.heifwriter", name = "heifwriter", version.ref = "heifwriter" }
 zxing-core = { group = "com.google.zxing", name = "core", version.ref = "zxing" }
+mlkit-barcode-scanning = { group = "com.google.mlkit", name = "barcode-scanning", version.ref = "mlkitBarcode" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

@@ -2,9 +2,7 @@ package id.andreasmbngaol.agallery.presentation.tools.qr
 
 import android.content.Intent
 import android.widget.Toast
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.PickVisualMediaRequest
-import androidx.activity.result.contract.ActivityResultContracts
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -20,7 +18,9 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -30,7 +30,11 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -53,22 +57,27 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.drawscope.scale
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.graphics.layer.GraphicsLayer
-import androidx.compose.ui.graphics.layer.drawLayer
 import androidx.compose.ui.graphics.rememberGraphicsLayer
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
+import coil3.compose.AsyncImage
 import com.adamglin.PhosphorIcons
 import com.adamglin.phosphoricons.Bold
 import com.adamglin.phosphoricons.bold.ArrowClockwise
@@ -87,6 +96,9 @@ import id.andreasmbngaol.agallery.core.ui.SystemBarScrim
 import id.andreasmbngaol.agallery.core.ui.drawsBackdrop
 import id.andreasmbngaol.agallery.core.ui.rememberEffectiveComponentStyle
 import id.andreasmbngaol.agallery.core.ui.rememberEffectiveEdgeEffectMode
+import id.andreasmbngaol.agallery.domain.model.Album
+import id.andreasmbngaol.agallery.domain.model.MediaItem
+import id.andreasmbngaol.agallery.domain.model.MediaScope
 import id.andreasmbngaol.agallery.domain.model.QrAltMode
 import id.andreasmbngaol.agallery.domain.model.QrBuiltInLogo
 import id.andreasmbngaol.agallery.domain.model.QrCardConfig
@@ -117,6 +129,10 @@ fun QrGeneratorScreen(
     val viewModel: QrGeneratorViewModel = koinViewModel()
     val state by viewModel.uiState.collectAsState()
     val config = state.config
+    // State picker logo internal berbasis album.
+    val pickerAlbums by viewModel.albums.collectAsState()
+    val pickerAlbumMedia by viewModel.albumMedia.collectAsState()
+    val pickerLoading by viewModel.pickerLoading.collectAsState()
     val componentStyle = rememberEffectiveComponentStyle(state.componentStyleChosen)
     val effectiveMode = rememberEffectiveEdgeEffectMode(state.edgeEffectMode)
     val backdrop = rememberLayerBackdrop()
@@ -138,11 +154,9 @@ fun QrGeneratorScreen(
     val cardLayer = rememberGraphicsLayer()
     val qrLayer = rememberGraphicsLayer()
 
-    val photoPicker = rememberLauncherForActivityResult(
-        ActivityResultContracts.PickVisualMedia(),
-    ) { uri ->
-        if (uri != null) viewModel.setPhotoLogo(uri.toString())
-    }
+    // Picker foto INTERNAL (bukan photo-picker sistem). Dibuka via dialog di
+    // bawah; daftar foto di-load lazy dari galeri lewat ViewModel.
+    var showPhotoPicker by remember { mutableStateOf(false) }
 
     val hasContent = config.content.isNotBlank()
 
@@ -345,9 +359,8 @@ fun QrGeneratorScreen(
                 onNone = viewModel::clearLogo,
                 onBuiltIn = viewModel::setBuiltInLogo,
                 onPickPhoto = {
-                    photoPicker.launch(
-                        PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly),
-                    )
+                    viewModel.loadAlbums()
+                    showPhotoPicker = true
                 },
             )
 
@@ -359,6 +372,21 @@ fun QrGeneratorScreen(
                 ),
                 selected = exportTarget,
                 onSelect = { exportTarget = it },
+            )
+        }
+
+        if (showPhotoPicker) {
+            QrInternalPhotoPickerDialog(
+                albums = pickerAlbums,
+                albumMedia = pickerAlbumMedia,
+                loading = pickerLoading,
+                onOpenAlbum = viewModel::openAlbum,
+                onCloseAlbum = viewModel::closeAlbumMedia,
+                onPick = { uri ->
+                    viewModel.setPhotoLogo(uri)
+                    showPhotoPicker = false
+                },
+                onDismiss = { showPhotoPicker = false },
             )
         }
     }
@@ -378,8 +406,21 @@ private fun QrCardPreview(
         modifier = Modifier
             .fillMaxWidth()
             .drawWithContent {
-                cardLayer.record { this@drawWithContent.drawContent() }
-                drawLayer(cardLayer)
+                // Rekam ke layer pada resolusi DITINGKATKAN utk ekspor tajam,
+                // tapi preview tetap tampil di resolusi native layar (drawContent
+                // langsung). Ini menghilangkan hasil PNG yang burik/pecah.
+                val scale = exportScaleFor(size.width)
+                cardLayer.record(
+                    size = IntSize(
+                        (size.width * scale).roundToInt(),
+                        (size.height * scale).roundToInt(),
+                    ),
+                ) {
+                    scale(scale = scale, pivot = Offset.Zero) {
+                        this@drawWithContent.drawContent()
+                    }
+                }
+                drawContent()
             }
             .clip(RoundedCornerShape(24.dp))
             .background(Color.White)
@@ -410,8 +451,18 @@ private fun QrCardPreview(
                 .fillMaxWidth(0.82f)
                 .aspectRatio(1f)
                 .drawWithContent {
-                    qrLayer.record { this@drawWithContent.drawContent() }
-                    drawLayer(qrLayer)
+                    val scale = exportScaleFor(size.width)
+                    qrLayer.record(
+                        size = IntSize(
+                            (size.width * scale).roundToInt(),
+                            (size.height * scale).roundToInt(),
+                        ),
+                    ) {
+                        scale(scale = scale, pivot = Offset.Zero) {
+                            this@drawWithContent.drawContent()
+                        }
+                    }
+                    drawContent()
                 }
                 .clip(RoundedCornerShape(16.dp))
                 .background(Color.White),
@@ -911,4 +962,206 @@ private fun LogoChip(
 private fun builtInLogoIcon(logo: QrBuiltInLogo): ImageVector = when (logo) {
     QrBuiltInLogo.HEART -> PhosphorIcons.Bold.Heart
     QrBuiltInLogo.LOCATION -> PhosphorIcons.Bold.MapPin
+}
+
+// Skala ekspor: perbesar tangkapan supaya PNG hasil tajam (target ~2048px pada
+// sisi terlebar), dibatasi 1x..4x supaya tidak boros memori di layar besar.
+private const val EXPORT_TARGET_PX = 2048f
+
+private fun exportScaleFor(widthPx: Float): Float =
+    if (widthPx <= 0f) 1f else (EXPORT_TARGET_PX / widthPx).coerceIn(1f, 4f)
+
+/**
+ * Picker logo INTERNAL berbasis ALBUM (bukan photo-picker sistem). Alur meniru
+ * "Create new album": tampilkan daftar folder/album dulu (grid 3 kolom), tap
+ * satu album utk melihat foto di dalamnya, lalu tap satu foto -> langsung jadi
+ * logo lewat [onPick]. Tombol Back device atau panah di header kembali dari
+ * isi album ke daftar album.
+ */
+@Composable
+private fun QrInternalPhotoPickerDialog(
+    albums: List<Album>,
+    albumMedia: List<MediaItem>,
+    loading: Boolean,
+    onOpenAlbum: (MediaScope) -> Unit,
+    onCloseAlbum: () -> Unit,
+    onPick: (String) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    var openedAlbum by remember { mutableStateOf<Album?>(null) }
+
+    fun backToAlbums() {
+        openedAlbum = null
+        onCloseAlbum()
+    }
+
+    // Back device: dari isi album -> daftar album; dari daftar album -> tutup
+    // (dibiarkan ke perilaku default Dialog).
+    BackHandler(enabled = openedAlbum != null) { backToAlbums() }
+
+    Dialog(
+        onDismissRequest = onDismiss,
+        properties = DialogProperties(usePlatformDefaultWidth = false),
+    ) {
+        Surface(
+            shape = RoundedCornerShape(28.dp),
+            color = MaterialTheme.colorScheme.surfaceContainerHigh,
+            tonalElevation = 6.dp,
+            modifier = Modifier
+                .fillMaxWidth(0.92f)
+                .heightIn(max = 560.dp),
+        ) {
+            Column(modifier = Modifier.padding(20.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    if (openedAlbum != null) {
+                        IconButton(onClick = { backToAlbums() }) {
+                            Icon(
+                                imageVector = PhosphorIcons.Bold.ArrowLeft,
+                                contentDescription = stringResource(R.string.action_back),
+                                tint = MaterialTheme.colorScheme.onSurface,
+                            )
+                        }
+                        Spacer(Modifier.width(8.dp))
+                    }
+                    Text(
+                        text = openedAlbum?.name ?: stringResource(R.string.qr_logo_pick_title),
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .heightIn(max = 420.dp)
+                        .padding(top = 16.dp),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    when {
+                        loading -> CircularProgressIndicator()
+                        openedAlbum == null -> {
+                            if (albums.isEmpty()) {
+                                Text(
+                                    text = stringResource(R.string.qr_logo_pick_empty),
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            } else {
+                                LazyVerticalGrid(
+                                    columns = GridCells.Fixed(3),
+                                    modifier = Modifier.fillMaxWidth(),
+                                    contentPadding = PaddingValues(bottom = 8.dp),
+                                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                                ) {
+                                    items(albums, key = { it.key }) { album ->
+                                        QrPickerAlbumTile(
+                                            album = album,
+                                            onClick = {
+                                                openedAlbum = album
+                                                onOpenAlbum(album.scope)
+                                            },
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                        else -> {
+                            if (albumMedia.isEmpty()) {
+                                Text(
+                                    text = stringResource(R.string.qr_logo_pick_empty),
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            } else {
+                                LazyVerticalGrid(
+                                    columns = GridCells.Fixed(3),
+                                    modifier = Modifier.fillMaxWidth(),
+                                    contentPadding = PaddingValues(bottom = 8.dp),
+                                    horizontalArrangement = Arrangement.spacedBy(4.dp),
+                                    verticalArrangement = Arrangement.spacedBy(4.dp),
+                                ) {
+                                    items(albumMedia, key = { it.id }) { item ->
+                                        QrPickerPhotoCell(
+                                            item = item,
+                                            onClick = { onPick(item.uri) },
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.CenterEnd) {
+                    TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_cancel)) }
+                }
+            }
+        }
+    }
+}
+
+/** Kartu album (cover + nama + jumlah item) utk langkah pertama picker logo. */
+@Composable
+private fun QrPickerAlbumTile(
+    album: Album,
+    onClick: () -> Unit,
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick),
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .aspectRatio(1f)
+                .clip(RoundedCornerShape(12.dp))
+                .background(MaterialTheme.colorScheme.surfaceContainerHighest),
+        ) {
+            AsyncImage(
+                model = album.coverUri,
+                contentDescription = album.name,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier.fillMaxSize(),
+            )
+        }
+        Text(
+            text = album.name,
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.onSurface,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.padding(top = 4.dp),
+        )
+        Text(
+            text = stringResource(R.string.album_item_count, album.itemCount),
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            maxLines = 1,
+        )
+    }
+}
+
+/** Sel foto (single-tap = pilih) utk langkah kedua picker logo. */
+@Composable
+private fun QrPickerPhotoCell(
+    item: MediaItem,
+    onClick: () -> Unit,
+) {
+    Box(
+        modifier = Modifier
+            .aspectRatio(1f)
+            .clip(RoundedCornerShape(6.dp))
+            .background(MaterialTheme.colorScheme.surfaceContainerHighest)
+            .clickable(onClick = onClick),
+    ) {
+        AsyncImage(
+            model = item.uri,
+            contentDescription = item.displayName,
+            contentScale = ContentScale.Crop,
+            modifier = Modifier.fillMaxSize(),
+        )
+    }
 }

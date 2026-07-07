@@ -20,6 +20,8 @@ import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material3.CircularProgressIndicator
@@ -60,10 +62,12 @@ import id.andreasmbngaol.agallery.domain.model.MediaType
 import id.andreasmbngaol.agallery.domain.model.bucketAlbumKey
 import id.andreasmbngaol.agallery.domain.model.mediaScopeFromKey
 import id.andreasmbngaol.agallery.presentation.animation.sharedPhotoElement
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import me.saket.telephoto.zoomable.coil3.ZoomableAsyncImage
 import me.saket.telephoto.zoomable.rememberZoomableImageState
 import org.koin.androidx.compose.koinViewModel
+import kotlin.time.Duration.Companion.milliseconds
 
 /**
  * Viewer full-screen ala Google Photos:
@@ -98,6 +102,7 @@ fun PhotoViewerScreen(
     val media by viewModel.media.collectAsState()
     val favoriteIds by viewModel.favoriteIds.collectAsState()
     val albums by viewModel.albums.collectAsState()
+    val qrDetections by viewModel.qrDetections.collectAsState()
 
     // Gaya komponen (Solid/Frosted/Glass) dari Settings. Hanya GLASS (refraction
     // live) yang meng-capture backdrop tiap frame; FROSTED/SOLID hemat GPU.
@@ -113,6 +118,7 @@ fun PhotoViewerScreen(
     var showRename by remember { mutableStateOf(false) }
     var showRemoveMeta by remember { mutableStateOf(false) }
     var showConvert by remember { mutableStateOf(false) }
+    var showQrSheet by remember { mutableStateOf(false) }
     var showTrashConfirm by remember { mutableStateOf(false) }
     var pendingDeleteUri by remember { mutableStateOf<String?>(null) }
     var albumPickerMode by remember { mutableStateOf<AlbumPickerMode?>(null) }
@@ -185,6 +191,16 @@ fun PhotoViewerScreen(
             pageCount = { items.size },
         )
         val currentItem = items.getOrNull(pagerState.currentPage)
+
+        // QR Detection (1.7.0): scan foto aktif setelah halaman diam ~600ms
+        // (debounce). Ganti halaman -> effect lama dibatalkan otomatis, hasil
+        // di-cache di ViewModel jadi tak scan ulang saat balik ke foto yg sama.
+        LaunchedEffect(currentItem?.id) {
+            val item = currentItem ?: return@LaunchedEffect
+            if (item.type != MediaType.IMAGE) return@LaunchedEffect
+            delay(600.milliseconds)
+            viewModel.detectQr(item)
+        }
 
         // Pager jadi SUMBER backdrop yang dibiaskan glass (kalau didukung).
         // PENTING (perf): backdrop di-capture HANYA saat media benar-benar diam
@@ -320,6 +336,34 @@ fun PhotoViewerScreen(
                         onDelete = { pendingDeleteUri = item.uri },
                     )
                 }
+            }
+
+            // Chip QR (pojok kanan-bawah, di atas action bar). Hanya tampil
+            // saat chrome/tombol tampil & foto punya QR terdeteksi.
+            val qrResults = qrDetections[item.id].orEmpty()
+            if (!isVideo && qrResults.isNotEmpty()) {
+                AnimatedVisibility(
+                    visible = chromeVisible,
+                    enter = fadeIn(),
+                    exit = fadeOut(),
+                    modifier = Modifier
+                        .align(Alignment.BottomEnd)
+                        .navigationBarsPadding()
+                        .padding(end = 20.dp, bottom = 92.dp),
+                ) {
+                    QrDetectedChip(
+                        count = qrResults.size,
+                        style = componentStyle,
+                        backdrop = backdrop,
+                        onClick = { showQrSheet = true },
+                    )
+                }
+            }
+            if (showQrSheet && qrResults.isNotEmpty()) {
+                QrResultSheet(
+                    results = qrResults,
+                    onDismiss = { showQrSheet = false },
+                )
             }
 
             if (showDetails) {

@@ -59,6 +59,8 @@
     <string name="qr_style_dots">Dots</string>
     <string name="qr_logo_none">No logo</string>
     <string name="qr_logo_photo">Pick photo</string>
+    <string name="qr_logo_pick_title">Choose a photo</string>
+    <string name="qr_logo_pick_empty">No photos found</string>
     <string name="qr_export_card">Full card</string>
     <string name="qr_export_qr_only">QR only</string>
     <string name="qr_action_save">Save</string>
@@ -69,6 +71,34 @@
     <string name="qr_need_content">Enter a link or text first</string>
     <string name="qr_share_title">Share QR code</string>
     <string name="qr_preview_placeholder">Enter a link or text to preview the QR</string>
+    <!-- QR Detection (1.7.0) -->
+    <string name="qr_detect_chip">QR code</string>
+    <string name="qr_detect_chip_multi">%1$d QR codes</string>
+    <string name="qr_detect_sheet_title">QR code found</string>
+    <string name="qr_detect_sheet_title_multi">%1$d QR codes found</string>
+    <string name="qr_detect_copy">Copy</string>
+    <string name="qr_detect_open">Open</string>
+    <string name="qr_detect_copied">Copied to clipboard</string>
+    <string name="qr_detect_no_app">No app can open this</string>
+    <string name="qr_type_url">Link</string>
+    <string name="qr_type_email">Email</string>
+    <string name="qr_type_phone">Phone</string>
+    <string name="qr_type_sms">SMS</string>
+    <string name="qr_type_wifi">Wi-Fi</string>
+    <string name="qr_type_contact">Contact</string>
+    <string name="qr_type_geo">Location</string>
+    <string name="qr_type_text">Text</string>
+    <string name="qr_open_link">Open link</string>
+    <string name="qr_open_email">Send email</string>
+    <string name="qr_open_dial">Call</string>
+    <string name="qr_open_sms">Send SMS</string>
+    <string name="qr_open_maps">Open in Maps</string>
+    <string name="qr_wifi_password">Password</string>
+    <string name="qr_wifi_security">Security</string>
+    <string name="qr_contact_phone">Phone</string>
+    <string name="qr_contact_email">Email</string>
+    <string name="qr_contact_org">Organization</string>
+    <string name="qr_email_subject">Subject</string>
 
     <!-- ===== Gallery ===== -->
     <string name="gallery_title">Gallery</string>
