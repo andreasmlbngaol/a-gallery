@@ -13,7 +13,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -37,7 +36,9 @@ import androidx.core.net.toUri
 import com.adamglin.PhosphorIcons
 import com.adamglin.phosphoricons.Bold
 import com.adamglin.phosphoricons.bold.MapPin
+import com.kyant.backdrop.Backdrop
 import id.andreasmbngaol.agallery.R
+import id.andreasmbngaol.agallery.domain.model.ComponentStyle
 import id.andreasmbngaol.agallery.domain.model.MediaDetails
 import id.andreasmbngaol.agallery.domain.model.MediaItem
 import id.andreasmbngaol.agallery.domain.model.MediaType
@@ -66,6 +67,8 @@ fun MediaDetailsSheet(
     item: MediaItem,
     loadDetails: suspend (String) -> MediaDetails?,
     onDismiss: () -> Unit,
+    style: ComponentStyle,
+    backdrop: Backdrop,
     onRemoveMetadata: (() -> Unit)? = null,
 ) {
     val sheetState = rememberBottomSheetState(
@@ -174,14 +177,17 @@ fun MediaDetailsSheet(
             }
 
             // ---------- Hapus metadata (foto yg didukung; fitur 1.4.0) ----------
+            // Tombol dibuat seragam dgn tema app (SOLID/FROSTED/GLASS) via
+            // GlassActionButton. "Ubah format" kini pindah ke menu More (⋮).
             onRemoveMetadata?.let { onRemove ->
                 Spacer(Modifier.height(24.dp))
-                FilledTonalButton(
+                GlassActionButton(
+                    text = stringResource(R.string.action_remove_metadata),
                     onClick = onRemove,
+                    style = style,
+                    backdrop = backdrop,
                     modifier = Modifier.fillMaxWidth(),
-                ) {
-                    Text(stringResource(R.string.action_remove_metadata))
-                }
+                )
             }
         }
     }

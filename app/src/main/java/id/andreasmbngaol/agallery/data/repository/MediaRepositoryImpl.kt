@@ -12,7 +12,9 @@ import id.andreasmbngaol.agallery.data.local.room.entity.FavoriteEntity
 import id.andreasmbngaol.agallery.data.local.room.entity.TrashedEntity
 import id.andreasmbngaol.agallery.data.paging.MediaPagingSource
 import id.andreasmbngaol.agallery.domain.model.Album
+import id.andreasmbngaol.agallery.domain.model.ConversionOutcome
 import id.andreasmbngaol.agallery.domain.model.GallerySortOrder
+import id.andreasmbngaol.agallery.domain.model.ImageFormat
 import id.andreasmbngaol.agallery.domain.model.MediaDetails
 import id.andreasmbngaol.agallery.domain.model.MediaItem
 import id.andreasmbngaol.agallery.domain.model.MediaScope
@@ -254,4 +256,11 @@ class MediaRepositoryImpl(
         saveAsCopy: Boolean,
     ): MetadataRemovalOutcome =
         mediaStore.removeMetadata(uriString, categories, saveAsCopy)
+
+    override suspend fun convertImageFormat(
+        uriString: String,
+        target: ImageFormat,
+        quality: Int,
+    ): ConversionOutcome =
+        mediaStore.convertImageFormat(uriString, target, quality)
 }

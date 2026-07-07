@@ -33,8 +33,8 @@ android {
         applicationId = "id.andreasmbngaol.agallery"
         minSdk = 29
         targetSdk = 37
-        versionCode = 14
-        versionName = "1.4.0"
+        versionCode = 15
+        versionName = "1.5.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -156,6 +156,10 @@ dependencies {
 
     // EXIF metadata reader (foto) — androidx.exifinterface
     implementation(libs.androidx.exifinterface)
+
+    // HEIC/HEIF encoder (AndroidX) — Format Converter 1.5.0. NB: android.media.HeifWriter
+    // itu class @hide (bukan API publik), jadi wajib pakai androidx.heifwriter.
+    implementation(libs.androidx.heifwriter)
 
 
     testImplementation(libs.junit)

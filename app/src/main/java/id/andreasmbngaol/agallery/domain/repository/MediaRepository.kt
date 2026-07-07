@@ -3,7 +3,9 @@ package id.andreasmbngaol.agallery.domain.repository
 import android.content.IntentSender
 import androidx.paging.PagingData
 import id.andreasmbngaol.agallery.domain.model.Album
+import id.andreasmbngaol.agallery.domain.model.ConversionOutcome
 import id.andreasmbngaol.agallery.domain.model.GallerySortOrder
+import id.andreasmbngaol.agallery.domain.model.ImageFormat
 import id.andreasmbngaol.agallery.domain.model.MediaDetails
 import id.andreasmbngaol.agallery.domain.model.MediaItem
 import id.andreasmbngaol.agallery.domain.model.MediaScope
@@ -137,4 +139,15 @@ interface MediaRepository {
         categories: Set<MetadataCategory>,
         saveAsCopy: Boolean,
     ): MetadataRemovalOutcome
+
+    /**
+     * Konversi foto [uriString] ke [target] format ([quality] 1..100 utk lossy;
+     * PNG mengabaikannya). Selalu menghasilkan file baru di folder yg sama;
+     * penghapusan asli diputuskan pemanggil. Lihat [ConversionOutcome].
+     */
+    suspend fun convertImageFormat(
+        uriString: String,
+        target: ImageFormat,
+        quality: Int,
+    ): ConversionOutcome
 }

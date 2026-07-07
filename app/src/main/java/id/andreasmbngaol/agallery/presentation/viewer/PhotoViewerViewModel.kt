@@ -7,6 +7,8 @@ import androidx.lifecycle.viewModelScope
 import id.andreasmbngaol.agallery.R
 import id.andreasmbngaol.agallery.domain.model.Album
 import id.andreasmbngaol.agallery.domain.model.ComponentStyle
+import id.andreasmbngaol.agallery.domain.model.ConversionOutcome
+import id.andreasmbngaol.agallery.domain.model.ImageFormat
 import id.andreasmbngaol.agallery.domain.model.EdgeEffectMode
 import id.andreasmbngaol.agallery.domain.model.GallerySortOrder
 import id.andreasmbngaol.agallery.domain.model.MediaDetails
@@ -14,6 +16,7 @@ import id.andreasmbngaol.agallery.domain.model.MediaItem
 import id.andreasmbngaol.agallery.domain.model.MediaScope
 import id.andreasmbngaol.agallery.domain.model.MetadataCategory
 import id.andreasmbngaol.agallery.domain.model.MetadataRemovalOutcome
+import id.andreasmbngaol.agallery.domain.usecase.ConvertImageFormatUseCase
 import id.andreasmbngaol.agallery.domain.usecase.CopyMediaToAlbumUseCase
 import id.andreasmbngaol.agallery.domain.usecase.DeleteMediaUseCase
 import id.andreasmbngaol.agallery.domain.usecase.GetAlbumsUseCase
@@ -62,6 +65,7 @@ class PhotoViewerViewModel(
     private val moveToAlbumUseCase: MoveMediaToAlbumUseCase,
     private val copyToAlbumUseCase: CopyMediaToAlbumUseCase,
     private val removeMetadataUseCase: RemoveMetadataUseCase,
+    private val convertImageFormatUseCase: ConvertImageFormatUseCase,
     private val setAlbumCoverUseCase: SetAlbumCoverUseCase,
 ) : ViewModel() {
 
@@ -256,6 +260,51 @@ class PhotoViewerViewModel(
                 _messages.emit(appContext.getString(R.string.msg_metadata_unsupported))
             MetadataRemovalOutcome.Failed ->
                 _messages.emit(appContext.getString(R.string.msg_metadata_failed))
+        }
+    }
+
+    /**
+     * Konversi [item] ke [target] format ([quality] 1..100 utk lossy). Konversi
+     * selalu bikin file baru; kalau [deleteOriginal] true, asli dipindah ke
+     * Trash (soft-trash berbasis Room, tanpa dialog consent MediaStore).
+     */
+    fun convertFormat(
+        item: MediaItem,
+        target: ImageFormat,
+        quality: Int,
+        deleteOriginal: Boolean,
+    ) {
+        viewModelScope.launch {
+            when (val outcome = convertImageFormatUseCase(item.uri, target, quality)) {
+                is ConversionOutcome.Success -> {
+                    if (deleteOriginal) {
+                        moveToTrashUseCase(item)
+                    }
+                    refresh()
+                    val msg = if (deleteOriginal) {
+                        appContext.getString(
+                            R.string.msg_converted_replaced,
+                            outcome.displayName,
+                        )
+                    } else {
+                        appContext.getString(
+                            R.string.msg_converted_saved,
+                            outcome.displayName,
+                        )
+                    }
+                    _messages.emit(msg)
+                }
+                ConversionOutcome.UnsupportedSource ->
+                    _messages.emit(
+                        appContext.getString(R.string.msg_convert_unsupported_source),
+                    )
+                ConversionOutcome.UnsupportedTarget ->
+                    _messages.emit(
+                        appContext.getString(R.string.msg_convert_unsupported_target),
+                    )
+                ConversionOutcome.Failed ->
+                    _messages.emit(appContext.getString(R.string.msg_convert_failed))
+            }
         }
     }
 

@@ -200,4 +200,23 @@
     <string name="msg_metadata_copy_created">Clean copy saved</string>
     <string name="msg_metadata_unsupported">This format isn\'t supported yet for metadata removal</string>
     <string name="msg_metadata_failed">Couldn\'t remove metadata</string>
+
+    <!-- Format Converter (1.5.0) -->
+    <string name="action_convert_format">Convert format</string>
+    <string name="action_convert">Convert</string>
+    <string name="convert_format_title">Convert format</string>
+    <string name="convert_format_desc">Pick a target format. A new file is created in the same folder.</string>
+    <string name="convert_format_target">Convert to</string>
+    <string name="convert_format_current">%1$s (current)</string>
+    <string name="convert_format_quality">Quality: %1$d</string>
+    <string name="convert_format_output">Result</string>
+    <string name="convert_format_output_keep">Keep original, save a new file</string>
+    <string name="convert_format_output_replace">Replace original (move it to Trash)</string>
+    <string name="convert_format_alpha_note">This format has no transparency, so transparent areas will be filled with black.</string>
+    <string name="convert_format_heic_note">HEIC depends on your device\'s encoder and may not work on every phone.</string>
+    <string name="msg_converted_saved">Saved as %1$s</string>
+    <string name="msg_converted_replaced">Converted to %1$s, original moved to Trash</string>
+    <string name="msg_convert_unsupported_source">This image can\'t be read</string>
+    <string name="msg_convert_unsupported_target">Your device can\'t create this format</string>
+    <string name="msg_convert_failed">Couldn\'t convert this photo</string>
 </resources>

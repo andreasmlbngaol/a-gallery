@@ -171,6 +171,38 @@ fun GlassIconButton(
 }
 
 /**
+ * Tombol aksi LEBAR bergaya kaca (SOLID/FROSTED/GLASS) untuk dipakai di luar
+ * island — mis. tombol "Hapus metadata" di detail sheet — biar seragam dgn
+ * tema app. Bentuk kapsul (CircleShape = pill utk elemen lebar), konten diberi
+ * warna onSurface supaya kontras di light & dark.
+ */
+@Composable
+fun GlassActionButton(
+    text: String,
+    onClick: () -> Unit,
+    style: ComponentStyle,
+    backdrop: Backdrop,
+    modifier: Modifier = Modifier,
+) {
+    val tint = MaterialTheme.colorScheme.onSurface
+    Box(
+        modifier = modifier
+            .height(52.dp)
+            .clip(CircleShape)
+            .liquidGlass(style, backdrop)
+            .clickable(onClick = onClick)
+            .padding(horizontal = 20.dp),
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(
+            text = text,
+            style = MaterialTheme.typography.labelLarge,
+            color = tint,
+        )
+    }
+}
+
+/**
  * "Island" kapsul liquid glass yang membungkus sebaris tombol (mis. Share ·
  * Delete · Favorite). Tombol di dalamnya transparan; hanya island yang berkaca
  * (mirip pola track pill di nav bar gallery).
@@ -256,6 +288,7 @@ fun ViewerActionBar(
     onOpenWith: () -> Unit,
     onCopy: () -> Unit,
     onMove: () -> Unit,
+    onConvertFormat: () -> Unit,
     onDelete: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -293,6 +326,7 @@ fun ViewerActionBar(
             onOpenWith = onOpenWith,
             onCopy = onCopy,
             onMove = onMove,
+            onConvertFormat = onConvertFormat,
             onDelete = onDelete,
         )
     }
@@ -359,6 +393,7 @@ private fun GlassMoreButton(
     onOpenWith: () -> Unit,
     onCopy: () -> Unit,
     onMove: () -> Unit,
+    onConvertFormat: () -> Unit,
     onDelete: () -> Unit,
 ) {
     var expanded by remember { mutableStateOf(false) }
@@ -380,6 +415,7 @@ private fun GlassMoreButton(
             onOpenWith = onOpenWith,
             onCopy = onCopy,
             onMove = onMove,
+            onConvertFormat = onConvertFormat,
             onDelete = onDelete,
         )
     }
@@ -427,6 +463,8 @@ private fun ViewerMoreDropdown(
     onDelete: () -> Unit,
     onSetAs: () -> Unit = {},
     onSetAsCover: () -> Unit = {},
+    // "Ubah format" hanya untuk gambar; video menyembunyikannya (null).
+    onConvertFormat: (() -> Unit)? = null,
     // "Set as wallpaper" hanya untuk gambar; video menyembunyikannya.
     showSetAs: Boolean = true,
 ) {
@@ -481,6 +519,16 @@ private fun ViewerMoreDropdown(
                 onMove()
             },
         )
+        onConvertFormat?.let { onConvert ->
+            DropdownMenuItem(
+                text = { Text(stringResource(R.string.action_convert_format)) },
+                leadingIcon = { Icon(PhosphorIcons.Bold.Image, contentDescription = null) },
+                onClick = {
+                    onDismiss()
+                    onConvert()
+                },
+            )
+        }
         DropdownMenuItem(
             text = { Text(stringResource(R.string.action_delete), color = DangerRed) },
             leadingIcon = { Icon(PhosphorIcons.Fill.Trash, contentDescription = null, tint = DangerRed) },
@@ -571,7 +619,13 @@ fun RenameDialog(
     onConfirm: (String) -> Unit,
     onDismiss: () -> Unit,
 ) {
-    var text by remember { mutableStateOf(initialName) }
+    // Pisahkan base + ekstensi: user hanya mengedit base, ekstensi asli SELALU
+    // dipertahankan (ditampilkan sbg suffix read-only). Mencegah kasus nama jadi
+    // "Renamed" tanpa ekstensi -> yg bikin hasil convert ikut aneh (Renamed.webp).
+    val dotIndex = initialName.lastIndexOf('.')
+    val hasExt = dotIndex > 0
+    val extension = if (hasExt) initialName.substring(dotIndex) else "" // termasuk titik
+    var text by remember { mutableStateOf(if (hasExt) initialName.substring(0, dotIndex) else initialName) }
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(stringResource(R.string.action_rename)) },
@@ -581,12 +635,28 @@ fun RenameDialog(
                 onValueChange = { text = it },
                 singleLine = true,
                 label = { Text(stringResource(R.string.viewer_file_name)) },
+                suffix = if (extension.isNotEmpty()) {
+                    { Text(extension) }
+                } else {
+                    null
+                },
                 modifier = Modifier.fillMaxWidth(),
             )
         },
         confirmButton = {
             TextButton(
-                onClick = { onConfirm(text.trim()) },
+                onClick = {
+                    val entered = text.trim()
+                    // Re-append ekstensi asli (kecuali user sudah mengetiknya).
+                    val finalName = if (
+                        extension.isNotEmpty() && !entered.endsWith(extension, ignoreCase = true)
+                    ) {
+                        entered + extension
+                    } else {
+                        entered
+                    }
+                    onConfirm(finalName)
+                },
                 enabled = text.isNotBlank(),
             ) { Text(stringResource(R.string.action_rename)) }
         },

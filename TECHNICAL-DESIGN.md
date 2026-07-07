@@ -176,7 +176,7 @@ operate on a photo that already exists?*
 | Bahasa Indonesia support | No (app-wide) | `res/values-id/` | 1.2.0 |
 | Metadata Viewer | Yes | Viewer (detail panel) | 1.3.0 |
 | Metadata Remover | Yes (single / batch) | Viewer + multi-select | 1.4.0 |
-| Format Converter | Yes (single / batch) | Viewer + multi-select | 1.5.0 |
+| Format Converter | Yes (single; batch in 1.5.1) | Viewer (detail panel) | 1.5.0 |
 | QR Code Generator | No (creates) | Tools hub | 1.6.0 |
 | QR Detection | Yes | Viewer | 1.7.0 |
 | Watermark | Yes (single / batch) | Viewer + multi-select | 1.8.0 |
@@ -249,10 +249,33 @@ already certain. Detailed design is done per-feature at build time.
   - **Consent** reuses the existing write-request / `RecoverableSecurityException`
     flow from rename/move (auto-retries after the user approves).
   - **Bulk / multi-select** removal is a planned fast-follow (1.4.1).
-- **Format Converter** (1.5.0) — *Viewer + multi-select.* Convert between JPG,
-  PNG, WEBP, HEIC, HEIF. Primary use case: rescue HEIC/HEIF into JPG/PNG.
-  Supports batch. (HEIC/HEIF encoding depends on device hardware support —
-  handle at build time.)
+- **Format Converter** (1.5.0) — *Viewer (detail panel).* Convert a single photo
+  between **JPG, PNG, WEBP, HEIC** (HEIF shares the HEIC container, so it's
+  offered as HEIC), launched from the swipe-up detail panel (photos only).
+  Primary use case: rescue HEIC/HEIF into JPG/PNG, or shrink to WEBP. Implemented
+  in 1.5.0:
+  - **Target picker** — the source's current format is disabled (no converting a
+    file to itself). All other formats are selectable.
+  - **Quality slider** (1–100, default 95) shown only for **lossy** targets
+    (JPG / WEBP / HEIC). **PNG** is lossless, so the slider is hidden.
+  - **Decode** via `ImageDecoder` into a software bitmap; orientation is baked
+    into the pixels, then the output EXIF orientation is reset to `NORMAL` to
+    avoid a double-rotate.
+  - **Encode** — JPG/PNG/WEBP via `Bitmap.compress` (WEBP uses `WEBP_LOSSY` on
+    API 30+, legacy `WEBP` on API 29). **HEIC** via `android.media.HeifWriter`
+    (bitmap input mode) into a cache temp file, then copied into the MediaStore
+    entry. HeifWriter depends on the device's HW encoder; if it's unavailable the
+    conversion fails cleanly with an "unsupported on this device" message.
+  - **Transparency → no-alpha targets** — JPG and HEIC have no alpha, so
+    transparent areas are **flattened onto black** before encoding.
+  - **Metadata** — for JPG/PNG/WEBP the full EXIF set (date, camera, GPS, misc)
+    is copied best-effort to the result, orientation reset to normal. HEIC skips
+    EXIF carry-over (HeifWriter / androidx `ExifInterface` can't write HEIF).
+  - **Output choice, asked every time** — **keep the original + new file**, or
+    **replace the original** (which moves it to the Room-based soft Trash, no
+    MediaStore consent needed). Conversion always writes a **new file** in the
+    **same folder**, with a unique name (`_1`, `_2`, … on collision).
+  - **Bulk / multi-select** conversion is a planned fast-follow (1.5.1).
 - **QR Code Generator** (1.6.0) — *Tools hub.* Create a customizable, modern QR
   code, optionally with a title/subtitle and a center logo or photo.
 - **QR Detection** (1.7.0) — *Viewer.* Detect and read a QR/barcode in a photo.

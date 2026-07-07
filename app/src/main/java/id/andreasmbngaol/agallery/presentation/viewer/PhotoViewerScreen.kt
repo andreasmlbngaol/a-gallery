@@ -112,6 +112,7 @@ fun PhotoViewerScreen(
     var showDetails by remember { mutableStateOf(false) }
     var showRename by remember { mutableStateOf(false) }
     var showRemoveMeta by remember { mutableStateOf(false) }
+    var showConvert by remember { mutableStateOf(false) }
     var showTrashConfirm by remember { mutableStateOf(false) }
     var pendingDeleteUri by remember { mutableStateOf<String?>(null) }
     var albumPickerMode by remember { mutableStateOf<AlbumPickerMode?>(null) }
@@ -303,6 +304,7 @@ fun PhotoViewerScreen(
                         onHoldDelete = { pendingDeleteUri = item.uri },
                         onRename = { showRename = true },
                         onSetAs = { setAsMedia(context, item) },
+                        onConvertFormat = { showConvert = true },
                         onSetAsCover = {
                             viewModel.setAlbumCover(albumKey ?: bucketAlbumKey(item.bucketId), item.id)
                         },
@@ -325,6 +327,8 @@ fun PhotoViewerScreen(
                     item = item,
                     loadDetails = viewModel::loadDetails,
                     onDismiss = { showDetails = false },
+                    style = componentStyle,
+                    backdrop = backdrop,
                     // Hapus metadata hanya untuk foto (video di-skip).
                     onRemoveMetadata = if (item.type == MediaType.IMAGE) {
                         {
@@ -353,6 +357,16 @@ fun PhotoViewerScreen(
                         showRemoveMeta = false
                     },
                     onDismiss = { showRemoveMeta = false },
+                )
+            }
+            if (showConvert) {
+                ConvertFormatDialog(
+                    currentMime = item.mimeType,
+                    onConfirm = { target, quality, deleteOriginal ->
+                        viewModel.convertFormat(item, target, quality, deleteOriginal)
+                        showConvert = false
+                    },
+                    onDismiss = { showConvert = false },
                 )
             }
             if (showTrashConfirm) {

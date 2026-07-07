@@ -210,4 +210,23 @@
     <string name="msg_metadata_copy_created">Salinan bersih tersimpan</string>
     <string name="msg_metadata_unsupported">Format ini belum didukung buat hapus metadata</string>
     <string name="msg_metadata_failed">Gagal hapus metadata</string>
+
+    <!-- Format Converter (1.5.0) -->
+    <string name="action_convert_format">Ubah format</string>
+    <string name="action_convert">Ubah</string>
+    <string name="convert_format_title">Ubah format</string>
+    <string name="convert_format_desc">Pilih format tujuan. File baru dibikin di folder yang sama, aslinya aman.</string>
+    <string name="convert_format_target">Ubah ke</string>
+    <string name="convert_format_current">%1$s (sekarang)</string>
+    <string name="convert_format_quality">Kualitas: %1$d</string>
+    <string name="convert_format_output">Hasil</string>
+    <string name="convert_format_output_keep">Simpan asli, bikin file baru</string>
+    <string name="convert_format_output_replace">Ganti asli (buang ke Trash)</string>
+    <string name="convert_format_alpha_note">Format ini nggak punya transparansi, jadi area transparan bakal diisi warna hitam.</string>
+    <string name="convert_format_heic_note">HEIC tergantung encoder HP-mu, bisa jadi nggak jalan di semua HP.</string>
+    <string name="msg_converted_saved">Tersimpan sebagai %1$s</string>
+    <string name="msg_converted_replaced">Udah diubah ke %1$s, aslinya dibuang ke Trash</string>
+    <string name="msg_convert_unsupported_source">Gambar ini nggak bisa dibaca</string>
+    <string name="msg_convert_unsupported_target">HP-mu nggak bisa bikin format ini</string>
+    <string name="msg_convert_failed">Gagal ngubah foto ini</string>
 </resources>
