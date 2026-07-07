@@ -5,7 +5,11 @@ import androidx.core.net.toUri
 import androidx.paging.Pager
 import androidx.paging.PagingConfig
 import androidx.paging.PagingData
+import id.andreasmbngaol.agallery.data.local.mediastore.ImageFormatConverter
+import id.andreasmbngaol.agallery.data.local.mediastore.MediaDetailsReader
 import id.andreasmbngaol.agallery.data.local.mediastore.MediaStoreDataSource
+import id.andreasmbngaol.agallery.data.local.mediastore.MediaStoreEditor
+import id.andreasmbngaol.agallery.data.local.mediastore.MetadataRemover
 import id.andreasmbngaol.agallery.data.local.room.dao.MediaDao
 import id.andreasmbngaol.agallery.data.local.room.entity.AlbumCoverEntity
 import id.andreasmbngaol.agallery.data.local.room.entity.FavoriteEntity
@@ -33,6 +37,10 @@ import kotlinx.coroutines.flow.map
 
 class MediaRepositoryImpl(
     private val mediaStore: MediaStoreDataSource,
+    private val editor: MediaStoreEditor,
+    private val detailsReader: MediaDetailsReader,
+    private val metadataRemover: MetadataRemover,
+    private val formatConverter: ImageFormatConverter,
     private val mediaDao: MediaDao,
 ) : MediaRepository {
 
@@ -210,14 +218,14 @@ class MediaRepositoryImpl(
     override suspend fun autoPurgeExpiredDirectly(retentionDays: Int): Int {
         // Background purge butuh All-files access karena tak bisa tampilkan
         // dialog consent. Tanpa izin -> no-op (item ditahan sampai purge manual).
-        if (!mediaStore.hasAllFilesAccess()) return 0
+        if (!editor.hasAllFilesAccess()) return 0
         val threshold =
             System.currentTimeMillis() - retentionDays.toLong() * 24L * 60L * 60L * 1000L
         val expired = mediaDao.getTrashedOlderThan(threshold)
         if (expired.isEmpty()) return 0
         var deleted = 0
         expired.forEach { e ->
-            if (mediaStore.deleteDirect(listOf(e.uri.toUri()))) {
+            if (editor.deleteDirect(listOf(e.uri.toUri()))) {
                 mediaDao.removeTrashed(e.mediaId)
                 deleted++
             }
@@ -226,16 +234,16 @@ class MediaRepositoryImpl(
     }
 
     override suspend fun createDeleteRequest(uris: List<String>): IntentSender? =
-        mediaStore.buildDeleteRequest(uris.map { it.toUri() })
+        editor.buildDeleteRequest(uris.map { it.toUri() })
 
     override suspend fun getMediaDetails(uri: String): MediaDetails? =
-        mediaStore.queryDetails(uri)
+        detailsReader.queryDetails(uri)
 
     override suspend fun renameMedia(uriString: String, newDisplayName: String): IntentSender? =
-        mediaStore.renameMedia(uriString, newDisplayName)
+        editor.renameMedia(uriString, newDisplayName)
 
     override suspend fun moveMediaToAlbum(uriString: String, relativePath: String): IntentSender? =
-        mediaStore.moveMediaToAlbum(uriString, relativePath)
+        editor.moveMediaToAlbum(uriString, relativePath)
 
     override suspend fun copyMediaToAlbum(
         uriString: String,
@@ -244,23 +252,23 @@ class MediaRepositoryImpl(
         mimeType: String,
         isVideo: Boolean,
     ) {
-        mediaStore.copyMediaToAlbum(uriString, relativePath, displayName, mimeType, isVideo)
+        editor.copyMediaToAlbum(uriString, relativePath, displayName, mimeType, isVideo)
     }
 
     override suspend fun createWriteRequest(uris: List<String>): IntentSender? =
-        mediaStore.buildWriteRequest(uris.map { it.toUri() })
+        editor.buildWriteRequest(uris.map { it.toUri() })
 
     override suspend fun removeMetadata(
         uriString: String,
         categories: Set<MetadataCategory>,
         saveAsCopy: Boolean,
     ): MetadataRemovalOutcome =
-        mediaStore.removeMetadata(uriString, categories, saveAsCopy)
+        metadataRemover.removeMetadata(uriString, categories, saveAsCopy)
 
     override suspend fun convertImageFormat(
         uriString: String,
         target: ImageFormat,
         quality: Int,
     ): ConversionOutcome =
-        mediaStore.convertImageFormat(uriString, target, quality)
+        formatConverter.convertImageFormat(uriString, target, quality)
 }

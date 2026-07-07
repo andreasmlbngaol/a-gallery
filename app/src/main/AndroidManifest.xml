@@ -3,8 +3,10 @@
     xmlns:tools="http://schemas.android.com/tools">
 
     <!-- Android 13+ (API 33+) -->
-    <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
-    <uses-permission android:name="android.permission.READ_MEDIA_VIDEO" />
+    <uses-permission android:name="android.permission.READ_MEDIA_IMAGES"
+        tools:ignore="PhotoAndVideoPolicy" />
+    <uses-permission android:name="android.permission.READ_MEDIA_VIDEO"
+        tools:ignore="PhotoAndVideoPolicy" />
     <!-- Android 14+ (API 34+): user pilih sebagian media -->
     <uses-permission android:name="android.permission.READ_MEDIA_VISUAL_USER_SELECTED" />
     <!-- Android 12L ke bawah (API <= 32) -->
@@ -17,7 +19,7 @@
          30 hari di background. -->
     <uses-permission
         android:name="android.permission.MANAGE_EXTERNAL_STORAGE"
-        tools:ignore="ScopedStorage" />
+        tools:ignore="AllFilesAccessPolicy,ScopedStorage" />
 
     <!-- Android 10 (API 29): butuh WRITE + legacy storage supaya hapus langsung
          berfungsi (OS ini belum punya konsep All-files access). -->
@@ -39,7 +41,6 @@
         <activity
             android:name=".MainActivity"
             android:exported="true"
-            android:label="@string/app_name"
             android:theme="@style/Theme.AGallery"
             android:windowSoftInputMode="adjustResize">
             <intent-filter>
@@ -47,5 +48,17 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <!-- FileProvider: membagikan gambar QR (ditulis ke cache) lewat share
+             sheet tanpa mengekspos path file mentah. -->
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.fileprovider"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/file_paths" />
+        </provider>
     </application>
 </manifest>

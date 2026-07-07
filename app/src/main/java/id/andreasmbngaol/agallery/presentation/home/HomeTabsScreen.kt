@@ -26,6 +26,7 @@ import id.andreasmbngaol.agallery.presentation.albums.AlbumsScreen
 import id.andreasmbngaol.agallery.presentation.gallery.GalleryGridScreen
 import id.andreasmbngaol.agallery.presentation.gallery.GalleryViewModel
 import id.andreasmbngaol.agallery.presentation.settings.SettingsScreen
+import id.andreasmbngaol.agallery.presentation.tools.ToolsScreen
 import org.koin.androidx.compose.koinViewModel
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
@@ -34,7 +35,8 @@ import kotlin.math.roundToInt
 private const val PageSettings = 0
 private const val PageGallery = 1
 private const val PageAlbums = 2
-private const val HomePageCount = 3
+private const val PageTools = 3
+private const val HomePageCount = 4
 
 private val NavSwipePxPerPage = 72.dp
 
@@ -45,6 +47,7 @@ fun HomeTabsScreen(
     onOpenAlbum: (albumKey: String, name: String) -> Unit = { _, _ -> },
     onOpenTrash: () -> Unit = {},
     onCreateAlbum: () -> Unit = {},
+    onOpenQrGenerator: () -> Unit = {},
 ) {
     val galleryViewModel: GalleryViewModel = koinViewModel()
 
@@ -81,6 +84,7 @@ fun HomeTabsScreen(
     val selectedTab = when (pagerState.currentPage) {
         PageSettings -> GalleryTab.Settings
         PageAlbums -> GalleryTab.Albums
+        PageTools -> GalleryTab.Tools
         else -> GalleryTab.Gallery
     }
 
@@ -90,6 +94,7 @@ fun HomeTabsScreen(
             val target = when (tab) {
                 GalleryTab.Settings -> PageSettings
                 GalleryTab.Albums -> PageAlbums
+                GalleryTab.Tools -> PageTools
                 else -> PageGallery
             }
             scope.launch { pagerState.animateScrollToPage(target) }
@@ -124,6 +129,10 @@ fun HomeTabsScreen(
         ) { page ->
             when (page) {
                 PageSettings -> SettingsScreen()
+                PageTools -> ToolsScreen(
+                    edgeEffectMode = edgeEffectMode,
+                    onOpenQrGenerator = onOpenQrGenerator,
+                )
                 PageAlbums -> AlbumsScreen(
                     edgeEffectMode = edgeEffectMode,
                     // Diteruskan supaya tombol Pin/Unpin di hold-overlay

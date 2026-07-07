@@ -41,6 +41,44 @@
     <string name="tab_settings">Pengaturan</string>
     <string name="tab_gallery">Galeri</string>
     <string name="tab_albums">Album</string>
+    <string name="tab_tools">Alat</string>
+
+    <!-- Tools hub -->
+    <string name="tools_section_utilities">Utilitas</string>
+    <string name="tools_coming_soon">Segera hadir</string>
+    <string name="tool_qr_generator_title">Pembuat Kode QR</string>
+    <string name="tool_qr_generator_desc">Bikin kode QR buat tautan, teks, dan lainnya</string>
+
+    <!-- QR Code Generator (1.6.0) -->
+    <string name="qr_section_content">Konten</string>
+    <string name="qr_section_style">Gaya QR</string>
+    <string name="qr_section_logo">Logo tengah</string>
+    <string name="qr_section_export">Ekspor</string>
+    <string name="qr_field_content_label">Tautan atau teks</string>
+    <string name="qr_field_title_label">Judul</string>
+    <string name="qr_field_subtitle_label">Subjudul</string>
+    <string name="qr_field_alt_label">Teks alternatif (URL)</string>
+    <string name="qr_field_supporting_label">Teks pendukung</string>
+    <string name="qr_alt_same">Ikut konten</string>
+    <string name="qr_alt_custom">Custom</string>
+    <string name="qr_color_pick">Warna teks</string>
+    <string name="qr_color_hex">HEX</string>
+    <string name="qr_color_apply">Pilih</string>
+    <string name="qr_color_cancel">Batal</string>
+    <string name="qr_style_square">Kotak</string>
+    <string name="qr_style_dots">Titik</string>
+    <string name="qr_logo_none">Tanpa logo</string>
+    <string name="qr_logo_photo">Pilih foto</string>
+    <string name="qr_export_card">Kartu penuh</string>
+    <string name="qr_export_qr_only">QR saja</string>
+    <string name="qr_action_save">Simpan</string>
+    <string name="qr_action_share">Bagikan</string>
+    <string name="qr_action_clear">Hapus semua</string>
+    <string name="qr_saved">Tersimpan ke galeri</string>
+    <string name="qr_save_failed">Gagal menyimpan</string>
+    <string name="qr_need_content">Masukkan tautan atau teks dulu</string>
+    <string name="qr_share_title">Bagikan kode QR</string>
+    <string name="qr_preview_placeholder">Masukkan tautan atau teks untuk pratinjau QR</string>
 
     <!-- ===== Gallery ===== -->
     <string name="gallery_title">Galeri</string>

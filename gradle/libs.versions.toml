@@ -32,6 +32,7 @@ media3 = "1.10.1"
 workmanager = "2.11.2"
 exifinterface = "1.4.2"
 heifwriter = "1.1.0"           # encoder HEIC/HEIF (AndroidX) utk Format Converter 1.5.0
+zxing = "3.5.4"                # ZXing core: encoder QR (pure-Java, offline) utk QR Generator 1.6.0
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -97,6 +98,7 @@ androidx-media3-ui = { group = "androidx.media3", name = "media3-ui", version.re
 androidx-work-runtime = { group = "androidx.work", name = "work-runtime-ktx", version.ref = "workmanager" }
 androidx-exifinterface = { group = "androidx.exifinterface", name = "exifinterface", version.ref = "exifinterface" }
 androidx-heifwriter = { group = "androidx.heifwriter", name = "heifwriter", version.ref = "heifwriter" }
+zxing-core = { group = "com.google.zxing", name = "core", version.ref = "zxing" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

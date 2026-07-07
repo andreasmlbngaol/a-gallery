@@ -33,8 +33,8 @@ android {
         applicationId = "id.andreasmbngaol.agallery"
         minSdk = 29
         targetSdk = 37
-        versionCode = 15
-        versionName = "1.5.0"
+        versionCode = 16
+        versionName = "1.6.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -160,6 +160,10 @@ dependencies {
     // HEIC/HEIF encoder (AndroidX) — Format Converter 1.5.0. NB: android.media.HeifWriter
     // itu class @hide (bukan API publik), jadi wajib pakai androidx.heifwriter.
     implementation(libs.androidx.heifwriter)
+
+    // ZXing core — encoder QR (pure-Java, offline, tanpa izin INTERNET) utk QR
+    // Code Generator 1.6.0. Matriks per-modul dirender sendiri di Compose Canvas.
+    implementation(libs.zxing.core)
 
 
     testImplementation(libs.junit)

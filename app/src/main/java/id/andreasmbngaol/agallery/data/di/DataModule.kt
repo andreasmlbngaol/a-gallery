@@ -4,7 +4,11 @@ import androidx.datastore.core.DataStore
 import androidx.datastore.core.DataStoreFactory
 import androidx.datastore.dataStoreFile
 import androidx.room.Room
+import id.andreasmbngaol.agallery.data.local.mediastore.ImageFormatConverter
+import id.andreasmbngaol.agallery.data.local.mediastore.MediaDetailsReader
 import id.andreasmbngaol.agallery.data.local.mediastore.MediaStoreDataSource
+import id.andreasmbngaol.agallery.data.local.mediastore.MediaStoreEditor
+import id.andreasmbngaol.agallery.data.local.mediastore.MetadataRemover
 import id.andreasmbngaol.agallery.data.local.prefs.AppSettingsDto
 import id.andreasmbngaol.agallery.data.local.prefs.AppSettingsSerializer
 import id.andreasmbngaol.agallery.data.local.room.AGalleryDatabase
@@ -29,6 +33,10 @@ val dataModule = module {
     }
     single { get<AGalleryDatabase>().mediaDao() }
     single { MediaStoreDataSource(androidContext()) }
+    single { MediaStoreEditor(androidContext()) }
+    single { MediaDetailsReader(androidContext()) }
+    single { MetadataRemover(androidContext()) }
+    single { ImageFormatConverter(androidContext()) }
 
     // Typed DataStore untuk preferensi (kotlinx.serialization / JSON).
     single<DataStore<AppSettingsDto>> {

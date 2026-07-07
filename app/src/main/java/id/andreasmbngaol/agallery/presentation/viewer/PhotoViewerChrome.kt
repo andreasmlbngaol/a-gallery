@@ -208,7 +208,7 @@ fun GlassActionButton(
  * (mirip pola track pill di nav bar gallery).
  */
 @Composable
-private fun GlassIsland(
+fun GlassIsland(
     style: ComponentStyle,
     backdrop: Backdrop,
     modifier: Modifier = Modifier,

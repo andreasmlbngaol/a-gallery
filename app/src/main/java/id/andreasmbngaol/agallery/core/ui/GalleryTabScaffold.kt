@@ -86,7 +86,7 @@ import id.andreasmbngaol.agallery.domain.model.GallerySortOrder
 /**
  * Dua tab utama root screen di AGallery.
  */
-enum class GalleryTab { Settings, Gallery, Albums }
+enum class GalleryTab { Settings, Gallery, Albums, Tools }
 
 /**
  * Tinggi total footprint bar mengambang dari BAWAH area content, di luar
@@ -355,6 +355,7 @@ private fun TabSwitcher(
         GalleryTab.Settings to stringResource(R.string.tab_settings),
         GalleryTab.Gallery to stringResource(R.string.tab_gallery),
         GalleryTab.Albums to stringResource(R.string.tab_albums),
+        GalleryTab.Tools to stringResource(R.string.tab_tools),
     )
     val selectedIndex = entries.indexOfFirst { it.first == selectedTab }.coerceAtLeast(0)
     val scrollState = rememberScrollState()
@@ -362,7 +363,7 @@ private fun TabSwitcher(
 
     // Lebar px tiap tab (wrap content, jadi beda-beda) buat menghitung offset
     // scroll yang MENENGAHKAN tab terpilih di dalam pill.
-    val tabWidths = remember { mutableStateListOf(0, 0, 0) }
+    val tabWidths = remember { mutableStateListOf(0, 0, 0, 0) }
 
     // Track kaca (API 33+) / frosted solid (fallback). Lebar TETAP = PillWidth.
     val baseTrackModifier = modifier

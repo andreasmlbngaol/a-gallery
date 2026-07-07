@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<paths>
+    <!-- Folder cache tempat gambar QR ditulis sebelum dibagikan lewat share sheet. -->
+    <cache-path
+        name="shared_qr"
+        path="shared_qr/" />
+</paths>

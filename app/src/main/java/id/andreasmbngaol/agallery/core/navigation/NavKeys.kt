@@ -51,4 +51,8 @@ sealed interface Screen : NavKey {
      */
     @Serializable
     data object CreateAlbum : Screen
+
+    /** Layar QR Code Generator (dibuka dari tab Tools). */
+    @Serializable
+    data object QrGenerator : Screen
 }

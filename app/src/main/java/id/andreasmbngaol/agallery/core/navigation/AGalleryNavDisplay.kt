@@ -16,6 +16,7 @@ import id.andreasmbngaol.agallery.presentation.animation.LocalSharedTransitionSc
 import id.andreasmbngaol.agallery.presentation.albums.AlbumDetailScreen
 import id.andreasmbngaol.agallery.presentation.albums.CreateAlbumScreen
 import id.andreasmbngaol.agallery.presentation.home.HomeTabsScreen
+import id.andreasmbngaol.agallery.presentation.tools.qr.QrGeneratorScreen
 import id.andreasmbngaol.agallery.presentation.trash.TrashScreen
 import id.andreasmbngaol.agallery.presentation.viewer.PhotoViewerScreen
 
@@ -67,6 +68,7 @@ fun AGalleryNavDisplay() {
                                 },
                                 onOpenTrash = { backStack.add(Screen.Trash) },
                                 onCreateAlbum = { backStack.add(Screen.CreateAlbum) },
+                                onOpenQrGenerator = { backStack.add(Screen.QrGenerator) },
                             )
                         }
 
@@ -108,6 +110,12 @@ fun AGalleryNavDisplay() {
 
                         is Screen.CreateAlbum -> NavEntry(key) {
                             CreateAlbumScreen(
+                                onBack = { backStack.removeLastOrNull() },
+                            )
+                        }
+
+                        is Screen.QrGenerator -> NavEntry(key) {
+                            QrGeneratorScreen(
                                 onBack = { backStack.removeLastOrNull() },
                             )
                         }
