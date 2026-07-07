@@ -4,12 +4,14 @@ import androidx.room.Entity
 import androidx.room.PrimaryKey
 
 /**
- * Override cover album yang dipilih user lewat aksi "Set as Cover" di viewer.
+ * User-selected cover override applied through the "Set as Cover" action in the
+ * viewer.
  *
- * [albumKey] = kunci album (smart atau "bucket:<id>"), [mediaId] = MediaStore
- * _ID foto/video yang dipilih jadi sampul. Saat membangun daftar album, cover
- * ini dipakai HANYA jika item-nya masih ada & tidak sedang di Trash; kalau
- * tidak, otomatis fallback ke item terbaru (perilaku default).
+ * [albumKey] is the album key (a smart key or `"bucket:<id>"`) and [mediaId] is
+ * the MediaStore `_ID` of the photo or video chosen as the cover. When building
+ * the album list this override is used ONLY if the item still exists and is not
+ * currently in Trash; otherwise it falls back to the most recent item (the
+ * default behavior).
  */
 @Entity(tableName = "album_cover")
 data class AlbumCoverEntity(

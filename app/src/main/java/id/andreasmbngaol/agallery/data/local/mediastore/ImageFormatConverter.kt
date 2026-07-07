@@ -24,9 +24,9 @@ import java.io.File
 private const val HEIF_TIMEOUT_MS = 10_000L
 
 /**
- * Konversi format gambar (fitur 1.5.0). Dipisah dari [MediaStoreDataSource]
- * karena melibatkan decode/encode bitmap + HeifWriter yang cukup berat.
- * Konstanta tag EXIF yang disalin ada di [MediaExifTags].
+ * Image format conversion (1.5.0 feature). Kept separate from
+ * [MediaStoreDataSource] because it involves fairly heavy bitmap decode/encode
+ * plus HeifWriter. The copied EXIF tag constants live in [MediaExifTags].
  */
 class ImageFormatConverter(
     private val context: Context,
@@ -34,10 +34,11 @@ class ImageFormatConverter(
     private val resolver get() = context.contentResolver
 
     /**
-     * Konversi [uriString] ke [target]. SELALU bikin file baru di folder yg
-     * sama (asli tak disentuh). [quality] 1..100 utk lossy; PNG lossless.
-     * Orientasi otomatis dibakar ke pixel saat decode, lalu EXIF disalin dgn
-     * orientasi di-reset normal (JPG/PNG/WEBP; HEIC terbatas via HeifWriter).
+     * Converts [uriString] to [target]. ALWAYS creates a new file in the same
+     * folder (the original is untouched). [quality] is 1..100 for lossy formats;
+     * PNG is lossless. Orientation is baked into the pixels at decode time, then
+     * EXIF is copied with orientation reset to normal (JPG/PNG/WEBP; HEIC is
+     * limited, via HeifWriter).
      */
     suspend fun convertImageFormat(
         uriString: String,
@@ -56,7 +57,6 @@ class ImageFormatConverter(
         } ?: return@withContext ConversionOutcome.Failed
         val (displayName, relativePath) = info
 
-        // 1) Decode -> software bitmap (biar bisa di-compress; orientasi dibakar).
         val decoded = try {
             val source = ImageDecoder.createSource(resolver, srcUri)
             ImageDecoder.decodeBitmap(source) { decoder, _, _ ->
@@ -67,17 +67,14 @@ class ImageFormatConverter(
             return@withContext ConversionOutcome.UnsupportedSource
         }
 
-        // 2) Flatten transparansi ke hitam kalau target tanpa alpha (JPG/HEIC).
         val bitmap = if (!target.supportsAlpha && decoded.hasAlpha()) {
             flattenOnColor(decoded).also { decoded.recycle() }
         } else {
             decoded
         }
 
-        // 3) Nama hasil unik di folder yg sama.
         val outName = uniqueConvertedName(baseName(displayName), target.extension, relativePath)
 
-        // 4) Insert entri pending.
         val collection =
             MediaStore.Images.Media.getContentUri(MediaStore.VOLUME_EXTERNAL_PRIMARY)
         val values = ContentValues().apply {
@@ -101,7 +98,6 @@ class ImageFormatConverter(
             }
             if (!encoded) error("encode failed")
 
-            // Salin EXIF (kecuali HEIC yg tak didukung tulis EXIF-nya).
             if (target != ImageFormat.HEIC) {
                 copyExifResettingOrientation(srcUri, destUri)
             }
@@ -146,13 +142,11 @@ class ImageFormatConverter(
     }
 
     /**
-     * Encode HEIC via HeifWriter. HeifWriter butuh path file (konstruktor
-     * FileDescriptor baru ada di API 30), jadi tulis ke cache dulu lalu salin ke
-     * MediaStore. Lempar exception kalau codec HW tak tersedia -> ditangkap
-     * pemanggil jadi UnsupportedTarget.
+     * Encodes HEIC via HeifWriter. HeifWriter needs a file path (the
+     * FileDescriptor constructor only exists on API 30+), so write to the cache
+     * first then copy into MediaStore. Throws if the HW codec is unavailable ->
+     * caught by the caller as UnsupportedTarget.
      */
-    // HeifWriter.close() (warisan WriterBase) keannotasi @RestrictTo di 1.0.0,
-    // padahal memang harus dipanggil consumer utk melepas resource. Suppress.
     @Suppress("RestrictedApi")
     private fun encodeHeic(bitmap: Bitmap, dest: Uri, quality: Int): Boolean {
         val temp = File.createTempFile("convert_", ".heic", context.cacheDir)
@@ -176,7 +170,7 @@ class ImageFormatConverter(
         }
     }
 
-    /** Gambar [src] di atas kanvas berwarna [color] (buang alpha). */
+    /** Draws [src] over a solid black canvas (drops alpha). */
     private fun flattenOnColor(src: Bitmap): Bitmap {
         val out = createBitmap(src.width, src.height)
         val canvas = Canvas(out)
@@ -186,9 +180,10 @@ class ImageFormatConverter(
     }
 
     /**
-     * Salin tag EXIF sumber ke tujuan, TAPI reset orientasi ke normal (karena
-     * orientasi sudah dibakar ke pixel saat decode -> mencegah double-rotate).
-     * Best-effort: kegagalan tak membatalkan konversi.
+     * Copies source EXIF tags to the destination, BUT resets orientation to
+     * normal (orientation was already baked into the pixels at decode time ->
+     * prevents a double rotation). Best-effort: failure does not abort the
+     * conversion.
      */
     private fun copyExifResettingOrientation(srcUri: Uri, destUri: Uri) {
         try {
@@ -205,7 +200,6 @@ class ImageFormatConverter(
                 dstExif.saveAttributes()
             }
         } catch (_: Throwable) {
-            // EXIF opsional.
         }
     }
 
@@ -214,7 +208,7 @@ class ImageFormatConverter(
         return if (dot > 0) name.substring(0, dot) else name
     }
 
-    /** Nama file hasil unik di [relativePath] biar tak menimpa yg sudah ada. */
+    /** Unique output filename in [relativePath] so it does not overwrite an existing one. */
     private fun uniqueConvertedName(base: String, ext: String, relativePath: String): String {
         var candidate = "$base.$ext"
         var i = 1

@@ -16,9 +16,9 @@ import kotlinx.coroutines.withContext
 import java.util.Locale
 
 /**
- * Hapus metadata terpilih dari sebuah foto (fitur 1.4.0). Dipisah dari
- * [MediaStoreDataSource] karena merupakan operasi tulis EXIF yang berdiri
- * sendiri. Konstanta tag EXIF ada di [MediaExifTags].
+ * Removes selected metadata from a photo (1.4.0 feature). Kept separate from
+ * [MediaStoreDataSource] because it is a standalone EXIF write operation. The
+ * EXIF tag constants live in [MediaExifTags].
  */
 class MetadataRemover(
     private val context: Context,
@@ -26,15 +26,15 @@ class MetadataRemover(
     private val resolver get() = context.contentResolver
 
     /**
-     * Buang metadata terpilih dari sebuah foto.
+     * Removes the selected metadata from a photo.
      *
-     * Hanya format yang bisa di-strip LOSSLESS oleh ExifInterface (JPEG/PNG/WebP)
-     * yang didukung; HEIC/HEIF & video -> [MetadataRemovalOutcome.UnsupportedFormat].
+     * Only formats that ExifInterface can strip LOSSLESSLY (JPEG/PNG/WebP) are
+     * supported; HEIC/HEIF & video -> [MetadataRemovalOutcome.UnsupportedFormat].
      *
-     * - [saveAsCopy]=false -> timpa file asli (butuh consent kalau file bukan
-     *   milik app & belum punya All-files access).
-     * - [saveAsCopy]=true  -> buat salinan di folder yg sama lalu strip salinan
-     *   itu (app pemilik salinan -> tak perlu consent). File asli tetap utuh.
+     * - [saveAsCopy]=false -> overwrite the original file (needs consent when the
+     *   file is not owned by the app and there is no All-files access yet).
+     * - [saveAsCopy]=true  -> create a copy in the same folder then strip that
+     *   copy (the app owns the copy -> no consent needed). The original stays intact.
      */
     suspend fun removeMetadata(
         uriString: String,
@@ -95,7 +95,6 @@ class MetadataRemover(
             }
         }
 
-        // Timpa file asli.
         return@withContext try {
             stripTags(uri, tags)
             MetadataRemovalOutcome.Success(savedAsCopy = false)
@@ -114,7 +113,7 @@ class MetadataRemover(
         }
     }
 
-    /** Buka fd read-write lalu null-kan [tags] & simpan (lossless, tanpa re-encode). */
+    /** Opens a read-write fd, nulls out [tags] & saves (lossless, no re-encode). */
     private fun stripTags(uri: Uri, tags: List<String>) {
         resolver.openFileDescriptor(uri, "rw")?.use { pfd ->
             val exif = ExifInterface(pfd.fileDescriptor)
@@ -123,7 +122,7 @@ class MetadataRemover(
         } ?: error("open fd rw failed")
     }
 
-    /** Sisipkan "_clean" sebelum ekstensi supaya salinan tak menimpa asli. */
+    /** Inserts "_clean" before the extension so the copy does not overwrite the original. */
     private fun cleanCopyName(original: String): String {
         val dot = original.lastIndexOf('.')
         return if (dot > 0) {
@@ -133,7 +132,7 @@ class MetadataRemover(
         }
     }
 
-    /** Susun daftar tag EXIF yang mau di-null berdasarkan kategori terpilih. */
+    /** Builds the list of EXIF tags to null out based on the selected categories. */
     private fun tagsToRemove(categories: Set<MetadataCategory>): List<String> {
         val out = LinkedHashSet<String>()
         if (MetadataCategory.ALL in categories) {

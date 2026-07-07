@@ -15,16 +15,17 @@ import kotlinx.coroutines.withContext
 import java.io.File
 
 /**
- * Bertanggung jawab untuk 3 hal terkait gambar QR: simpan ke galeri (MediaStore),
- * siapkan file cache utk dibagikan (FileProvider), dan decode foto logo jadi
- * [ImageBitmap]. Dipisah dari layer presentation supaya VM tetap bebas Context.
+ * Handles three QR-image concerns: saving to the gallery (MediaStore), preparing
+ * a cache file for sharing (FileProvider), and decoding a logo photo into an
+ * [ImageBitmap]. Kept out of the presentation layer so view models stay free of
+ * Context.
  */
 class QrImageSaver(
     private val context: Context,
 ) {
     private val resolver get() = context.contentResolver
 
-    /** Simpan [bitmap] PNG ke galeri di folder "Pictures/AGallery QR". */
+    /** Saves [bitmap] as a PNG to the gallery under "Pictures/AGallery QR". */
     suspend fun saveToGallery(bitmap: Bitmap): Boolean = withContext(Dispatchers.IO) {
         val name = "QR_${System.currentTimeMillis()}.png"
         val collection =
@@ -51,8 +52,9 @@ class QrImageSaver(
     }
 
     /**
-     * Tulis PNG ke cache lalu bungkus jadi content:// uri via FileProvider supaya
-     * bisa dibagikan lewat share sheet (ACTION_SEND) tanpa menyentuh galeri.
+     * Writes a PNG to the cache then wraps it as a content:// uri via FileProvider
+     * so it can be shared through the share sheet (ACTION_SEND) without touching
+     * the gallery.
      */
     suspend fun cacheForShare(bitmap: Bitmap): Uri? = withContext(Dispatchers.IO) {
         try {
@@ -67,7 +69,7 @@ class QrImageSaver(
         }
     }
 
-    /** Decode foto logo (di-downscale) jadi [ImageBitmap] utk digambar di kanvas. */
+    /** Decodes the (downscaled) logo photo into an [ImageBitmap] for canvas drawing. */
     suspend fun loadLogoBitmap(uri: String): ImageBitmap? = withContext(Dispatchers.IO) {
         try {
             val source = ImageDecoder.createSource(resolver, uri.toUri())
@@ -76,7 +78,6 @@ class QrImageSaver(
                 decoder.setTargetSampleSize(2)
                 decoder.isMutableRequired = false
             }
-            // Software config wajib supaya aman digambar & di-capture ke bitmap.
             val safe = if (decoded.config == Bitmap.Config.HARDWARE) {
                 decoded.copy(Bitmap.Config.ARGB_8888, false).also { decoded.recycle() }
             } else {

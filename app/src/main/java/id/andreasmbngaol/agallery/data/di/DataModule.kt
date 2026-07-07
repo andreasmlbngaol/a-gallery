@@ -38,7 +38,6 @@ val dataModule = module {
     single { MetadataRemover(androidContext()) }
     single { ImageFormatConverter(androidContext()) }
 
-    // Typed DataStore untuk preferensi (kotlinx.serialization / JSON).
     single<DataStore<AppSettingsDto>> {
         DataStoreFactory.create(
             serializer = AppSettingsSerializer,

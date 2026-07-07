@@ -8,11 +8,12 @@ import java.io.InputStream
 import java.io.OutputStream
 
 /**
- * Serializer untuk typed DataStore, memakai kotlinx.serialization (JSON).
- * Tanpa protobuf plugin/toolchain — cukup reuse serialization yang sudah ada.
+ * Serializer for the typed DataStore, using kotlinx.serialization (JSON).
+ *
+ * Avoids the protobuf plugin/toolchain by reusing the serialization support the
+ * app already depends on.
  */
 object AppSettingsSerializer : Serializer<AppSettingsDto> {
-
     private val json = Json {
         ignoreUnknownKeys = true
         encodeDefaults = true
@@ -27,7 +28,6 @@ object AppSettingsSerializer : Serializer<AppSettingsDto> {
                 input.readBytes().decodeToString(),
             )
         } catch (_: Exception) {
-            // File korup/kosong -> balik ke default, jangan sampai crash.
             defaultValue
         }
 

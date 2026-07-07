@@ -35,6 +35,14 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.map
 
+/**
+ * [MediaRepository] implementation that combines MediaStore (photos/videos) with
+ * Room-backed state (favorites, soft-delete Trash, album cover overrides).
+ *
+ * Reads are exposed as reactive paging/flows that rebuild on MediaStore changes,
+ * favorite/trash updates, or a manual [refreshMedia] trigger, while writes are
+ * delegated to the focused MediaStore helper classes.
+ */
 class MediaRepositoryImpl(
     private val mediaStore: MediaStoreDataSource,
     private val editor: MediaStoreEditor,
@@ -43,8 +51,6 @@ class MediaRepositoryImpl(
     private val formatConverter: ImageFormatConverter,
     private val mediaDao: MediaDao,
 ) : MediaRepository {
-
-    // Config paging tunggal -> dipakai bareng galeri utama, album, & favorit.
     private val pagingConfig = PagingConfig(
         pageSize = MediaPagingSource.PAGE_SIZE,
         initialLoadSize = MediaPagingSource.PAGE_SIZE,
@@ -52,10 +58,6 @@ class MediaRepositoryImpl(
         enablePlaceholders = true,
     )
 
-    // Sinyal refresh manual. Setiap kali di-increment (via [refreshMedia]),
-    // getMediaPaging & observeAlbums membangun ulang sumbernya. Dipakai
-    // terutama setelah user memberi izin media (grant tidak selalu memicu
-    // ContentObserver MediaStore).
     private val refreshTrigger = MutableStateFlow(0)
 
     @OptIn(ExperimentalCoroutinesApi::class)
@@ -64,8 +66,6 @@ class MediaRepositoryImpl(
         scope: MediaScope,
     ): Flow<PagingData<MediaItem>> =
         if (scope == MediaScope.Favorites) {
-            // Favorit hidup di Room -> gabungkan dgn trash-list (excludeIds)
-            // + favorite-list (includeIds). Scope MediaStore = semua media.
             combine(
                 mediaDao.observeTrashedIds().map { it.toHashSet() }.distinctUntilChanged(),
                 mediaDao.observeFavoriteIds().map { it.toHashSet() }.distinctUntilChanged(),
@@ -86,8 +86,6 @@ class MediaRepositoryImpl(
                     ).flow
                 }
         } else {
-            // Scope biasa (kamera/allMedia/videos/screenshots/recordings/bucket).
-            // Trash tetap disaring di level SOURCE agar count & offset konsisten.
             combine(
                 mediaDao.observeTrashedIds().map { it.toHashSet() }.distinctUntilChanged(),
                 refreshTrigger,
@@ -122,8 +120,6 @@ class MediaRepositoryImpl(
     }
 
     override suspend fun getAlbums(): List<Album> {
-        // Sekali baca daftar favorit, trash, & cover override -> ikut menentukan
-        // album cerdas Favorites, penyaringan item trash, & sampul pilihan user.
         val favs = mediaDao.observeFavoriteIds().first().toHashSet()
         val trashed = mediaDao.observeTrashedIds().first().toHashSet()
         val coverOverrides = mediaDao.observeAlbumCovers().first()
@@ -133,8 +129,6 @@ class MediaRepositoryImpl(
 
     override fun observeAlbums(): Flow<List<Album>> =
         combine(
-            // contentChanges() sudah emit sekali di awal (snapshot pertama),
-            // lalu tiap kali MediaStore berubah.
             mediaStore.contentChanges(),
             mediaDao.observeFavoriteIds().map { it.toHashSet() }.distinctUntilChanged(),
             mediaDao.observeTrashedIds().map { it.toHashSet() }.distinctUntilChanged(),
@@ -194,30 +188,20 @@ class MediaRepositoryImpl(
         }
 
     override suspend fun restoreFromTrash(mediaId: Long) {
-        // Cukup lepas marker; MediaStore row-nya tidak pernah dihapus di
-        // soft-delete, jadi item otomatis muncul lagi di grid setelah stream
-        // observeTrashedIds emit tanpa id ini.
         mediaDao.removeTrashed(mediaId)
     }
 
     override suspend fun finalizePermanentDelete(mediaId: Long) {
-        // Dipanggil TrashScreen setelah SAF delete-request user-approved.
-        // Row Room ikut dihapus supaya tidak jadi ghost record.
         mediaDao.removeTrashed(mediaId)
     }
 
     override suspend fun purgeExpiredTrash(retentionDays: Int): List<String> {
-        // Ambil URI item yg umurnya melewati retensi supaya caller bisa bangun
-        // SAF delete-request. Marker Room baru dihapus lewat
-        // [finalizePermanentDelete] setelah delete disetujui.
         val threshold =
             System.currentTimeMillis() - retentionDays.toLong() * 24L * 60L * 60L * 1000L
         return mediaDao.getTrashedOlderThan(threshold).map { it.uri }
     }
 
     override suspend fun autoPurgeExpiredDirectly(retentionDays: Int): Int {
-        // Background purge butuh All-files access karena tak bisa tampilkan
-        // dialog consent. Tanpa izin -> no-op (item ditahan sampai purge manual).
         if (!editor.hasAllFilesAccess()) return 0
         val threshold =
             System.currentTimeMillis() - retentionDays.toLong() * 24L * 60L * 60L * 1000L

@@ -13,18 +13,17 @@ import org.koin.core.component.inject
 import java.util.concurrent.TimeUnit
 
 /**
- * Worker harian yang menghapus PERMANEN item Trash yg umurnya > 30 hari.
+ * Daily worker that PERMANENTLY deletes Trash items older than 30 days.
  *
- * Hanya efektif bila app punya All-files access, karena penghapusan di
- * background TIDAK bisa memunculkan dialog konfirmasi sistem. Kalau izin belum
- * ada, worker jadi no-op (item tetap tersimpan sampai user purge manual di
- * layar Trash).
+ * Only effective when the app has All-files access, because a background
+ * deletion CANNOT show the system confirmation dialog. Without the permission
+ * the worker is a no-op (items stay until the user purges them manually from the
+ * Trash screen).
  */
 class TrashPurgeWorker(
     context: Context,
     params: WorkerParameters,
 ) : CoroutineWorker(context, params), KoinComponent {
-
     private val mediaRepository: MediaRepository by inject()
 
     override suspend fun doWork(): Result {
@@ -42,7 +41,7 @@ class TrashPurgeWorker(
         const val RETENTION_DAYS = 30
         private const val UNIQUE_NAME = "trash-auto-purge"
 
-        /** Jadwalkan purge harian (idempoten; dipanggil sekali saat app start). */
+        /** Schedules the daily purge (idempotent; called once on app start). */
         fun schedule(context: Context) {
             val request = PeriodicWorkRequestBuilder<TrashPurgeWorker>(
                 1, TimeUnit.DAYS,

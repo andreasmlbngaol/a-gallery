@@ -3,17 +3,17 @@ package id.andreasmbngaol.agallery.data.local.mediastore
 import androidx.exifinterface.media.ExifInterface
 
 /**
- * Konstanta tag EXIF yang dipakai BARENG oleh [MetadataRemover] (strip metadata)
- * dan [ImageFormatConverter] (salin metadata saat konversi). Dikumpulkan di satu
- * tempat supaya tak duplikat & tetap konsisten.
+ * EXIF tag constants SHARED by [MetadataRemover] (metadata stripping) and
+ * [ImageFormatConverter] (metadata copying during conversion). Collected in one
+ * place to avoid duplication and stay consistent.
  */
 internal object MediaExifTags {
-    /** Format yang bisa di-strip lossless oleh ExifInterface. */
+    /** Formats that ExifInterface can strip losslessly. */
     val STRIP_SUPPORTED_MIME = setOf(
         "image/jpeg", "image/jpg", "image/png", "image/webp",
     )
 
-    /** Semua tag GPS/lokasi. */
+    /** All GPS/location tags. */
     val LOCATION_EXIF_TAGS = listOf(
         ExifInterface.TAG_GPS_LATITUDE, ExifInterface.TAG_GPS_LATITUDE_REF,
         ExifInterface.TAG_GPS_LONGITUDE, ExifInterface.TAG_GPS_LONGITUDE_REF,
@@ -33,7 +33,7 @@ internal object MediaExifTags {
         ExifInterface.TAG_GPS_DIFFERENTIAL,
     )
 
-    /** Tag perangkat + pengaturan pemotretan (termasuk kapan diambil). */
+    /** Device and capture-setting tags (including when the shot was taken). */
     val CAMERA_EXIF_TAGS = listOf(
         ExifInterface.TAG_MAKE, ExifInterface.TAG_MODEL, ExifInterface.TAG_SOFTWARE,
         ExifInterface.TAG_F_NUMBER, ExifInterface.TAG_APERTURE_VALUE,
@@ -41,8 +41,6 @@ internal object MediaExifTags {
         ExifInterface.TAG_SHUTTER_SPEED_VALUE, ExifInterface.TAG_EXPOSURE_BIAS_VALUE,
         ExifInterface.TAG_EXPOSURE_MODE, ExifInterface.TAG_EXPOSURE_PROGRAM,
         ExifInterface.TAG_EXPOSURE_INDEX,
-        // Catatan: TAG_ISO_SPEED_RATINGS deprecated & 1:1 dgn tag di bawah
-        // (EXIF 0x8827), jadi cukup pakai TAG_PHOTOGRAPHIC_SENSITIVITY.
         ExifInterface.TAG_PHOTOGRAPHIC_SENSITIVITY, ExifInterface.TAG_FOCAL_LENGTH,
         ExifInterface.TAG_FOCAL_LENGTH_IN_35MM_FILM, ExifInterface.TAG_FLASH,
         ExifInterface.TAG_FLASH_ENERGY, ExifInterface.TAG_METERING_MODE,
@@ -58,8 +56,8 @@ internal object MediaExifTags {
     )
 
     /**
-     * Info personal lain (hanya dipakai saat "Semua"). Orientasi SENGAJA
-     * tak dimasukkan supaya foto tak jadi miring setelah di-strip.
+     * Other personal info (used only for the "All" category). Orientation is
+     * INTENTIONALLY excluded so photos are not rotated after stripping.
      */
     val MISC_EXIF_TAGS = listOf(
         ExifInterface.TAG_ARTIST, ExifInterface.TAG_COPYRIGHT,
@@ -69,7 +67,7 @@ internal object MediaExifTags {
         ExifInterface.TAG_SUBSEC_TIME,
     )
 
-    /** Semua tag yg disalin saat konversi (orientasi ditangani terpisah). */
+    /** All tags copied during conversion (orientation is handled separately). */
     val COPYABLE_EXIF_TAGS: List<String> =
         (LOCATION_EXIF_TAGS + CAMERA_EXIF_TAGS + MISC_EXIF_TAGS).distinct()
 }

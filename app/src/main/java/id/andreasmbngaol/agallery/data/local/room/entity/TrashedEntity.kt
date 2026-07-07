@@ -8,11 +8,11 @@ import androidx.room.PrimaryKey
  * main gallery grid but its underlying MediaStore file is NOT deleted, so it
  * can still be restored within the retention window ([trashedAt] + 30 days).
  *
- * [isVideo] & [durationMs] direkam saat di-trash supaya layar Trash bisa
- * menampilkan badge video + durasi tanpa query MediaStore lagi.
+ * [isVideo] and [durationMs] are captured at trash time so the Trash screen can
+ * show the video badge and duration without querying MediaStore again.
  *
  * The permanent purge after 30 days is handled by [id.andreasmbngaol.agallery.data.local.room.dao.MediaDao.getTrashedOlderThan]
- * + [id.andreasmbngaol.agallery.data.local.room.dao.MediaDao.purgeTrashedOlderThan] (dipicu saat app start / layar Trash dibuka).
+ * + [id.andreasmbngaol.agallery.data.local.room.dao.MediaDao.purgeTrashedOlderThan] (triggered on app start / when the Trash screen opens).
  */
 @Entity(tableName = "trashed")
 data class TrashedEntity(

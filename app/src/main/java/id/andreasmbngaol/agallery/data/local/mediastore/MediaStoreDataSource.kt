@@ -29,26 +29,25 @@ import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.withContext
 
 /**
- * Sumber data langsung ke MediaStore (foto + video) untuk KUERI & reaktivitas.
- * Semua kueri dijalankan di [Dispatchers.IO].
+ * Direct MediaStore data source (photos + videos) for QUERIES & reactivity. All
+ * queries run on [Dispatchers.IO].
  *
- * Operasi lain sudah DIPISAH ke kelas terpisah di package yg sama supaya file
- * ini fokus pada satu tanggung jawab (query + observe + daftar album):
+ * Other operations are SPLIT into separate classes in the same package so this
+ * file focuses on a single responsibility (query + observe + album list):
  * - [MediaStoreEditor]      -> delete/rename/move/copy + consent request
- * - [MediaDetailsReader]    -> queryDetails + enrichment EXIF/video
- * - [MetadataRemover]       -> hapus metadata terpilih
- * - [ImageFormatConverter]  -> konversi format gambar
+ * - [MediaDetailsReader]    -> queryDetails + EXIF/video enrichment
+ * - [MetadataRemover]       -> remove selected metadata
+ * - [ImageFormatConverter]  -> image format conversion
  *
- * Format HEIC/HEIF ikut ke-load otomatis karena filter `MEDIA_TYPE=IMAGE`
- * mencakup semua image apapun mime-nya; decoding-nya di-handle Coil (yang
- * secara native support HEIF sejak platform Android 8+).
+ * HEIC/HEIF formats load automatically because the `MEDIA_TYPE=IMAGE` filter
+ * covers every image regardless of its mime; decoding is handled by Coil (which
+ * natively supports HEIF since Android 8+).
  */
 class MediaStoreDataSource(
     private val context: Context,
 ) {
     private val resolver get() = context.contentResolver
 
-    // Kolom minimum untuk kueri media (foto + video)
     private val projection = arrayOf(
         MediaStore.Files.FileColumns._ID,
         MediaStore.Files.FileColumns.DISPLAY_NAME,
@@ -60,31 +59,22 @@ class MediaStoreDataSource(
         MediaStore.Files.FileColumns.BUCKET_DISPLAY_NAME,
     )
 
-    // Untuk kueri album -> perlu RELATIVE_PATH agar bisa deteksi
-    // Screenshots / Screen recordings.
     private val albumProjection: Array<String> = projection + arrayOf(
         MediaStore.Files.FileColumns.RELATIVE_PATH,
     )
 
-    // Konstanta path kamera. Bentuk relatif tanpa slash awal supaya cocok
-    // dgn semantik MediaStore.RELATIVE_PATH.
     private val cameraPathFilter = "DCIM/Camera/%"
 
-    // URI koleksi (semua volume eksternal). API 29+.
     private val collectionUri: Uri =
         MediaStore.Files.getContentUri(MediaStore.VOLUME_EXTERNAL)
 
     private val imageType = MediaStore.Files.FileColumns.MEDIA_TYPE_IMAGE
     private val videoType = MediaStore.Files.FileColumns.MEDIA_TYPE_VIDEO
 
-    // -----------------------------------------------------------------
-    //  Reaktivitas: pantau perubahan MediaStore (foto/video baru/terhapus)
-    // -----------------------------------------------------------------
-
     /**
-     * Flow yang emit setiap kali koleksi MediaStore berubah (item baru,
-     * terhapus, dsb). Emit sekali di awal supaya konsumer langsung memuat
-     * snapshot pertama. Dipakai untuk auto re-indexing daftar album.
+     * Flow that emits whenever the MediaStore collection changes (item added,
+     * removed, etc.). Emits once at the start so consumers immediately load the
+     * first snapshot. Used for auto re-indexing of the album list.
      */
     fun contentChanges(): Flow<Unit> = callbackFlow {
         val observer = object : ContentObserver(Handler(Looper.getMainLooper())) {
@@ -93,11 +83,11 @@ class MediaStoreDataSource(
             }
         }
         resolver.registerContentObserver(collectionUri, true, observer)
-        trySend(Unit) // snapshot awal
+        trySend(Unit)
         awaitClose { resolver.unregisterContentObserver(observer) }
     }
 
-    /** Daftarkan observer eksternal (dipakai PagingSource utk invalidate). */
+    /** Registers an external observer (used by PagingSource to invalidate). */
     fun registerObserver(observer: ContentObserver) {
         resolver.registerContentObserver(collectionUri, true, observer)
     }
@@ -106,11 +96,7 @@ class MediaStoreDataSource(
         resolver.unregisterContentObserver(observer)
     }
 
-    // -----------------------------------------------------------------
-    //  Selection helpers
-    // -----------------------------------------------------------------
-
-    /** Terapkan filter "pengecualian ID" (mis. daftar trash). */
+    /** Applies an "exclude IDs" filter (e.g. the trash list). */
     private fun applyExclusion(
         base: String,
         args: List<String>,
@@ -123,7 +109,7 @@ class MediaStoreDataSource(
         return newSel to newArgs.toTypedArray()
     }
 
-    /** Terapkan filter "hanya ID di dalam set" (mis. daftar favorit). */
+    /** Applies an "only IDs in the set" filter (e.g. the favorites list). */
     private fun applyInclusion(
         base: String,
         args: List<String>,
@@ -136,8 +122,8 @@ class MediaStoreDataSource(
     }
 
     /**
-     * Bangun WHERE clause dasar sesuai [scope]. Selalu mencakup filter
-     * jenis media (foto & video) supaya file lain tidak bocor.
+     * Builds the base WHERE clause for [scope]. Always includes the media-type
+     * filter (photos & videos) so other files do not leak in.
      */
     private fun buildScopeSelection(scope: MediaScope): Pair<String, List<String>> {
         val bothTypes = "(${MediaStore.Files.FileColumns.MEDIA_TYPE}=? OR " +
@@ -150,29 +136,19 @@ class MediaStoreDataSource(
             }
             MediaScope.AllMedia,
             MediaScope.Favorites -> {
-                // Favorites di-filter lebih lanjut via applyInclusion(favIds).
                 bothTypes to bothArgs
             }
             MediaScope.Trash -> {
-                // Trash BUKAN scope MediaStore -- konten diambil langsung dari
-                // tabel Room `trashed`. Kalau ada caller yg salah memanggil
-                // getMediaPaging(Trash), kembalikan clause "kosong" biar hasil
-                // paging pasti empty (bukan crash / bocor semua media).
                 "1=0" to emptyList()
             }
             MediaScope.AllVideos -> {
                 "${MediaStore.Files.FileColumns.MEDIA_TYPE}=?" to listOf(videoType.toString())
             }
             MediaScope.Screenshots -> {
-                // Cocokkan case-insensitive utk variasi vendor (Pictures/Screenshots,
-                // DCIM/Screenshots, dll.).
                 val sel = "$bothTypes AND LOWER(${MediaStore.Files.FileColumns.RELATIVE_PATH}) LIKE ?"
                 sel to (bothArgs + "%screenshots/%")
             }
             MediaScope.ScreenRecordings -> {
-                // Screen recordings hanya bertipe video. Vendor menaruh di
-                // "Movies/Screen recordings/" (Google/AOSP), "DCIM/Screen recordings/"
-                // (beberapa OEM), atau "Movies/ScreenRecorder/" (Xiaomi/OPPO).
                 val sel = ("${MediaStore.Files.FileColumns.MEDIA_TYPE}=? " +
                     "AND (LOWER(${MediaStore.Files.FileColumns.RELATIVE_PATH}) LIKE ? " +
                     "OR LOWER(${MediaStore.Files.FileColumns.RELATIVE_PATH}) LIKE ?)")
@@ -188,10 +164,6 @@ class MediaStoreDataSource(
             }
         }
     }
-
-    // -----------------------------------------------------------------
-    //  Query media
-    // -----------------------------------------------------------------
 
     suspend fun queryMedia(
         limit: Int,
@@ -212,10 +184,6 @@ class MediaStoreDataSource(
         val orderByCol = MediaStore.Files.FileColumns.DATE_ADDED
         val dir = if (sortOrder == GallerySortOrder.DateAsc) "ASC" else "DESC"
 
-        // Android 11+ menolak "LIMIT ... OFFSET ..." di string sortOrder
-        // (IllegalArgumentException: Invalid token LIMIT). Pakai Bundle-based
-        // query dgn QUERY_ARG_LIMIT/OFFSET. Overload ini tersedia sejak API 26,
-        // minSdk kita 29 jadi aman tanpa fallback.
         val queryArgs = Bundle().apply {
             putString(ContentResolver.QUERY_ARG_SQL_SORT_ORDER, "$orderByCol $dir")
             putInt(ContentResolver.QUERY_ARG_LIMIT, limit)
@@ -251,7 +219,7 @@ class MediaStoreDataSource(
         )?.use { it.count } ?: 0
     }
 
-    /** Sama dgn [queryMedia] tapi tanpa limit -- utk viewer. */
+    /** Same as [queryMedia] but without a limit -- for the viewer. */
     suspend fun queryAllMedia(
         sortOrder: GallerySortOrder,
         excludeIds: Set<Long> = emptySet(),
@@ -277,13 +245,9 @@ class MediaStoreDataSource(
         items
     }
 
-    // -----------------------------------------------------------------
-    //  Query albums (folder + album cerdas)
-    // -----------------------------------------------------------------
-
     /**
-     * Akumulator album folder: cover = item terbaru (karena kita
-     * memindai DATE_ADDED DESC), plus penghitung foto/video.
+     * Folder album accumulator: cover = newest item (because we scan
+     * DATE_ADDED DESC), plus photo/video counters.
      */
     private data class AlbumAccumulator(
         var name: String,
@@ -293,8 +257,8 @@ class MediaStoreDataSource(
     )
 
     /**
-     * Akumulator album cerdas. Karena kita memindai DATE_ADDED DESC, item
-     * pertama yang match otomatis jadi cover.
+     * Smart album accumulator. Because we scan DATE_ADDED DESC, the first
+     * matching item automatically becomes the cover.
      */
     private class SmartAccumulator {
         var coverUri: String? = null
@@ -310,15 +274,15 @@ class MediaStoreDataSource(
     }
 
     /**
-     * Kembalikan daftar album (cerdas dulu, lalu folder). Sekali pindai
-     * MediaStore -> semua accumulator terisi bareng.
+     * Returns the album list (smart albums first, then folders). A single
+     * MediaStore scan -> all accumulators are filled together.
      *
-     * @param favoriteIds   ID media yg difavoritkan (utk album Favorites).
-     * @param trashedIds    ID media yg sedang di Trash -> DIKECUALIKAN dari
-     *   hitungan & cover, sehingga album yg isinya habis ke-trash ikut hilang
-     *   dan cover tidak pernah menampilkan item yg sudah di-trash.
-     * @param coverOverrides Map albumKey -> mediaId pilihan user ("Set as
-     *   Cover"). Dipakai hanya bila item-nya masih ada & tidak di-trash.
+     * @param favoriteIds   IDs of favorited media (for the Favorites album).
+     * @param trashedIds    IDs of media currently in Trash -> EXCLUDED from
+     *   counts & covers, so an album whose content is fully trashed disappears
+     *   and a cover never shows an item that is already trashed.
+     * @param coverOverrides Map of albumKey -> user-chosen mediaId ("Set as
+     *   Cover"). Used only when the item still exists and is not trashed.
      */
     suspend fun queryAlbums(
         favoriteIds: Set<Long>,
@@ -328,10 +292,8 @@ class MediaStoreDataSource(
         val (sel, args) = buildScopeSelection(MediaScope.AllMedia)
         val orderSql = "${MediaStore.Files.FileColumns.DATE_ADDED} DESC"
 
-        // Folder-based accumulators (kunci = bucketId)
         val folders = LinkedHashMap<Long, AlbumAccumulator>()
 
-        // Smart album accumulators
         val smartRecent = SmartAccumulator()
         val smartCamera = SmartAccumulator()
         val smartVideos = SmartAccumulator()
@@ -339,15 +301,10 @@ class MediaStoreDataSource(
         val smartRecordings = SmartAccumulator()
         val smartFavorites = SmartAccumulator()
 
-        // Bucket yang identik dgn album cerdas "folder-like" (Camera,
-        // Screenshots, Screen Recordings). Dikumpulkan supaya folder-nya TIDAK
-        // dobel muncul di section "More" (album cerdas sudah mewakilinya).
         val cameraBucketIds = HashSet<Long>()
         val screenshotBucketIds = HashSet<Long>()
         val recordingBucketIds = HashSet<Long>()
 
-        // URI utk id yg jadi target "Set as Cover" (hanya yg tidak di-trash,
-        // karena item trash sudah di-`continue` sebelum tercatat).
         val overrideIds = coverOverrides.values.toHashSet()
         val overrideUriById = HashMap<Long, String>()
 
@@ -366,7 +323,6 @@ class MediaStoreDataSource(
 
             while (c.moveToNext()) {
                 val id = c.getLong(idCol)
-                // Item yg sedang di Trash tidak boleh ikut dihitung/di-cover.
                 if (id in trashedIds) continue
                 val uri = ContentUris.withAppendedId(collectionUri, id).toString()
                 val isVideo = c.getInt(typeCol) == videoType
@@ -374,13 +330,11 @@ class MediaStoreDataSource(
                 val bucketName = c.getStringOrNull(bucketNameCol).orEmpty()
                 val path = c.getStringOrNull(pathCol).orEmpty().lowercase()
 
-                // Folder accumulator
                 val acc = folders.getOrPut(bucketId) { AlbumAccumulator(name = bucketName) }
                 if (acc.name.isEmpty() && bucketName.isNotEmpty()) acc.name = bucketName
                 if (acc.coverUri == null) acc.coverUri = uri
                 if (isVideo) acc.videoCount++ else acc.photoCount++
 
-                // Smart accumulators
                 smartRecent.add(uri, isVideo)
                 if (path.startsWith("dcim/camera/")) {
                     smartCamera.add(uri, isVideo)
@@ -401,12 +355,9 @@ class MediaStoreDataSource(
             }
         }
 
-        // Cover pilihan user utk sebuah albumKey (null bila item-nya sudah
-        // tidak ada / di-trash -> otomatis fallback ke cover default).
         fun overrideCover(key: String): String? =
             coverOverrides[key]?.let { overrideUriById[it] }
 
-        // Susun hasil: smart dulu (urutan kanonik), lalu folder.
         val smart = buildList {
             fun addIfAny(key: String, name: String, acc: SmartAccumulator) {
                 if (acc.itemCount == 0) return
@@ -431,9 +382,6 @@ class MediaStoreDataSource(
         }
 
         val folderAlbums = folders
-            // Buang folder yg sudah diwakili album cerdas folder-like (hindari
-            // duplikat visual di "More") + folder yg jadi kosong akibat semua
-            // item-nya di-trash.
             .filterKeys {
                 it !in cameraBucketIds &&
                     it !in screenshotBucketIds &&

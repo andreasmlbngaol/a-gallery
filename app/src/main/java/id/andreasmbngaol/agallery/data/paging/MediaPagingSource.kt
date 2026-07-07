@@ -11,35 +11,30 @@ import id.andreasmbngaol.agallery.domain.model.media.MediaItem
 import id.andreasmbngaol.agallery.domain.model.media.MediaScope
 
 /**
- * PagingSource offset-based di atas [MediaStoreDataSource].
+ * Offset-based PagingSource on top of [MediaStoreDataSource].
  *
- * ## Kenapa placeholders + itemsBefore/itemsAfter?
+ * ## Why placeholders + itemsBefore/itemsAfter?
  *
- * Grid dan viewer memakai stream paging TERPISAH (VM berbeda). Supaya posisi
- * tap di grid (`index` absolut) bisa dibuka langsung di viewer, tiap halaman
- * WAJIB tahu posisinya di dalam total (`itemsBefore`) + sisa di bawahnya
- * (`itemsAfter`). Dengan placeholders aktif, `LazyPagingItems.itemCount` =
- * total sebenarnya, jadi index mana pun valid seketika.
+ * The grid and the viewer use SEPARATE paging streams (different view models).
+ * So that a tap position in the grid (an absolute `index`) can be opened
+ * directly in the viewer, every page MUST know its position within the total
+ * (`itemsBefore`) and how many items remain below it (`itemsAfter`). With
+ * placeholders enabled, `LazyPagingItems.itemCount` equals the real total, so
+ * any index is valid immediately.
  *
- * ## Konsistensi offset
+ * ## Offset consistency
  *
- * `key` = nomor halaman; `offset = page * PAGE_SIZE`. Ini hanya benar kalau
- * SEMUA load berukuran sama, makanya di [androidx.paging.PagingConfig] `initialLoadSize`
- * disetel = `pageSize` (= [PAGE_SIZE]).
+ * `key` is the page number; `offset = page * PAGE_SIZE`. This only holds when
+ * EVERY load has the same size, which is why [androidx.paging.PagingConfig]
+ * `initialLoadSize` is set to `pageSize` (= [PAGE_SIZE]).
  */
 class MediaPagingSource(
     private val dataSource: MediaStoreDataSource,
     private val sortOrder: GallerySortOrder,
     private val excludeIds: Set<Long> = emptySet(),
     private val scope: MediaScope = MediaScope.Camera,
-    // Kalau non-null, HANYA ID yang ada di set ini yang dimuat (dipakai
-    // scope Favorites di repository). includeIds kosong -> hasil kosong.
     private val includeIds: Set<Long>? = null,
 ) : PagingSource<Int, MediaItem>() {
-
-    // Auto re-indexing: begitu MediaStore berubah (foto/video baru, terhapus),
-    // batalkan source ini supaya Paging membuat source baru & memuat ulang.
-    // getRefreshKey menjaga posisi scroll mendekati anchor semula.
     private val observer = object : ContentObserver(Handler(Looper.getMainLooper())) {
         override fun onChange(selfChange: Boolean) {
             invalidate()

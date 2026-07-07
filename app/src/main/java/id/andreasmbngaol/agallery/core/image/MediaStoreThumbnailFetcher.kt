@@ -10,26 +10,8 @@ import coil3.decode.DataSource
 import coil3.fetch.FetchResult
 import coil3.fetch.Fetcher
 import coil3.fetch.ImageFetchResult
-import coil3.key.Keyer
 import coil3.request.Options
 import coil3.size.pxOrElse
-
-/**
- * Lightweight model handed to Coil as the `data` for a grid thumbnail request.
- *
- * Using a dedicated type (instead of a plain `String` or `Uri`) routes grid
- * requests to [MediaStoreThumbnailFetcher] rather than Coil's default fetcher,
- * which would open and decode the full-resolution photo.
- *
- * @property uri the `content://` uri of the item (photo or video).
- * @property isVideo whether the item is a video; `loadThumbnail` extracts a
- *   single frame automatically, so no separate video-frame decoder is needed
- *   for the grid.
- */
-data class MediaStoreThumbnail(
-    val uri: String,
-    val isVideo: Boolean,
-)
 
 /**
  * Coil [Fetcher] that loads thumbnails via [ContentResolver.loadThumbnail],
@@ -113,21 +95,5 @@ class MediaStoreThumbnailFetcher(
     companion object {
         /** Fallback thumbnail size in pixels when a request omits its size. */
         private const val DEFAULT_THUMBNAIL_PX = 400
-    }
-}
-
-/**
- * Coil [Keyer] for [MediaStoreThumbnail] so fetch results can enter the memory
- * and disk caches.
- *
- * Without a keyer Coil cannot derive a cache key from the custom type and would
- * refetch on every display. The key combines the uri and the target size, so
- * the same thumbnail is not decoded repeatedly while scrolling back and forth.
- */
-class MediaStoreThumbnailKeyer : Keyer<MediaStoreThumbnail> {
-    override fun key(data: MediaStoreThumbnail, options: Options): String {
-        val w = options.size.width.pxOrElse { 0 }
-        val h = options.size.height.pxOrElse { 0 }
-        return "${data.uri}#thumb=${w}x$h"
     }
 }

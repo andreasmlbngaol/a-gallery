@@ -8,6 +8,10 @@ import id.andreasmbngaol.agallery.data.local.room.entity.FavoriteEntity
 import id.andreasmbngaol.agallery.data.local.room.entity.TrashedEntity
 import kotlinx.coroutines.flow.Flow
 
+/**
+ * Room DAO for the app's local state: favorites, soft-delete Trash markers, and
+ * per-album cover overrides.
+ */
 @Dao
 interface MediaDao {
     @Query("SELECT mediaId FROM favorites")
@@ -19,13 +23,11 @@ interface MediaDao {
     @Query("DELETE FROM favorites WHERE mediaId = :mediaId")
     suspend fun removeFavorite(mediaId: Long)
 
-    // --- Trash (soft-delete, retensi 30 hari) ---
-
-    /** ID media yg sedang di Trash; dipakai repo utk menyaring grid & viewer. */
+    /** IDs of media currently in Trash; used by the repository to filter the grid & viewer. */
     @Query("SELECT mediaId FROM trashed")
     fun observeTrashedIds(): Flow<List<Long>>
 
-    /** Isi Trash lengkap (terbaru dulu) — untuk layar Trash. */
+    /** Full Trash contents (newest first) -- for the Trash screen. */
     @Query("SELECT * FROM trashed ORDER BY trashedAt DESC")
     fun observeTrashed(): Flow<List<TrashedEntity>>
 
@@ -35,15 +37,13 @@ interface MediaDao {
     @Query("DELETE FROM trashed WHERE mediaId = :mediaId")
     suspend fun removeTrashed(mediaId: Long)
 
-    /** Marker Trash yg lebih tua dari [threshold] (epoch ms) — utk purge 30 hari. */
+    /** Trash markers older than [threshold] (epoch ms) -- for the 30-day purge. */
     @Query("SELECT * FROM trashed WHERE trashedAt < :threshold")
     suspend fun getTrashedOlderThan(threshold: Long): List<TrashedEntity>
 
-    /** Hapus marker Trash yg lebih tua dari [threshold] (epoch ms) → purge 30 hari. */
+    /** Deletes Trash markers older than [threshold] (epoch ms) -> the 30-day purge. */
     @Query("DELETE FROM trashed WHERE trashedAt < :threshold")
     suspend fun purgeTrashedOlderThan(threshold: Long)
-
-    // --- Album cover override ("Set as Cover") ---
 
     @Query("SELECT * FROM album_cover")
     fun observeAlbumCovers(): Flow<List<AlbumCoverEntity>>

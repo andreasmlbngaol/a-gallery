@@ -10,10 +10,14 @@ import id.andreasmbngaol.agallery.domain.model.settings.MAX_GRID_COLUMNS
 import id.andreasmbngaol.agallery.domain.model.settings.MIN_GRID_COLUMNS
 import id.andreasmbngaol.agallery.domain.model.settings.PerformanceMode
 
+/**
+ * Maps the persisted [AppSettingsDto] into the domain [AppSettings], applying
+ * defaults and clamping for absent or out-of-range values and migrating legacy
+ * enum names to their current equivalents.
+ */
 fun AppSettingsDto.toDomain(): AppSettings =
     AppSettings(
         edgeEffectMode = edgeEffectMode?.let { raw ->
-            // Migrasi nama lama -> baru (rilis <= 0.3.9 menyimpan FROSTED/GRADIENT).
             val normalized = when (raw) {
                 "FROSTED" -> "BLURRY"
                 "GRADIENT" -> "DARKEN"
@@ -34,13 +38,3 @@ fun AppSettingsDto.toDomain(): AppSettings =
             ?: PerformanceMode.BALANCED,
         pinnedAlbumKeys = pinnedAlbumKeys,
     )
-
-//fun AppSettings.toDto(): AppSettingsDto =
-//    AppSettingsDto(
-//        edgeEffectMode = edgeEffectMode?.name,
-//        componentStyle = componentStyle?.name,
-//        gridColumns = gridColumns,
-//        sortOrder = sortOrder.name,
-//        performanceMode = performanceMode.name,
-//        pinnedAlbumKeys = pinnedAlbumKeys,
-//    )

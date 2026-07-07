@@ -14,10 +14,15 @@ import id.andreasmbngaol.agallery.domain.repository.SettingsRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 
+/**
+ * [SettingsRepository] backed by a typed DataStore of [AppSettingsDto].
+ *
+ * Reads expose the persisted settings as a mapped domain [AppSettings] stream,
+ * and each setter updates a single field, storing enums by name.
+ */
 class SettingsRepositoryImpl(
     private val dataStore: DataStore<AppSettingsDto>,
 ) : SettingsRepository {
-
     override val settings: Flow<AppSettings> =
         dataStore.data.map { it.toDomain() }
 

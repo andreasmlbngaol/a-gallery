@@ -13,36 +13,28 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
 /**
- * Operasi TULIS/EDIT ke MediaStore via ContentResolver: hapus, rename, pindah,
- * & salin, termasuk penanganan consent (SAF write/delete request) untuk file
- * yang bukan milik app. Dipisah dari [MediaStoreDataSource] supaya kueri & tulis
- * tidak numpuk di satu file.
+ * WRITE/EDIT operations against MediaStore via ContentResolver: delete, rename,
+ * move, and copy, including consent handling (SAF write/delete requests) for
+ * files not owned by the app. Kept separate from [MediaStoreDataSource] so
+ * queries and writes do not pile up in one file.
  */
 class MediaStoreEditor(
     private val context: Context,
 ) {
     private val resolver get() = context.contentResolver
 
-    // -----------------------------------------------------------------
-    //  Delete request (SAF / API 30+)
-    // -----------------------------------------------------------------
-
     fun buildDeleteRequest(uris: List<Uri>): IntentSender? {
         if (uris.isEmpty()) return null
-        // All-files access ON -> hapus LANGSUNG tanpa dialog konfirmasi sistem.
         if (AllFilesAccess.isGranted()) {
             try {
                 uris.forEach { resolver.delete(it, null, null) }
                 return null
             } catch (_: SecurityException) {
-                // Jatuh ke jalur consent di bawah kalau ternyata tetap ditolak.
             }
         }
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
             return MediaStore.createDeleteRequest(resolver, uris).intentSender
         }
-        // Fallback: coba delete langsung. Kalau butuh consent, akan lempar
-        // RecoverableSecurityException -> IntentSender bisa diambil.
         return try {
             uris.forEach { resolver.delete(it, null, null) }
             null
@@ -54,8 +46,8 @@ class MediaStoreEditor(
     }
 
     /**
-     * Bangun write-request untuk BANYAK uri sekaligus (batch move). Null bila
-     * All-files access aktif (tak perlu consent) atau perangkat < API 30.
+     * Builds a write request for MANY uris at once (batch move). Null when
+     * All-files access is active (no consent needed) or the device is < API 30.
      */
     fun buildWriteRequest(uris: List<Uri>): IntentSender? {
         if (uris.isEmpty()) return null
@@ -66,13 +58,13 @@ class MediaStoreEditor(
         return null
     }
 
-    /** True bila app punya All-files access (atau OS < 11 yg tak butuh). */
+    /** True when the app has All-files access (or OS < 11, which does not need it). */
     fun hasAllFilesAccess(): Boolean = AllFilesAccess.isGranted()
 
     /**
-     * Hapus PERMANEN langsung via ContentResolver tanpa dialog. Hanya berhasil
-     * bila app punya All-files access (API 30+) atau file milik app sendiri.
-     * Dipakai auto-purge Trash di background. Return true kalau semua terhapus.
+     * PERMANENTLY deletes directly via ContentResolver without a dialog. Only
+     * succeeds when the app has All-files access (API 30+) or owns the files.
+     * Used by the background Trash auto-purge. Returns true if all were deleted.
      */
     fun deleteDirect(uris: List<Uri>): Boolean {
         if (uris.isEmpty()) return true
@@ -84,7 +76,7 @@ class MediaStoreEditor(
         }
     }
 
-    /** Setelah user setuju di consent dialog, jalankan block ini. */
+    /** Runs this after the user approves the consent dialog. */
     fun updateWithConsent(uri: Uri, values: ContentValues): IntentSender? {
         return try {
             resolver.update(uri, values, null, null)

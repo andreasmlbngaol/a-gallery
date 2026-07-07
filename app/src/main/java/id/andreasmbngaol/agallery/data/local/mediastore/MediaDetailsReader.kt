@@ -19,10 +19,10 @@ import java.util.Locale
 import kotlin.math.roundToInt
 
 /**
- * Baca detail teknis media untuk info bottom sheet: dimensi/ukuran dari
- * MediaStore, lalu diperkaya EXIF (foto) atau metadata video (bitrate, codec,
- * fps, lokasi). Dipisah dari [MediaStoreDataSource] karena murni operasi baca
- * yang berdiri sendiri.
+ * Reads technical media details for the info bottom sheet: dimensions/size from
+ * MediaStore, then enriched with EXIF (photos) or video metadata (bitrate,
+ * codec, fps, location). Kept separate from [MediaStoreDataSource] because it is
+ * a purely standalone read operation.
  */
 class MediaDetailsReader(
     private val context: Context,
@@ -49,12 +49,10 @@ class MediaDetailsReader(
         } ?: return@withContext null
 
         val (details, mime) = base
-        // Perkaya dgn metadata teknis. Semua dibungkus try/catch supaya file
-        // tanpa metadata (mis. screenshot) tetap aman -> field ekstra null.
         if (mime.startsWith("video")) enrichVideo(uri, details) else enrichImage(uri, details)
     }
 
-    /** Baca EXIF foto: kamera, exposure, flash, tanggal ambil & GPS. */
+    /** Reads photo EXIF: camera, exposure, flash, capture date & GPS. */
     private fun enrichImage(uri: Uri, base: MediaDetails): MediaDetails = try {
         resolver.openInputStream(uri)?.use { stream ->
             val exif = ExifInterface(stream)
@@ -82,7 +80,7 @@ class MediaDetailsReader(
         base
     }
 
-    /** Baca metadata teknis video: bitrate, dimensi, lokasi, codec & fps. */
+    /** Reads technical video metadata: bitrate, dimensions, location, codec & fps. */
     private fun enrichVideo(uri: Uri, base: MediaDetails): MediaDetails {
         var result = base
 
@@ -111,7 +109,6 @@ class MediaDetailsReader(
                 longitude = lng,
             )
         } catch (_: Exception) {
-            // biarkan result apa adanya
         } finally {
             try { retriever.release() } catch (_: Exception) { }
         }
@@ -141,7 +138,6 @@ class MediaDetailsReader(
                 frameRate = frameRate,
             )
         } catch (_: Exception) {
-            // biarkan result apa adanya
         } finally {
             try { extractor.release() } catch (_: Exception) { }
         }
@@ -215,7 +211,7 @@ class MediaDetailsReader(
         }
     }
 
-    /** Parse string lokasi ISO-6709 (mis "+37.42-122.08/") -> lat/long. */
+    /** Parses an ISO-6709 location string (e.g. "+37.42-122.08/") -> lat/long. */
     private fun parseIso6709(raw: String?): Pair<Double?, Double?> {
         if (raw.isNullOrBlank()) return null to null
         return try {

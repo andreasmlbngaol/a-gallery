@@ -3,12 +3,13 @@ package id.andreasmbngaol.agallery.data.local.prefs
 import kotlinx.serialization.Serializable
 
 /**
- * Representasi tersimpan di DataStore. Sengaja dipisah dari domain
- * [id.andreasmbngaol.agallery.domain.model.settings.AppSettings] supaya domain bersih
- * dari anotasi serialization & bebas dari perubahan format storage.
+ * Persisted representation stored in DataStore. Deliberately kept separate from
+ * the domain [id.andreasmbngaol.agallery.domain.model.settings.AppSettings] so
+ * the domain stays free of serialization annotations and insulated from storage
+ * format changes.
  *
- * Semua field nullable = toleran versi lama (field baru absen -> pakai default
- * domain saat mapping).
+ * Every field is nullable for backward compatibility: an absent (newly added)
+ * field falls back to the domain default during mapping.
  */
 @Serializable
 data class AppSettingsDto(

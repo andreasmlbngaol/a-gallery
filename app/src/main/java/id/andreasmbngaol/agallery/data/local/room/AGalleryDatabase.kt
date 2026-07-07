@@ -9,6 +9,13 @@ import id.andreasmbngaol.agallery.data.local.room.entity.AlbumCoverEntity
 import id.andreasmbngaol.agallery.data.local.room.entity.FavoriteEntity
 import id.andreasmbngaol.agallery.data.local.room.entity.TrashedEntity
 
+/**
+ * Room database backing the app's local state: favorites, the soft-delete Trash
+ * records, and per-album cover overrides.
+ *
+ * Schema changes are applied through [MIGRATION_1_2] and [MIGRATION_2_3] so user
+ * data survives upgrades without a destructive migration.
+ */
 @Database(
     entities = [FavoriteEntity::class, TrashedEntity::class, AlbumCoverEntity::class],
     version = 3,
@@ -19,9 +26,10 @@ abstract class AGalleryDatabase : RoomDatabase() {
 }
 
 /**
- * v1 -> v2: menambah tabel [TrashedEntity] ("trashed") untuk fitur Trash
- * (soft-delete 30 hari). Tabel `favorites` tidak berubah, jadi cukup CREATE
- * TABLE baru — data favorit user TETAP aman (tanpa destructive migration).
+ * v1 -> v2: adds the [TrashedEntity] ("trashed") table for the Trash feature
+ * (30-day soft delete). The `favorites` table is unchanged, so only a new CREATE
+ * TABLE is required -- existing user favorites stay intact (no destructive
+ * migration).
  */
 val MIGRATION_1_2 = object : Migration(1, 2) {
     override fun migrate(db: SupportSQLiteDatabase) {
@@ -37,10 +45,11 @@ val MIGRATION_1_2 = object : Migration(1, 2) {
 
 /**
  * v2 -> v3:
- * - Menambah kolom `isVideo` + `durationMs` ke tabel `trashed` supaya layar
- *   Trash bisa menampilkan badge video + durasi (baris lama default 0/false).
- * - Menambah tabel `album_cover` untuk fitur "Set as Cover" (override sampul
- *   album per user).
+ * - Adds the `isVideo` and `durationMs` columns to the `trashed` table so the
+ *   Trash screen can show the video badge and duration (existing rows default to
+ *   0/false).
+ * - Adds the `album_cover` table for the "Set as Cover" feature (per-user album
+ *   cover override).
  */
 val MIGRATION_2_3 = object : Migration(2, 3) {
     override fun migrate(db: SupportSQLiteDatabase) {

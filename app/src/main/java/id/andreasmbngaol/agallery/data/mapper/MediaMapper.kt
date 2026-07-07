@@ -7,8 +7,10 @@ import id.andreasmbngaol.agallery.domain.model.media.MediaItem
 import id.andreasmbngaol.agallery.domain.model.media.MediaType
 
 /**
- * Map 1 baris cursor MediaStore.Files -> MediaItem (domain).
- * Cursor wajib punya kolom sesuai projection di MediaStoreDataSource.
+ * Maps a single MediaStore.Files cursor row into a domain [MediaItem].
+ *
+ * The cursor must expose the columns declared by the projection in
+ * [id.andreasmbngaol.agallery.data.local.mediastore.MediaStoreDataSource].
  */
 fun Cursor.toMediaItem(): MediaItem {
     val id = getLong(getColumnIndexOrThrow(MediaStore.Files.FileColumns._ID))
@@ -18,7 +20,6 @@ fun Cursor.toMediaItem(): MediaItem {
         if (mediaTypeInt == MediaStore.Files.FileColumns.MEDIA_TYPE_VIDEO) MediaType.VIDEO
         else MediaType.IMAGE
 
-    // URI content:// spesifik per tipe supaya aman dimuat Coil / dibuka viewer.
     val baseUri = when (type) {
         MediaType.VIDEO -> MediaStore.Video.Media.EXTERNAL_CONTENT_URI
         MediaType.IMAGE -> MediaStore.Images.Media.EXTERNAL_CONTENT_URI
