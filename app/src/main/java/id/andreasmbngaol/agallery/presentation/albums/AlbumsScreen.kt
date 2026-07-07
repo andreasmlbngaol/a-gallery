@@ -89,10 +89,10 @@ import id.andreasmbngaol.agallery.core.ui.ScreenTopBarHeight
 import id.andreasmbngaol.agallery.core.ui.drawsBackdrop
 import id.andreasmbngaol.agallery.core.ui.usesBlur
 import id.andreasmbngaol.agallery.core.ui.usesLens
-import id.andreasmbngaol.agallery.domain.model.Album
-import id.andreasmbngaol.agallery.domain.model.ComponentStyle
-import id.andreasmbngaol.agallery.domain.model.EdgeEffectMode
-import id.andreasmbngaol.agallery.domain.model.LOCKED_PIN_ALBUM_KEYS
+import id.andreasmbngaol.agallery.domain.model.album.Album
+import id.andreasmbngaol.agallery.domain.model.settings.ComponentStyle
+import id.andreasmbngaol.agallery.domain.model.settings.EdgeEffectMode
+import id.andreasmbngaol.agallery.domain.model.album.LOCKED_PIN_ALBUM_KEYS
 import id.andreasmbngaol.agallery.presentation.animation.sharedPhotoElement
 import org.koin.androidx.compose.koinViewModel
 

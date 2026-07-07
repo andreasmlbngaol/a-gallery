@@ -2,15 +2,15 @@ package id.andreasmbngaol.agallery.presentation.settings
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import id.andreasmbngaol.agallery.domain.model.AppSettings
-import id.andreasmbngaol.agallery.domain.model.ComponentStyle
-import id.andreasmbngaol.agallery.domain.model.EdgeEffectMode
-import id.andreasmbngaol.agallery.domain.model.PerformanceMode
-import id.andreasmbngaol.agallery.domain.usecase.GetSettingsUseCase
-import id.andreasmbngaol.agallery.domain.usecase.SetComponentStyleUseCase
-import id.andreasmbngaol.agallery.domain.usecase.SetEdgeEffectModeUseCase
-import id.andreasmbngaol.agallery.domain.usecase.SetGridColumnsUseCase
-import id.andreasmbngaol.agallery.domain.usecase.SetPerformanceModeUseCase
+import id.andreasmbngaol.agallery.domain.model.settings.AppSettings
+import id.andreasmbngaol.agallery.domain.model.settings.ComponentStyle
+import id.andreasmbngaol.agallery.domain.model.settings.EdgeEffectMode
+import id.andreasmbngaol.agallery.domain.model.settings.PerformanceMode
+import id.andreasmbngaol.agallery.domain.usecase.settings.GetSettingsUseCase
+import id.andreasmbngaol.agallery.domain.usecase.settings.SetComponentStyleUseCase
+import id.andreasmbngaol.agallery.domain.usecase.settings.SetEdgeEffectModeUseCase
+import id.andreasmbngaol.agallery.domain.usecase.settings.SetGridColumnsUseCase
+import id.andreasmbngaol.agallery.domain.usecase.settings.SetPerformanceModeUseCase
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.stateIn

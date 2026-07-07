@@ -4,7 +4,7 @@ import kotlinx.serialization.Serializable
 
 /**
  * Representasi tersimpan di DataStore. Sengaja dipisah dari domain
- * [id.andreasmbngaol.agallery.domain.model.AppSettings] supaya domain bersih
+ * [id.andreasmbngaol.agallery.domain.model.settings.AppSettings] supaya domain bersih
  * dari anotasi serialization & bebas dari perubahan format storage.
  *
  * Semua field nullable = toleran versi lama (field baru absen -> pakai default

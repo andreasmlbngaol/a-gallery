@@ -9,7 +9,7 @@ import android.provider.MediaStore
 import androidx.core.database.getStringOrNull
 import androidx.core.net.toUri
 import androidx.exifinterface.media.ExifInterface
-import id.andreasmbngaol.agallery.domain.model.MediaDetails
+import id.andreasmbngaol.agallery.domain.model.media.MediaDetails
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.time.LocalDateTime

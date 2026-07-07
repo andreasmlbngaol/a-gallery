@@ -1,7 +1,7 @@
 package id.andreasmbngaol.agallery.core.navigation
 
 import androidx.navigation3.runtime.NavKey
-import id.andreasmbngaol.agallery.domain.model.GallerySortOrder
+import id.andreasmbngaol.agallery.domain.model.settings.GallerySortOrder
 import kotlinx.serialization.Serializable
 
 /**

@@ -99,9 +99,9 @@ import id.andreasmbngaol.agallery.core.ui.rememberEffectiveComponentStyle
 import id.andreasmbngaol.agallery.core.ui.rememberEffectiveEdgeEffectMode
 import id.andreasmbngaol.agallery.core.ui.usesBlur
 import id.andreasmbngaol.agallery.core.ui.usesLens
-import id.andreasmbngaol.agallery.domain.model.ComponentStyle
-import id.andreasmbngaol.agallery.domain.model.MediaDetails
-import id.andreasmbngaol.agallery.domain.model.TrashItem
+import id.andreasmbngaol.agallery.domain.model.settings.ComponentStyle
+import id.andreasmbngaol.agallery.domain.model.media.MediaDetails
+import id.andreasmbngaol.agallery.domain.model.trash.TrashItem
 import id.andreasmbngaol.agallery.presentation.viewer.GlassIconButton
 import id.andreasmbngaol.agallery.presentation.viewer.VideoPlayerContent
 import kotlinx.coroutines.launch

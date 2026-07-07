@@ -26,7 +26,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 import id.andreasmbngaol.agallery.R
-import id.andreasmbngaol.agallery.domain.model.MetadataCategory
+import id.andreasmbngaol.agallery.domain.model.metadata.MetadataCategory
 
 /**
  * Dialog "Hapus metadata" (1.4.0).

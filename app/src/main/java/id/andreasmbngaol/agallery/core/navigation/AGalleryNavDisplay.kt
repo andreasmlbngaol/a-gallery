@@ -1,6 +1,5 @@
 package id.andreasmbngaol.agallery.core.navigation
 
-import androidx.compose.animation.ExperimentalSharedTransitionApi
 import androidx.compose.animation.SharedTransitionLayout
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
@@ -12,9 +11,9 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.navigation3.runtime.NavEntry
 import androidx.navigation3.runtime.rememberNavBackStack
 import androidx.navigation3.ui.NavDisplay
-import id.andreasmbngaol.agallery.presentation.animation.LocalSharedTransitionScope
 import id.andreasmbngaol.agallery.presentation.albums.AlbumDetailScreen
 import id.andreasmbngaol.agallery.presentation.albums.CreateAlbumScreen
+import id.andreasmbngaol.agallery.presentation.animation.LocalSharedTransitionScope
 import id.andreasmbngaol.agallery.presentation.home.HomeTabsScreen
 import id.andreasmbngaol.agallery.presentation.tools.qr.QrGeneratorScreen
 import id.andreasmbngaol.agallery.presentation.trash.TrashScreen
@@ -29,7 +28,6 @@ import id.andreasmbngaol.agallery.presentation.viewer.PhotoViewerScreen
  * [Screen] key to its destination composable and threads the navigation
  * callbacks that push or pop entries on the back stack.
  */
-@OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
 fun AGalleryNavDisplay() {
     val backStack = rememberNavBackStack(Screen.Home)

@@ -38,10 +38,10 @@ import com.adamglin.phosphoricons.Bold
 import com.adamglin.phosphoricons.bold.MapPin
 import com.kyant.backdrop.Backdrop
 import id.andreasmbngaol.agallery.R
-import id.andreasmbngaol.agallery.domain.model.ComponentStyle
-import id.andreasmbngaol.agallery.domain.model.MediaDetails
-import id.andreasmbngaol.agallery.domain.model.MediaItem
-import id.andreasmbngaol.agallery.domain.model.MediaType
+import id.andreasmbngaol.agallery.domain.model.settings.ComponentStyle
+import id.andreasmbngaol.agallery.domain.model.media.MediaDetails
+import id.andreasmbngaol.agallery.domain.model.media.MediaItem
+import id.andreasmbngaol.agallery.domain.model.media.MediaType
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter

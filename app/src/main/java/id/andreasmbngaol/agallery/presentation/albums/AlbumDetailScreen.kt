@@ -6,8 +6,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
-import id.andreasmbngaol.agallery.domain.model.GallerySortOrder
-import id.andreasmbngaol.agallery.domain.model.mediaScopeFromKey
+import id.andreasmbngaol.agallery.domain.model.settings.GallerySortOrder
+import id.andreasmbngaol.agallery.domain.model.album.mediaScopeFromKey
 import id.andreasmbngaol.agallery.presentation.animation.sharedPhotoElement
 import id.andreasmbngaol.agallery.presentation.gallery.GalleryGridScreen
 import id.andreasmbngaol.agallery.presentation.gallery.GalleryViewModel

@@ -66,9 +66,9 @@ import id.andreasmbngaol.agallery.core.ui.usesBlur
 import id.andreasmbngaol.agallery.core.ui.usesLens
 import androidx.compose.ui.res.stringResource
 import id.andreasmbngaol.agallery.R
-import id.andreasmbngaol.agallery.domain.model.Album
-import id.andreasmbngaol.agallery.domain.model.ComponentStyle
-import id.andreasmbngaol.agallery.domain.model.MediaItem
+import id.andreasmbngaol.agallery.domain.model.album.Album
+import id.andreasmbngaol.agallery.domain.model.settings.ComponentStyle
+import id.andreasmbngaol.agallery.domain.model.media.MediaItem
 import id.andreasmbngaol.agallery.presentation.viewer.GlassIconButton
 import id.andreasmbngaol.agallery.presentation.viewer.NewAlbumNameDialog
 import org.koin.androidx.compose.koinViewModel

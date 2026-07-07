@@ -72,7 +72,7 @@ import com.kyant.shapes.Capsule
 import id.andreasmbngaol.agallery.core.ui.drawsBackdrop
 import id.andreasmbngaol.agallery.core.ui.usesBlur
 import id.andreasmbngaol.agallery.core.ui.usesLens
-import id.andreasmbngaol.agallery.domain.model.ComponentStyle
+import id.andreasmbngaol.agallery.domain.model.settings.ComponentStyle
 
 // ---- Tuning liquid glass (samain dgn floating nav bar di GalleryTabScaffold) ----
 private val GlassBlurRadius = 4.dp

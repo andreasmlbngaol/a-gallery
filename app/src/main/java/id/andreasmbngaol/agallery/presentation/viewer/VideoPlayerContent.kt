@@ -78,7 +78,7 @@ import id.andreasmbngaol.agallery.R
 import id.andreasmbngaol.agallery.core.ui.drawsBackdrop
 import id.andreasmbngaol.agallery.core.ui.usesBlur
 import id.andreasmbngaol.agallery.core.ui.usesLens
-import id.andreasmbngaol.agallery.domain.model.ComponentStyle
+import id.andreasmbngaol.agallery.domain.model.settings.ComponentStyle
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch

@@ -9,8 +9,8 @@ import android.provider.MediaStore
 import androidx.core.database.getStringOrNull
 import androidx.core.net.toUri
 import androidx.exifinterface.media.ExifInterface
-import id.andreasmbngaol.agallery.domain.model.MetadataCategory
-import id.andreasmbngaol.agallery.domain.model.MetadataRemovalOutcome
+import id.andreasmbngaol.agallery.domain.model.metadata.MetadataCategory
+import id.andreasmbngaol.agallery.domain.model.metadata.MetadataRemovalOutcome
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.util.Locale

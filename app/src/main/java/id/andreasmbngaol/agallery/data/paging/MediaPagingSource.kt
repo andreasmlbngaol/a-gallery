@@ -6,9 +6,9 @@ import android.os.Looper
 import androidx.paging.PagingSource
 import androidx.paging.PagingState
 import id.andreasmbngaol.agallery.data.local.mediastore.MediaStoreDataSource
-import id.andreasmbngaol.agallery.domain.model.GallerySortOrder
-import id.andreasmbngaol.agallery.domain.model.MediaItem
-import id.andreasmbngaol.agallery.domain.model.MediaScope
+import id.andreasmbngaol.agallery.domain.model.settings.GallerySortOrder
+import id.andreasmbngaol.agallery.domain.model.media.MediaItem
+import id.andreasmbngaol.agallery.domain.model.media.MediaScope
 
 /**
  * PagingSource offset-based di atas [MediaStoreDataSource].

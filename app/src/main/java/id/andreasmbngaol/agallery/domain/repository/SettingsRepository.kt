@@ -1,14 +1,15 @@
 package id.andreasmbngaol.agallery.domain.repository
 
-import id.andreasmbngaol.agallery.domain.model.AppSettings
-import id.andreasmbngaol.agallery.domain.model.ComponentStyle
-import id.andreasmbngaol.agallery.domain.model.EdgeEffectMode
-import id.andreasmbngaol.agallery.domain.model.GallerySortOrder
-import id.andreasmbngaol.agallery.domain.model.PerformanceMode
+import id.andreasmbngaol.agallery.domain.model.settings.AppSettings
+import id.andreasmbngaol.agallery.domain.model.settings.ComponentStyle
+import id.andreasmbngaol.agallery.domain.model.settings.EdgeEffectMode
+import id.andreasmbngaol.agallery.domain.model.settings.GallerySortOrder
+import id.andreasmbngaol.agallery.domain.model.settings.PerformanceMode
 import kotlinx.coroutines.flow.Flow
 
 /**
- * Kontrak penyimpanan preferensi. Implementasi (DataStore) ada di layer data.
+ * Contract for preference storage. The implementation (DataStore) lives in the
+ * data layer.
  */
 interface SettingsRepository {
     val settings: Flow<AppSettings>

@@ -12,7 +12,7 @@ import id.andreasmbngaol.agallery.core.image.MediaStoreThumbnailFetcher
 import id.andreasmbngaol.agallery.core.image.MediaStoreThumbnailKeyer
 import id.andreasmbngaol.agallery.core.di.appModules
 import id.andreasmbngaol.agallery.data.work.TrashPurgeWorker
-import id.andreasmbngaol.agallery.domain.model.PerformanceMode
+import id.andreasmbngaol.agallery.domain.model.settings.PerformanceMode
 import id.andreasmbngaol.agallery.domain.repository.SettingsRepository
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking

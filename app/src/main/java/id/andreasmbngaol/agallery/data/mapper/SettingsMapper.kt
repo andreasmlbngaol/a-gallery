@@ -1,14 +1,14 @@
 package id.andreasmbngaol.agallery.data.mapper
 
 import id.andreasmbngaol.agallery.data.local.prefs.AppSettingsDto
-import id.andreasmbngaol.agallery.domain.model.AppSettings
-import id.andreasmbngaol.agallery.domain.model.ComponentStyle
-import id.andreasmbngaol.agallery.domain.model.DEFAULT_GRID_COLUMNS
-import id.andreasmbngaol.agallery.domain.model.EdgeEffectMode
-import id.andreasmbngaol.agallery.domain.model.GallerySortOrder
-import id.andreasmbngaol.agallery.domain.model.MAX_GRID_COLUMNS
-import id.andreasmbngaol.agallery.domain.model.MIN_GRID_COLUMNS
-import id.andreasmbngaol.agallery.domain.model.PerformanceMode
+import id.andreasmbngaol.agallery.domain.model.settings.AppSettings
+import id.andreasmbngaol.agallery.domain.model.settings.ComponentStyle
+import id.andreasmbngaol.agallery.domain.model.settings.DEFAULT_GRID_COLUMNS
+import id.andreasmbngaol.agallery.domain.model.settings.EdgeEffectMode
+import id.andreasmbngaol.agallery.domain.model.settings.GallerySortOrder
+import id.andreasmbngaol.agallery.domain.model.settings.MAX_GRID_COLUMNS
+import id.andreasmbngaol.agallery.domain.model.settings.MIN_GRID_COLUMNS
+import id.andreasmbngaol.agallery.domain.model.settings.PerformanceMode
 
 fun AppSettingsDto.toDomain(): AppSettings =
     AppSettings(

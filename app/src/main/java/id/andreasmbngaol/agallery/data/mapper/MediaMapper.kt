@@ -3,8 +3,8 @@ package id.andreasmbngaol.agallery.data.mapper
 import android.content.ContentUris
 import android.database.Cursor
 import android.provider.MediaStore
-import id.andreasmbngaol.agallery.domain.model.MediaItem
-import id.andreasmbngaol.agallery.domain.model.MediaType
+import id.andreasmbngaol.agallery.domain.model.media.MediaItem
+import id.andreasmbngaol.agallery.domain.model.media.MediaType
 
 /**
  * Map 1 baris cursor MediaStore.Files -> MediaItem (domain).

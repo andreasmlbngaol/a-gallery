@@ -44,7 +44,7 @@ import id.andreasmbngaol.agallery.R
 import id.andreasmbngaol.agallery.core.ui.EdgeEffectTopBarScaffold
 import id.andreasmbngaol.agallery.core.ui.FloatingTabBarHeight
 import id.andreasmbngaol.agallery.core.ui.ScreenTopBarHeight
-import id.andreasmbngaol.agallery.domain.model.EdgeEffectMode
+import id.andreasmbngaol.agallery.domain.model.settings.EdgeEffectMode
 
 /**
  * Tab "Tools": hub berisi utilitas non-galeri (mis. QR Code Generator). Grid 2

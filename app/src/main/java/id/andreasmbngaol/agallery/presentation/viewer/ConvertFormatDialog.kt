@@ -25,7 +25,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 import id.andreasmbngaol.agallery.R
-import id.andreasmbngaol.agallery.domain.model.ImageFormat
+import id.andreasmbngaol.agallery.domain.model.conversion.ImageFormat
 import kotlin.math.roundToInt
 
 /**

@@ -3,7 +3,7 @@ package id.andreasmbngaol.agallery.core.ui
 import android.os.Build
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
-import id.andreasmbngaol.agallery.domain.model.EdgeEffectMode
+import id.andreasmbngaol.agallery.domain.model.settings.EdgeEffectMode
 
 /**
  * Minimum SDK level for a real blur via `RenderEffect`. The

@@ -1,60 +1,74 @@
 package id.andreasmbngaol.agallery.domain.di
 
-import id.andreasmbngaol.agallery.domain.usecase.DeleteMediaUseCase
-import id.andreasmbngaol.agallery.domain.usecase.GetAlbumsUseCase
-import id.andreasmbngaol.agallery.domain.usecase.GetAllMediaUseCase
-import id.andreasmbngaol.agallery.domain.usecase.GetMediaDetailsUseCase
-import id.andreasmbngaol.agallery.domain.usecase.GetMediaPagingUseCase
-import id.andreasmbngaol.agallery.domain.usecase.GetSettingsUseCase
-import id.andreasmbngaol.agallery.domain.usecase.MoveToTrashUseCase
-import id.andreasmbngaol.agallery.domain.usecase.ObserveAlbumsUseCase
-import id.andreasmbngaol.agallery.domain.usecase.ObserveTrashItemsUseCase
-import id.andreasmbngaol.agallery.domain.usecase.RefreshMediaUseCase
-import id.andreasmbngaol.agallery.domain.usecase.SetAlbumCoverUseCase
-import id.andreasmbngaol.agallery.domain.usecase.RestoreFromTrashUseCase
-import id.andreasmbngaol.agallery.domain.usecase.FinalizePermanentDeleteUseCase
-import id.andreasmbngaol.agallery.domain.usecase.ConvertImageFormatUseCase
-import id.andreasmbngaol.agallery.domain.usecase.CopyMediaToAlbumUseCase
-import id.andreasmbngaol.agallery.domain.usecase.MoveMediaToAlbumUseCase
-import id.andreasmbngaol.agallery.domain.usecase.ObserveFavoriteIdsUseCase
-import id.andreasmbngaol.agallery.domain.usecase.RemoveMetadataUseCase
-import id.andreasmbngaol.agallery.domain.usecase.RenameMediaUseCase
-import id.andreasmbngaol.agallery.domain.usecase.RequestWriteAccessUseCase
-import id.andreasmbngaol.agallery.domain.usecase.SetComponentStyleUseCase
-import id.andreasmbngaol.agallery.domain.usecase.SetEdgeEffectModeUseCase
-import id.andreasmbngaol.agallery.domain.usecase.SetGridColumnsUseCase
-import id.andreasmbngaol.agallery.domain.usecase.SetPerformanceModeUseCase
-import id.andreasmbngaol.agallery.domain.usecase.SetPinnedAlbumsUseCase
-import id.andreasmbngaol.agallery.domain.usecase.SetSortOrderUseCase
-import id.andreasmbngaol.agallery.domain.usecase.ToggleFavoriteUseCase
+import id.andreasmbngaol.agallery.domain.usecase.editing.ConvertImageFormatUseCase
+import id.andreasmbngaol.agallery.domain.usecase.editing.CopyMediaToAlbumUseCase
+import id.andreasmbngaol.agallery.domain.usecase.editing.DeleteMediaUseCase
+import id.andreasmbngaol.agallery.domain.usecase.editing.MoveMediaToAlbumUseCase
+import id.andreasmbngaol.agallery.domain.usecase.editing.RemoveMetadataUseCase
+import id.andreasmbngaol.agallery.domain.usecase.editing.RenameMediaUseCase
+import id.andreasmbngaol.agallery.domain.usecase.editing.RequestWriteAccessUseCase
+import id.andreasmbngaol.agallery.domain.usecase.favorite.ObserveFavoriteIdsUseCase
+import id.andreasmbngaol.agallery.domain.usecase.favorite.ToggleFavoriteUseCase
+import id.andreasmbngaol.agallery.domain.usecase.media.GetAlbumsUseCase
+import id.andreasmbngaol.agallery.domain.usecase.media.GetAllMediaUseCase
+import id.andreasmbngaol.agallery.domain.usecase.media.GetMediaDetailsUseCase
+import id.andreasmbngaol.agallery.domain.usecase.media.GetMediaPagingUseCase
+import id.andreasmbngaol.agallery.domain.usecase.media.ObserveAlbumsUseCase
+import id.andreasmbngaol.agallery.domain.usecase.media.RefreshMediaUseCase
+import id.andreasmbngaol.agallery.domain.usecase.media.SetAlbumCoverUseCase
+import id.andreasmbngaol.agallery.domain.usecase.settings.GetSettingsUseCase
+import id.andreasmbngaol.agallery.domain.usecase.settings.SetComponentStyleUseCase
+import id.andreasmbngaol.agallery.domain.usecase.settings.SetEdgeEffectModeUseCase
+import id.andreasmbngaol.agallery.domain.usecase.settings.SetGridColumnsUseCase
+import id.andreasmbngaol.agallery.domain.usecase.settings.SetPerformanceModeUseCase
+import id.andreasmbngaol.agallery.domain.usecase.settings.SetPinnedAlbumsUseCase
+import id.andreasmbngaol.agallery.domain.usecase.settings.SetSortOrderUseCase
+import id.andreasmbngaol.agallery.domain.usecase.trash.FinalizePermanentDeleteUseCase
+import id.andreasmbngaol.agallery.domain.usecase.trash.MoveToTrashUseCase
+import id.andreasmbngaol.agallery.domain.usecase.trash.ObserveTrashItemsUseCase
+import id.andreasmbngaol.agallery.domain.usecase.trash.RestoreFromTrashUseCase
+import org.koin.core.module.dsl.factoryOf
 import org.koin.dsl.module
 
+/**
+ * Koin module that wires up every domain use case. Each use case is registered
+ * as a factory, so a fresh instance is created for each injection.
+ */
 val domainModule = module {
-    factory { GetMediaPagingUseCase(get()) }
-    factory { GetAllMediaUseCase(get()) }
-    factory { GetMediaDetailsUseCase(get()) }
-    factory { DeleteMediaUseCase(get()) }
-    factory { GetAlbumsUseCase(get()) }
-    factory { ObserveAlbumsUseCase(get()) }
-    factory { SetAlbumCoverUseCase(get()) }
-    factory { RefreshMediaUseCase(get()) }
-    factory { RequestWriteAccessUseCase(get()) }
-    factory { ToggleFavoriteUseCase(get()) }
-    factory { MoveToTrashUseCase(get()) }
-    factory { ObserveTrashItemsUseCase(get()) }
-    factory { RestoreFromTrashUseCase(get()) }
-    factory { FinalizePermanentDeleteUseCase(get()) }
-    factory { ObserveFavoriteIdsUseCase(get()) }
-    factory { RenameMediaUseCase(get()) }
-    factory { RemoveMetadataUseCase(get()) }
-    factory { ConvertImageFormatUseCase(get()) }
-    factory { MoveMediaToAlbumUseCase(get()) }
-    factory { CopyMediaToAlbumUseCase(get()) }
-    factory { GetSettingsUseCase(get()) }
-    factory { SetEdgeEffectModeUseCase(get()) }
-    factory { SetComponentStyleUseCase(get()) }
-    factory { SetGridColumnsUseCase(get()) }
-    factory { SetPerformanceModeUseCase(get()) }
-    factory { SetSortOrderUseCase(get()) }
-    factory { SetPinnedAlbumsUseCase(get()) }
+    // media
+    factoryOf(::GetMediaPagingUseCase)
+    factoryOf(::GetAllMediaUseCase)
+    factoryOf(::GetMediaDetailsUseCase)
+    factoryOf(::GetAlbumsUseCase)
+    factoryOf(::ObserveAlbumsUseCase)
+    factoryOf(::RefreshMediaUseCase)
+    factoryOf(::SetAlbumCoverUseCase)
+
+    // editing
+    factoryOf(::DeleteMediaUseCase)
+    factoryOf(::RenameMediaUseCase)
+    factoryOf(::MoveMediaToAlbumUseCase)
+    factoryOf(::CopyMediaToAlbumUseCase)
+    factoryOf(::RequestWriteAccessUseCase)
+    factoryOf(::ConvertImageFormatUseCase)
+    factoryOf(::RemoveMetadataUseCase)
+
+    // favorite
+    factoryOf(::ToggleFavoriteUseCase)
+    factoryOf(::ObserveFavoriteIdsUseCase)
+
+    // trash
+    factoryOf(::MoveToTrashUseCase)
+    factoryOf(::ObserveTrashItemsUseCase)
+    factoryOf(::RestoreFromTrashUseCase)
+    factoryOf(::FinalizePermanentDeleteUseCase)
+
+    // settings
+    factoryOf(::GetSettingsUseCase)
+    factoryOf(::SetComponentStyleUseCase)
+    factoryOf(::SetEdgeEffectModeUseCase)
+    factoryOf(::SetGridColumnsUseCase)
+    factoryOf(::SetPerformanceModeUseCase)
+    factoryOf(::SetSortOrderUseCase)
+    factoryOf(::SetPinnedAlbumsUseCase)
 }

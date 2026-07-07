@@ -40,8 +40,8 @@ import com.adamglin.phosphoricons.bold.ArrowSquareOut
 import com.adamglin.phosphoricons.bold.Copy
 import com.kyant.backdrop.Backdrop
 import id.andreasmbngaol.agallery.R
-import id.andreasmbngaol.agallery.domain.model.ComponentStyle
-import id.andreasmbngaol.agallery.domain.model.QrContent
+import id.andreasmbngaol.agallery.domain.model.settings.ComponentStyle
+import id.andreasmbngaol.agallery.domain.model.qr.QrContent
 
 /**
  * Chip kaca kecil yang muncul di pojok kanan-bawah foto saat ada QR terdeteksi

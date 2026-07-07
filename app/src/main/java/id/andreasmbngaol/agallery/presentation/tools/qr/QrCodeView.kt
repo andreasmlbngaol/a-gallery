@@ -16,7 +16,7 @@ import androidx.compose.ui.graphics.vector.rememberVectorPainter
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
 import id.andreasmbngaol.agallery.core.qr.QrMatrix
-import id.andreasmbngaol.agallery.domain.model.QrDotStyle
+import id.andreasmbngaol.agallery.domain.model.qr.QrDotStyle
 import kotlin.math.min
 import kotlin.math.roundToInt
 

@@ -58,11 +58,11 @@ import id.andreasmbngaol.agallery.core.ui.isBlurryEdgeSupported
 import id.andreasmbngaol.agallery.core.ui.isGlassSupported
 import id.andreasmbngaol.agallery.core.ui.resolveComponentStyle
 import id.andreasmbngaol.agallery.core.ui.resolveEdgeEffectMode
-import id.andreasmbngaol.agallery.domain.model.ComponentStyle
-import id.andreasmbngaol.agallery.domain.model.EdgeEffectMode
-import id.andreasmbngaol.agallery.domain.model.MAX_GRID_COLUMNS
-import id.andreasmbngaol.agallery.domain.model.PerformanceMode
-import id.andreasmbngaol.agallery.domain.model.MIN_GRID_COLUMNS
+import id.andreasmbngaol.agallery.domain.model.settings.ComponentStyle
+import id.andreasmbngaol.agallery.domain.model.settings.EdgeEffectMode
+import id.andreasmbngaol.agallery.domain.model.settings.MAX_GRID_COLUMNS
+import id.andreasmbngaol.agallery.domain.model.settings.PerformanceMode
+import id.andreasmbngaol.agallery.domain.model.settings.MIN_GRID_COLUMNS
 import kotlinx.coroutines.delay
 import org.koin.androidx.compose.koinViewModel
 import kotlin.time.Duration.Companion.milliseconds

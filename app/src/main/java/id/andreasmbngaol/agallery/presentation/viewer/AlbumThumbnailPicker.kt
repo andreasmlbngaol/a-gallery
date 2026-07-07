@@ -43,7 +43,7 @@ import com.adamglin.phosphoricons.bold.Plus
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import id.andreasmbngaol.agallery.R
-import id.andreasmbngaol.agallery.domain.model.Album
+import id.andreasmbngaol.agallery.domain.model.album.Album
 
 /**
  * Dialog pemilih album berbasis THUMBNAIL (grid 3 kolom) untuk aksi Copy/Move.

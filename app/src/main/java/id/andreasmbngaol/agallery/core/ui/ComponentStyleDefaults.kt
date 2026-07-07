@@ -3,7 +3,7 @@ package id.andreasmbngaol.agallery.core.ui
 import android.os.Build
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
-import id.andreasmbngaol.agallery.domain.model.ComponentStyle
+import id.andreasmbngaol.agallery.domain.model.settings.ComponentStyle
 
 /**
  * Minimum SDK level required for the liquid-glass effect, which is backed by

@@ -26,7 +26,7 @@ import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.HazeTint
 import dev.chrisbanes.haze.hazeEffect
 import dev.chrisbanes.haze.hazeSource
-import id.andreasmbngaol.agallery.domain.model.EdgeEffectMode
+import id.andreasmbngaol.agallery.domain.model.settings.EdgeEffectMode
 
 /**
  * Draws an effect over the status-bar (top) and navigation-bar (bottom) areas,

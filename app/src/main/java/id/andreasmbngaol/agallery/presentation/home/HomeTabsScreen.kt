@@ -21,7 +21,7 @@ import id.andreasmbngaol.agallery.core.permission.MediaPermissions
 import id.andreasmbngaol.agallery.core.ui.GalleryTab
 import id.andreasmbngaol.agallery.core.ui.GalleryTabScaffold
 import id.andreasmbngaol.agallery.core.ui.rememberEffectiveComponentStyle
-import id.andreasmbngaol.agallery.domain.model.GallerySortOrder
+import id.andreasmbngaol.agallery.domain.model.settings.GallerySortOrder
 import id.andreasmbngaol.agallery.presentation.albums.AlbumsScreen
 import id.andreasmbngaol.agallery.presentation.gallery.GalleryGridScreen
 import id.andreasmbngaol.agallery.presentation.gallery.GalleryViewModel

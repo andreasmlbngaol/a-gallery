@@ -2,16 +2,16 @@ package id.andreasmbngaol.agallery.presentation.albums
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import id.andreasmbngaol.agallery.domain.model.ALBUM_KEY_TRASH
-import id.andreasmbngaol.agallery.domain.model.Album
-import id.andreasmbngaol.agallery.domain.model.DEFAULT_PINNED_ALBUM_KEYS
-import id.andreasmbngaol.agallery.domain.model.LOCKED_PIN_ALBUM_KEYS
-import id.andreasmbngaol.agallery.domain.model.MediaScope
-import id.andreasmbngaol.agallery.domain.usecase.GetSettingsUseCase
-import id.andreasmbngaol.agallery.domain.usecase.ObserveAlbumsUseCase
-import id.andreasmbngaol.agallery.domain.usecase.ObserveTrashItemsUseCase
-import id.andreasmbngaol.agallery.domain.usecase.RefreshMediaUseCase
-import id.andreasmbngaol.agallery.domain.usecase.SetPinnedAlbumsUseCase
+import id.andreasmbngaol.agallery.domain.model.album.ALBUM_KEY_TRASH
+import id.andreasmbngaol.agallery.domain.model.album.Album
+import id.andreasmbngaol.agallery.domain.model.album.DEFAULT_PINNED_ALBUM_KEYS
+import id.andreasmbngaol.agallery.domain.model.album.LOCKED_PIN_ALBUM_KEYS
+import id.andreasmbngaol.agallery.domain.model.media.MediaScope
+import id.andreasmbngaol.agallery.domain.usecase.settings.GetSettingsUseCase
+import id.andreasmbngaol.agallery.domain.usecase.media.ObserveAlbumsUseCase
+import id.andreasmbngaol.agallery.domain.usecase.trash.ObserveTrashItemsUseCase
+import id.andreasmbngaol.agallery.domain.usecase.media.RefreshMediaUseCase
+import id.andreasmbngaol.agallery.domain.usecase.settings.SetPinnedAlbumsUseCase
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine

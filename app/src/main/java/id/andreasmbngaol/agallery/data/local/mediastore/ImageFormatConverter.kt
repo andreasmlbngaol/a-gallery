@@ -14,8 +14,8 @@ import androidx.core.graphics.createBitmap
 import androidx.core.net.toUri
 import androidx.exifinterface.media.ExifInterface
 import androidx.heifwriter.HeifWriter
-import id.andreasmbngaol.agallery.domain.model.ConversionOutcome
-import id.andreasmbngaol.agallery.domain.model.ImageFormat
+import id.andreasmbngaol.agallery.domain.model.conversion.ConversionOutcome
+import id.andreasmbngaol.agallery.domain.model.conversion.ImageFormat
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File

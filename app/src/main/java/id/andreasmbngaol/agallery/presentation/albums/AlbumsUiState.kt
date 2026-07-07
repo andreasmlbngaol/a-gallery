@@ -1,6 +1,6 @@
 package id.andreasmbngaol.agallery.presentation.albums
 
-import id.andreasmbngaol.agallery.domain.model.Album
+import id.andreasmbngaol.agallery.domain.model.album.Album
 
 /**
  * State layar Albums.
