@@ -64,7 +64,7 @@ backdrop.
 - **Haze** — background blur for frosted surfaces.
 - **Phosphor Icons** — the app's icon set (Material Icons are intentionally **not** used); all icons use the **Bold** weight.
 
-## Feature status (v1.0.0)
+## Feature status (v1.7.0)
 
 | Area | Status |
 |---|---|
@@ -80,6 +80,15 @@ backdrop.
 | Share & set as wallpaper | ✅ |
 | Sort (date asc/desc) | ✅ |
 | Settings (grid density, component style) | ✅ |
-| On-device semantic search (AI) | ⏳ planned |
-| Location / map view | ⏳ planned |
+| Localization (English + Bahasa Indonesia) | ✅ |
+| Metadata viewer (EXIF; location → external maps) | ✅ |
+| Metadata remover (selective; single photo) | ✅ |
+| Format converter (JPG / PNG / WEBP / HEIC) | ✅ |
+| Tools hub | ✅ |
+| QR code generator | ✅ |
+| QR detection (in-photo, offline) | ✅ |
+| Bulk metadata / format operations | ⏳ planned |
+| On-device AI tools (background remover, scanner, OCR) | ⏳ planned (2.x) |
+| On-device semantic search (AI) | ⏳ planned (2.3.0) |
+| In-app map view | ❌ out of scope (opens external maps) |
 | Photo editing | ❌ out of scope |

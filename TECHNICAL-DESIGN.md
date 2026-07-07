@@ -46,7 +46,7 @@
 | `namespace` / `applicationId` | `id.andreasmbngaol.agallery` |
 | `minSdk` | **29 (Android 10)** |
 | `targetSdk` / `compileSdk` | 37 |
-| `versionCode` / `versionName` | `10` / `1.0.0` |
+| `versionCode` / `versionName` | `17` / `1.7.0` |
 | Language | Kotlin `2.4.0` (KSP `2.3.9`) |
 | UI | Jetpack Compose (BOM `2026.06.01`), Material 3 `1.5.0-alpha23` |
 | Build | AGP `9.2.1`, R8 full mode (minify + shrink resources) |
@@ -126,18 +126,22 @@ milestone, not strictly an API break — this is an app, not a library).
 
 ### 3.1 Release map
 
-**`1.x` — the localization & offline-utilities era (no `INTERNET` permission, no AI).**
+**`1.x` — the localization & offline-utilities era (no `INTERNET` permission, no AI).** **Shipped through `1.7.0`; this era is complete.**
 
-| Version | Scope |
-|---|---|
-| `1.1.0` | **Localization foundation** — externalize every hardcoded UI string into Android string resources (no visible behavior change) |
-| `1.2.0` | **Bahasa Indonesia support** — full `id` translation (`values-id/`); English stays the default |
-| `1.3.0` | **Metadata Viewer** |
-| `1.4.0` | **Metadata Remover** |
-| `1.5.0` | **Format Converter** (JPG/PNG/WEBP/HEIC/HEIF) |
-| `1.6.0` | **Tools hub** + **QR Code Generator** |
-| `1.7.0` | **QR Detection** (classic computer vision via a library — not AI) |
-| `1.8.0` | **Watermark** (the final non-AI feature) |
+| Version | Scope | Status |
+|---|---|---|
+| `1.1.0` | **Localization foundation** — externalize every hardcoded UI string into Android string resources (no visible behavior change) | ✅ Shipped |
+| `1.2.0` | **Bahasa Indonesia support** — full `id` translation (`values-id/`); English stays the default | ✅ Shipped |
+| `1.3.0` | **Metadata Viewer** | ✅ Shipped |
+| `1.4.0` | **Metadata Remover** | ✅ Shipped |
+| `1.5.0` | **Format Converter** (JPG/PNG/WEBP/HEIC/HEIF) | ✅ Shipped |
+| `1.6.0` | **Tools hub** + **QR Code Generator** | ✅ Shipped |
+| `1.7.0` | **QR Detection** (classic computer vision via a library — not AI) | ✅ Shipped |
+
+> Optional bulk / multi-select fast-follows may still ship as patch releases
+> (**Metadata Remover batch `1.4.1`**, **Format Converter batch `1.5.1`**). A
+> **Watermark** feature was previously planned for `1.8.0` but has been
+> **dropped from the roadmap**.
 
 **`2.0.0` — the on-device AI era.** Introduces the AI model framework
 (Section 7) and the first AI feature. AI stays offline (models are
@@ -179,7 +183,6 @@ operate on a photo that already exists?*
 | Format Converter | Yes (single; batch in 1.5.1) | Viewer (detail panel) | 1.5.0 |
 | QR Code Generator | No (creates) | Tools hub | 1.6.0 |
 | QR Detection | Yes | Viewer | 1.7.0 |
-| Watermark | Yes (single / batch) | Viewer + multi-select | 1.8.0 |
 | Background Remover | Yes | Viewer | 2.0.0 |
 | Smart Scanner | Mixed (photo or capture) | Tools hub (+ viewer surfacing) | 2.1.0 |
 | OCR → PDF | Mixed (capture / scan) | Tools hub | 2.2.0 |
@@ -281,8 +284,9 @@ already certain. Detailed design is done per-feature at build time.
 - **QR Detection** (1.7.0) — *Viewer.* Detect and read a QR/barcode in a photo.
   **Not AI** — done with a classic computer-vision library, fully offline, no
   model download.
-- **Watermark** (1.8.0, final non-AI feature) — *Viewer + multi-select.* Overlay
-  a text or image watermark on a photo. **No default preset.**
+
+> **Watermark** — previously planned as the final `1.x` non-AI feature
+> (`1.8.0`); **dropped from the roadmap** and no longer planned.
 
 ### AI utilities (2.x)
 

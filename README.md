@@ -33,6 +33,10 @@ while keeping you in full control of your media.
 - **Effortless organizing** — move, copy, or delete photos between albums, choosing a destination from a clear, visual grid.
 - **Recycle bin** — deleted items go to Trash first so you can restore them, and are cleared automatically after 30 days.
 - **Share and set as wallpaper** — right from the viewer.
+- **Metadata tools** — inspect a photo's details (date, camera, dimensions, location) and strip metadata like GPS before you share.
+- **Format converter** — convert photos between JPG, PNG, WEBP, and HEIC.
+- **QR tools** — generate a customizable QR code, and detect and read QR/barcodes right inside your photos.
+- **English & Bahasa Indonesia** — the app follows your system language.
 - **Make it yours** — tune the grid density and the overall look in Settings until it feels exactly right.
 
 ---

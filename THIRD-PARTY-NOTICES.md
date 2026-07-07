@@ -5,7 +5,7 @@ copyright of its respective authors and is used under the license listed below.
 This file is distributed with AGallery to satisfy the attribution requirements
 of the Apache License 2.0 and the MIT License.
 
-Last reviewed for AGallery **v1.0.0**. Dependency versions are defined in
+Last reviewed for AGallery **v1.7.0**. Dependency versions are defined in
 [`gradle/libs.versions.toml`](./gradle/libs.versions.toml).
 
 ---
