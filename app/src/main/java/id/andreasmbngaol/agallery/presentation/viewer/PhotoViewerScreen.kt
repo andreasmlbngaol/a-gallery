@@ -70,20 +70,20 @@ import org.koin.androidx.compose.koinViewModel
 import kotlin.time.Duration.Companion.milliseconds
 
 /**
- * Viewer full-screen ala Google Photos:
- * - Swipe antar media (HorizontalPager), pinch-to-zoom (Telephoto), video pakai
+ * Google Photos-style full-screen viewer:
+ * - Swipe between media (HorizontalPager), pinch-to-zoom (Telephoto), video uses
  *   [VideoPlayerContent].
- * - "Chrome" (top bar + action bar + kontrol video) di-toggle dgn tap layar.
- *   Statusnya global & persist antar halaman DAN config change (chromeVisible
- *   via rememberSaveable).
- * - Semua tombol pakai **liquid glass** (tergantung setting edge-effect, sama
- *   seperti nav bar gallery). Top bar: Back (kiri) + Info (kanan). Foto: action
- *   bar = 2 island [Share · Delete · Favorite] + More. Video: kontrol + aksi
- *   digabung jadi 1 island (kontrol di atas, aksi di bawah).
- * - Tap Trash -> konfirmasi pindah ke Trash. Tahan Trash -> hapus permanen
- *   (konfirmasi diserahkan ke dialog sistem Android, tanpa dialog internal).
- * - Swipe-down menutup; swipe-up / tombol Info membuka panel detail & media
- *   terangkat ke atas.
+ * - The "chrome" (top bar + action bar + video controls) is toggled by tapping the
+ *   screen. Its state is global & persists across pages AND config changes
+ *   (chromeVisible via rememberSaveable).
+ * - All buttons use **liquid glass** (depending on the edge-effect setting, same
+ *   as the gallery nav bar). Top bar: Back (left) + Info (right). Photo: action
+ *   bar = 2 islands [Share · Delete · Favorite] + More. Video: controls + actions
+ *   combined into 1 island (controls on top, actions below).
+ * - Tap Trash -> confirm move to Trash. Hold Trash -> permanent delete
+ *   (confirmation deferred to the Android system dialog, no internal dialog).
+ * - Swipe down to close; swipe up / the Info button opens the detail panel & the
+ *   media lifts upward.
  */
 @Composable
 fun PhotoViewerScreen(
@@ -104,15 +104,10 @@ fun PhotoViewerScreen(
     val albums by viewModel.albums.collectAsState()
     val qrDetections by viewModel.qrDetections.collectAsState()
 
-    // Gaya komponen (Solid/Frosted/Glass) dari Settings. Hanya GLASS (refraction
-    // live) yang meng-capture backdrop tiap frame; FROSTED/SOLID hemat GPU.
-    // Sudah di-resolve (GLASS -> FROSTED di perangkat < API 33).
     val componentStyleChosen by viewModel.componentStyle.collectAsState()
     val componentStyle = rememberEffectiveComponentStyle(componentStyleChosen)
-    // Backdrop dari konten media (pager) -> dibiaskan top bar & island foto.
     val backdrop = rememberLayerBackdrop()
 
-    // Chrome global -> persist antar halaman & rotasi.
     var chromeVisible by rememberSaveable { mutableStateOf(true) }
     var showDetails by remember { mutableStateOf(false) }
     var showRename by remember { mutableStateOf(false) }
@@ -123,13 +118,11 @@ fun PhotoViewerScreen(
     var pendingDeleteUri by remember { mutableStateOf<String?>(null) }
     var albumPickerMode by remember { mutableStateOf<AlbumPickerMode?>(null) }
 
-    // Consent hapus permanen (system delete dialog).
     val deleteLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.StartIntentSenderForResult(),
     ) { result ->
         if (result.resultCode == Activity.RESULT_OK) viewModel.refresh()
     }
-    // Consent tulis (rename/move file non-owned).
     val writeLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.StartIntentSenderForResult(),
     ) { result ->
@@ -158,18 +151,12 @@ fun PhotoViewerScreen(
 
     val dismissThresholdPx = with(LocalDensity.current) { 120.dp.toPx() }
     val dragOffsetY = remember { Animatable(0f) }
-    // True saat halaman aktif sedang di-zoom -> matikan capture backdrop.
     var currentPageZoomed by remember { mutableStateOf(false) }
 
-    // Latar viewer mengikuti tema (bukan hard-coded hitam). Di light-mode
-    // akan terang, di dark-mode gelap. Saat user swipe-down utk dismiss,
-    // opacity turun bertahap supaya konten di belakang mulai terlihat.
     val viewerBackground = MaterialTheme.colorScheme.background
     Box(
         modifier = Modifier
             .fillMaxSize()
-            // Dim latar dibaca di DRAW phase (drawBehind), bukan composition,
-            // supaya swipe-down tak memicu recompose seluruh screen tiap frame.
             .drawBehind {
                 val a = 1f - (dragOffsetY.value / dismissThresholdPx).coerceIn(0f, 1f) * 0.6f
                 drawRect(color = viewerBackground, alpha = a)
@@ -181,7 +168,6 @@ fun PhotoViewerScreen(
             return@Box
         }
         if (items.isEmpty()) {
-            // Item terakhir baru saja di-trash/hapus -> keluar dari viewer.
             LaunchedEffect(Unit) { onBack() }
             return@Box
         }
@@ -192,9 +178,6 @@ fun PhotoViewerScreen(
         )
         val currentItem = items.getOrNull(pagerState.currentPage)
 
-        // QR Detection (1.7.0): scan foto aktif setelah halaman diam ~600ms
-        // (debounce). Ganti halaman -> effect lama dibatalkan otomatis, hasil
-        // di-cache di ViewModel jadi tak scan ulang saat balik ke foto yg sama.
         LaunchedEffect(currentItem?.id) {
             val item = currentItem ?: return@LaunchedEffect
             if (item.type != MediaType.IMAGE) return@LaunchedEffect
@@ -202,23 +185,12 @@ fun PhotoViewerScreen(
             viewModel.detectQr(item)
         }
 
-        // Pager jadi SUMBER backdrop yang dibiaskan glass (kalau didukung).
-        // PENTING (perf): backdrop di-capture HANYA saat media benar-benar diam
-        // -- chrome tampil, tak ada swipe-dismiss, tak sedang geser antar
-        // halaman, dan tak di-zoom. Saat interaksi, capture dimatikan supaya
-        // tidak ada render layer foto full-res tiap frame (biang utama lag).
-        // Glass tetap menampilkan snapshot terakhir yang ter-capture.
         val captureBackdrop by remember(componentStyle) {
             derivedStateOf {
                 componentStyle.drawsBackdrop() &&
                     chromeVisible &&
                     (
-                        // GLASS: TETAP capture live walau lagi swipe/zoom -> kaca
-                        // ngikut gerakan (tak lagi "turun" jadi frosted saat swipe).
                         componentStyle.usesLiveBackdrop() ||
-                            // FROSTED: bekukan snapshot saat interaksi -> justru INI
-                            // tampilan frosted yang diinginkan (kaca buram saat swipe)
-                            // sekaligus hemat GPU.
                             (
                                 !pagerState.isScrollInProgress &&
                                     !currentPageZoomed &&
@@ -240,7 +212,6 @@ fun PhotoViewerScreen(
         ) { page ->
             val item = items[page]
             val isActive = page == pagerState.currentPage
-            // Untuk video aktif: baris aksi ditaruh di dalam island video gabungan.
             val videoActions: (@Composable () -> Unit)? =
                 if (item.type == MediaType.VIDEO) {
                     {
@@ -301,8 +272,6 @@ fun PhotoViewerScreen(
 
         currentItem?.let { item ->
             val isVideo = item.type == MediaType.VIDEO
-            // Foto: action bar 2 island di bawah. Video: aksi sudah menyatu di
-            // island video gabungan (lihat videoActions), jadi tak digambar lagi.
             if (!isVideo) {
                 AnimatedVisibility(
                     visible = chromeVisible,
@@ -338,8 +307,6 @@ fun PhotoViewerScreen(
                 }
             }
 
-            // Chip QR (pojok kanan-bawah, di atas action bar). Hanya tampil
-            // saat chrome/tombol tampil & foto punya QR terdeteksi.
             val qrResults = qrDetections[item.id].orEmpty()
             if (!isVideo && qrResults.isNotEmpty()) {
                 AnimatedVisibility(
@@ -373,7 +340,6 @@ fun PhotoViewerScreen(
                     onDismiss = { showDetails = false },
                     style = componentStyle,
                     backdrop = backdrop,
-                    // Hapus metadata hanya untuk foto (video di-skip).
                     onRemoveMetadata = if (item.type == MediaType.IMAGE) {
                         {
                             showDetails = false
@@ -472,7 +438,6 @@ private fun PhotoViewerPage(
     val imageState = rememberZoomableImageState()
     val isVideo = item.type == MediaType.VIDEO
 
-    // Lapor status zoom halaman aktif ke screen (utk gating capture backdrop).
     LaunchedEffect(isActive, imageState) {
         if (!isActive) {
             onZoomChange(false)
@@ -484,9 +449,6 @@ private fun PhotoViewerPage(
     val density = LocalDensity.current
     val detailsThresholdPx = with(density) { 80.dp.toPx() }
 
-    // Saat panel detail terbuka, media diangkat ke atas supaya tetap kelihatan
-    // di atas sheet (perilaku Google Photos). Hanya untuk halaman aktif.
-//    val configuration = LocalConfiguration.current
     val liftPx = with(density) { (LocalWindowInfo.current.containerSize.height.dp * 0.22f).toPx() }
     val liftOffset by animateFloatAsState(
         targetValue = if (detailsOpen && isActive) -liftPx else 0f,
@@ -560,7 +522,7 @@ private fun PhotoViewerPage(
     }
 }
 
-/** Bagikan media via ACTION_SEND. */
+/** Share media via ACTION_SEND. */
 private fun shareMedia(context: Context, item: MediaItem) {
     val intent = Intent(Intent.ACTION_SEND).apply {
         type = item.mimeType.ifEmpty { if (item.type == MediaType.VIDEO) "video/*" else "image/*" }
@@ -570,7 +532,7 @@ private fun shareMedia(context: Context, item: MediaItem) {
     context.startActivity(Intent.createChooser(intent, context.getString(R.string.action_share)))
 }
 
-/** Set as wallpaper / contact photo dll via ACTION_ATTACH_DATA. */
+/** Set as wallpaper / contact photo etc. via ACTION_ATTACH_DATA. */
 private fun setAsMedia(context: Context, item: MediaItem) {
     val mime = item.mimeType.ifEmpty { "image/*" }
     val intent = Intent(Intent.ACTION_ATTACH_DATA).apply {
@@ -581,7 +543,7 @@ private fun setAsMedia(context: Context, item: MediaItem) {
     context.startActivity(Intent.createChooser(intent, context.getString(R.string.action_set_as)))
 }
 
-/** Buka di aplikasi lain via ACTION_VIEW. */
+/** Open in another app via ACTION_VIEW. */
 private fun openWithMedia(context: Context, item: MediaItem) {
     val mime = item.mimeType.ifEmpty { if (item.type == MediaType.VIDEO) "video/*" else "image/*" }
     val intent = Intent(Intent.ACTION_VIEW).apply {

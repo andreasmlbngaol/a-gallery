@@ -49,17 +49,17 @@ import java.time.format.FormatStyle
 import java.util.Locale
 
 /**
- * Bottom sheet berisi metadata media, dibuka lewat swipe ke atas di viewer
- * (dipakai foto & video).
+ * Bottom sheet with media metadata, opened via swipe up in the viewer
+ * (used by both photos & videos).
  *
- * Sebagian data (nama, tipe, durasi, tanggal, folder) sudah ada di [item];
- * sisanya (ukuran, dimensi, EXIF kamera, lokasi, teknis video) dimuat
- * on-demand lewat [loadDetails] biar query grid tetap ringan.
+ * Some data (name, type, duration, date, folder) is already in [item];
+ * the rest (size, dimensions, camera EXIF, location, video technicals) is loaded
+ * on-demand via [loadDetails] so the grid query stays lightweight.
  *
- * Aturan tampilan (hybrid):
- * - Field INTI (Umum) selalu tampil; kalau kosong -> "-" ("\u2026" saat loading).
- * - Field OPSIONAL (Kamera / Lokasi / Video) hanya muncul kalau ada datanya,
- *   dan header section-nya ikut hilang kalau semua isinya kosong.
+ * Display rules (hybrid):
+ * - CORE fields (General) always show; if empty -> "-" ("\u2026" while loading).
+ * - OPTIONAL fields (Camera / Location / Video) only appear when data exists,
+ *   and their section header also disappears when everything is empty.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -73,9 +73,8 @@ fun MediaDetailsSheet(
 ) {
     val sheetState = rememberBottomSheetState(
         initialValue = SheetValue.Hidden,
-        enabledValues = setOf(SheetValue.Hidden, SheetValue.Expanded), // skip PartiallyExpanded
+        enabledValues = setOf(SheetValue.Hidden, SheetValue.Expanded),
     )
-    // key(item.id) -> reset state kalau sheet dipakai ulang utk item berbeda.
     var details by remember(item.id) { mutableStateOf<MediaDetails?>(null) }
     var loading by remember(item.id) { mutableStateOf(true) }
 
@@ -88,7 +87,6 @@ fun MediaDetailsSheet(
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
-        // Scrim transparan supaya foto/video yang bergeser ke atas tetap terlihat.
         scrimColor = Color.Transparent,
     ) {
         Column(
@@ -106,10 +104,8 @@ fun MediaDetailsSheet(
             Spacer(Modifier.height(16.dp))
 
             val d = details
-            // Placeholder: "\u2026" selagi loading, "-" kalau field inti memang kosong.
             val placeholder = if (loading) "\u2026" else "-"
 
-            // ---------- Umum (selalu tampil) ----------
             DetailRow(stringResource(R.string.detail_name), item.displayName.ifEmpty { placeholder })
             DetailRow(stringResource(R.string.detail_type), item.mimeType.ifEmpty { placeholder })
             if (item.type == MediaType.VIDEO && item.durationMs > 0L) {
@@ -135,7 +131,6 @@ fun MediaDetailsSheet(
             )
 
             if (d != null) {
-                // ---------- Kamera (opsional) ----------
                 val device = cameraDevice(d.cameraMake, d.cameraModel)
                 val hasCamera = listOfNotNull(
                     device, d.aperture, d.shutterSpeed,
@@ -155,7 +150,6 @@ fun MediaDetailsSheet(
                     }
                 }
 
-                // ---------- Lokasi (opsional) ----------
                 val lat = d.latitude
                 val lng = d.longitude
                 if (lat != null && lng != null) {
@@ -163,7 +157,6 @@ fun MediaDetailsSheet(
                     LocationRow(lat, lng)
                 }
 
-                // ---------- Video (opsional) ----------
                 val hasVideo = listOfNotNull(
                     d.frameRate, d.bitrate, d.videoCodec, d.audioCodec,
                 ).isNotEmpty()
@@ -176,9 +169,6 @@ fun MediaDetailsSheet(
                 }
             }
 
-            // ---------- Hapus metadata (foto yg didukung; fitur 1.4.0) ----------
-            // Tombol dibuat seragam dgn tema app (SOLID/FROSTED/GLASS) via
-            // GlassActionButton. "Ubah format" kini pindah ke menu More (⋮).
             onRemoveMetadata?.let { onRemove ->
                 Spacer(Modifier.height(24.dp))
                 GlassActionButton(
@@ -193,7 +183,7 @@ fun MediaDetailsSheet(
     }
 }
 
-/** Header kecil untuk memisahkan section metadata. */
+/** Small header to separate metadata sections. */
 @Composable
 private fun SectionHeader(text: String) {
     Spacer(Modifier.height(20.dp))
@@ -205,7 +195,7 @@ private fun SectionHeader(text: String) {
     Spacer(Modifier.height(4.dp))
 }
 
-/** Satu baris metadata: label kiri (lebar tetap) + value kanan (mengisi sisa). */
+/** A single metadata row: left label (fixed width) + right value (fills the rest). */
 @Composable
 private fun DetailRow(
     label: String,
@@ -233,8 +223,8 @@ private fun DetailRow(
 }
 
 /**
- * Baris lokasi: koordinat + tombol ikon MapPin yang melempar ke aplikasi peta
- * lewat intent geo: (aman utk app no-internet — app sendiri tak akses jaringan).
+ * Location row: coordinates + a MapPin icon button that launches a map app via a
+ * geo: intent (safe for a no-internet app — the app itself does not access the network).
  */
 @Composable
 private fun LocationRow(latitude: Double, longitude: Double) {
@@ -272,7 +262,7 @@ private fun LocationRow(latitude: Double, longitude: Double) {
     }
 }
 
-/** Gabungkan make + model kamera jadi satu string ramah, hindari duplikasi. */
+/** Combine camera make + model into a friendly string, avoiding duplication. */
 private fun cameraDevice(make: String?, model: String?): String? {
     val mk = make?.trim().orEmpty()
     val md = model?.trim().orEmpty()
@@ -285,7 +275,7 @@ private fun cameraDevice(make: String?, model: String?): String? {
     }
 }
 
-/** Byte -> string ramah baca (B/KB/MB/GB/TB, basis 1024). "-" kalau kosong. */
+/** Bytes -> a human-readable string (B/KB/MB/GB/TB, base 1024). "-" when empty. */
 private fun formatFileSize(bytes: Long): String {
     if (bytes <= 0L) return "-"
     val units = arrayOf("B", "KB", "MB", "GB", "TB")
@@ -302,7 +292,7 @@ private fun formatFileSize(bytes: Long): String {
     }
 }
 
-/** Epoch detik -> tanggal-waktu lokal ramah baca. "-" kalau kosong. */
+/** Epoch seconds -> a human-readable local date-time. "-" when empty. */
 private fun formatDate(epochSeconds: Long): String {
     if (epochSeconds <= 0L) return "-"
     val formatter = DateTimeFormatter
@@ -313,7 +303,7 @@ private fun formatDate(epochSeconds: Long): String {
         .format(formatter)
 }
 
-/** Milidetik -> "m:ss" atau "h:mm:ss". */
+/** Milliseconds -> "m:ss" or "h:mm:ss". */
 private fun formatDuration(ms: Long): String {
     val totalSeconds = (ms / 1000).coerceAtLeast(0L)
     val hours = totalSeconds / 3600

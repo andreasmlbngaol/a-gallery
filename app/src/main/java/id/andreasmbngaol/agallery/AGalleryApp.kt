@@ -21,11 +21,11 @@ import org.koin.core.context.GlobalContext
 import org.koin.core.context.startKoin
 
 /**
- * Kelas Application utama.
+ * The main [Application] class.
  *
- * Mengimplementasikan [SingletonImageLoader.Factory] supaya SEMUA pemanggilan
- * Coil (AsyncImage di grid, telephoto di viewer) memakai satu ImageLoader yang
- * sama — yang sudah didaftari [VideoFrameDecoder].
+ * Implements [SingletonImageLoader.Factory] so that EVERY Coil call (AsyncImage
+ * in the grid, telephoto in the viewer) uses the same single ImageLoader — the
+ * one that already has [VideoFrameDecoder] registered.
  */
 class AGalleryApp : Application(), SingletonImageLoader.Factory {
     override fun onCreate() {
@@ -34,43 +34,33 @@ class AGalleryApp : Application(), SingletonImageLoader.Factory {
             androidContext(this@AGalleryApp)
             modules(appModules)
         }
-        // Jadwalkan auto-purge Trash harian (hapus permanen item > 30 hari).
-        // Efektif hanya bila user mengaktifkan All-files access.
         TrashPurgeWorker.schedule(this)
     }
 
     /**
-     * ImageLoader global untuk Coil. [VideoFrameDecoder] wajib didaftarkan agar
-     * URI video (content://) bisa di-decode jadi 1 frame sebagai sampul di grid.
-     * Tanpa decoder ini, item video gagal decode sehingga hanya tampil kotak
-     * kosong (hitam/putih), sementara foto tetap normal.
+     * The global Coil [ImageLoader]. [VideoFrameDecoder] MUST be registered so
+     * video URIs (content://) can be decoded into a single frame to use as the
+     * grid cover. Without it, video items fail to decode and render as an empty
+     * (black/white) box, while photos keep working.
      *
-     * ## Tuning performa
-     * - memoryCache dibatasi ~25% RAM app: cukup buat scroll mulus tapi nggak
-     *   bikin GC agresif / HP kepanasan di galeri ribuan foto.
-     * - diskCache aktif: thumbnail nggak perlu decode ulang tiap buka app.
-     * - crossfade dipendekin (150ms) biar animasi terasa lebih ringan.
+     * ## Performance tuning
+     * - The memory cache is capped at ~25% of the app's RAM: enough for smooth
+     *   scrolling without triggering aggressive GC or overheating the device on
+     *   galleries with thousands of photos.
+     * - The disk cache is enabled so thumbnails don't have to be re-decoded on
+     *   every app launch.
+     * - The crossfade is shortened (150ms) to keep the animation feeling light.
      */
     override fun newImageLoader(context: PlatformContext): ImageLoader {
         return ImageLoader.Builder(context)
             .components {
-                // Fetcher kustom: thumbnail GRID diambil dari thumbnail bawaan
-                // MediaStore (loadThumbnail, API 29+) -> jauh lebih ringan &
-                // cepat daripada decode file foto penuh. Keyer WAJIB supaya
-                // hasilnya masuk cache (memory + disk).
                 add(MediaStoreThumbnailFetcher.Factory(context.contentResolver))
                 add(MediaStoreThumbnailKeyer())
-                // Tetap perlu untuk uri video biasa (mis. cover album) yang
-                // TIDAK lewat MediaStoreThumbnail.
                 add(VideoFrameDecoder.Factory())
             }
             .memoryCachePolicy(CachePolicy.ENABLED)
             .memoryCache {
                 MemoryCache.Builder()
-                    // Ukuran cache mengikuti PerformanceMode pilihan user: makin
-                    // agresif = makin banyak thumbnail ditahan di RAM supaya scroll
-                    // balik tidak decode ulang. Dibaca SEKALI saat ImageLoader
-                    // dibuat; perubahan mode berlaku penuh setelah app di-restart.
                     .maxSizePercent(context, resolveMemoryCachePercent())
                     .build()
             }
@@ -80,11 +70,12 @@ class AGalleryApp : Application(), SingletonImageLoader.Factory {
     }
 
     /**
-     * Baca [PerformanceMode] tersimpan (sekali, saat ImageLoader dibuat) lalu
-     * petakan ke persentase RAM untuk memory cache. Dibungkus try/catch supaya
-     * kegagalan baca preferensi TIDAK pernah bikin app crash — jatuh ke default
-     * seimbang. Perubahan mode saat runtime baru berlaku penuh setelah restart
-     * (ukuran memory cache Coil di-set saat build, tidak bisa di-resize).
+     * Reads the stored [PerformanceMode] (once, when the ImageLoader is built)
+     * and maps it to a RAM percentage for the memory cache. Wrapped in
+     * try/catch so a preference read failure can NEVER crash the app — it falls
+     * back to the balanced default. A mode change at runtime only takes full
+     * effect after a restart (Coil's memory cache size is set at build time and
+     * cannot be resized).
      */
     private fun resolveMemoryCachePercent(): Double {
         val mode = try {

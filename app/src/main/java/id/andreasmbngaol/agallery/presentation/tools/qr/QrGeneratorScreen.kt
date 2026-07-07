@@ -112,15 +112,15 @@ import kotlinx.coroutines.launch
 import org.koin.androidx.compose.koinViewModel
 
 /**
- * Layar QR Code Generator (fitur 1.6.0). Editor kartu QR yang fully
- * customizable: Title / Subtitle / QR / Alt text / Supporting text; gaya modul
- * (Kotak/Titik); logo tengah (foto dari picker atau ikon bawaan).
- * Hasil bisa disimpan ke galeri atau dibagikan -- baik kartu penuh maupun QR
- * saja -- dgn menangkap Composable ke bitmap lewat GraphicsLayer.
+ * QR Code Generator screen (feature 1.6.0). A fully customizable QR-card editor:
+ * Title / Subtitle / QR / Alt text / Supporting text; module style (Square/Dot);
+ * center logo (a photo from the picker or a built-in icon). The result can be
+ * saved to the gallery or shared -- either the full card or just the QR -- by
+ * capturing the Composable to a bitmap via GraphicsLayer.
  *
- * Styling topbar & tombol mengikuti Solid/Frosted/Glass ([GlassIconButton] /
- * [GlassIsland]) konsisten dgn layar lain. Edge effect (Off/Darken/Blur)
- * ditangani [SystemBarScrim] lewat mode dari setting.
+ * Top bar & button styling follow Solid/Frosted/Glass ([GlassIconButton] /
+ * [GlassIsland]) consistently with the other screens. The edge effect
+ * (Off/Darken/Blur) is handled by [SystemBarScrim] via the mode from settings.
  */
 @Composable
 fun QrGeneratorScreen(
@@ -129,7 +129,6 @@ fun QrGeneratorScreen(
     val viewModel: QrGeneratorViewModel = koinViewModel()
     val state by viewModel.uiState.collectAsState()
     val config = state.config
-    // State picker logo internal berbasis album.
     val pickerAlbums by viewModel.albums.collectAsState()
     val pickerAlbumMedia by viewModel.albumMedia.collectAsState()
     val pickerLoading by viewModel.pickerLoading.collectAsState()
@@ -140,9 +139,6 @@ fun QrGeneratorScreen(
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
 
-    // Resource di-resolve di scope composable (bukan context.getString di dalam
-    // lambda) supaya bebas dari lint "Querying resource values using
-    // LocalContext.current" & tetap reaktif thd perubahan bahasa/konfigurasi.
     val needContentMsg = stringResource(R.string.qr_need_content)
     val savedMsg = stringResource(R.string.qr_saved)
     val saveFailedMsg = stringResource(R.string.qr_save_failed)
@@ -150,12 +146,9 @@ fun QrGeneratorScreen(
 
     var exportTarget by remember { mutableStateOf(QrExportTarget.CARD) }
 
-    // Layer terpisah utk menangkap kartu penuh vs QR saja.
     val cardLayer = rememberGraphicsLayer()
     val qrLayer = rememberGraphicsLayer()
 
-    // Picker foto INTERNAL (bukan photo-picker sistem). Dibuka via dialog di
-    // bawah; daftar foto di-load lazy dari galeri lewat ViewModel.
     var showPhotoPicker by remember { mutableStateOf(false) }
 
     val hasContent = config.content.isNotBlank()
@@ -201,7 +194,6 @@ fun QrGeneratorScreen(
     SystemBarScrim(
         mode = effectiveMode,
         topOverlay = {
-            // ---------- Top bar (glass back + title) ----------
             Row(
                 modifier = Modifier
                     .align(Alignment.TopCenter)
@@ -232,7 +224,6 @@ fun QrGeneratorScreen(
                 )
             }
 
-            // ---------- Action island (icon-only: Simpan · Bagikan · Clear) ----------
             GlassIsland(
                 style = componentStyle,
                 backdrop = backdrop,
@@ -255,9 +246,6 @@ fun QrGeneratorScreen(
                         tint = MaterialTheme.colorScheme.onSurface,
                     )
                 }
-                // Clear all: reset semua input. State ViewModel bertahan selama
-                // layar hidup (nggak ke-reset walau keluar-masuk lewat back),
-                // jadi perlu tombol reset eksplisit -- kini di island bawah.
                 IconButton(onClick = viewModel::clearAll) {
                     Icon(
                         imageVector = PhosphorIcons.Bold.ArrowClockwise,
@@ -290,9 +278,7 @@ fun QrGeneratorScreen(
             )
 
             QrSectionHeader(stringResource(R.string.qr_section_content))
-            // Content = data mentah QR (tak tampil di kartu), jadi tanpa gaya.
             QrField(config.content, viewModel::updateContent, stringResource(R.string.qr_field_content_label))
-            // Field yg tampil di kartu: teks + ukuran (sp) + color picker.
             QrStyledField(
                 value = config.title,
                 onValueChange = viewModel::updateTitle,
@@ -312,7 +298,6 @@ fun QrGeneratorScreen(
                 onColorChange = viewModel::setSubtitleColor,
             )
 
-            // Alt text: bisa "ikut konten" (nggak usah ketik ulang) atau custom.
             QrSectionHeader(stringResource(R.string.qr_field_alt_label))
             QrSegmented(
                 options = listOf(
@@ -392,7 +377,7 @@ fun QrGeneratorScreen(
     }
 }
 
-/** Kartu QR yang dirender (juga di-capture ke bitmap saat Simpan/Bagikan). */
+/** The rendered QR card (also captured to a bitmap on Save/Share). */
 @Composable
 private fun QrCardPreview(
     config: QrCardConfig,
@@ -406,9 +391,6 @@ private fun QrCardPreview(
         modifier = Modifier
             .fillMaxWidth()
             .drawWithContent {
-                // Rekam ke layer pada resolusi DITINGKATKAN utk ekspor tajam,
-                // tapi preview tetap tampil di resolusi native layar (drawContent
-                // langsung). Ini menghilangkan hasil PNG yang burik/pecah.
                 val scale = exportScaleFor(size.width)
                 cardLayer.record(
                     size = IntSize(
@@ -535,10 +517,10 @@ private fun QrField(
 }
 
 /**
- * Field teks + kontrol gaya di sampingnya: ukuran (sp) & color picker. Dipakai
- * utk Title / Subtitle / Alt / Supporting. [textEnabled] dimatikan saat Alt
- * pakai mode "ikut konten" -- teks dikunci, tapi ukuran & warna tetap bisa
- * diatur.
+ * A text field + styling controls beside it: size (sp) & a color picker. Used for
+ * Title / Subtitle / Alt / Supporting. [textEnabled] is turned off when Alt uses
+ * the "follow content" mode -- the text is locked, but size & color can still be
+ * adjusted.
  */
 @Composable
 private fun QrStyledField(
@@ -574,11 +556,11 @@ private const val QR_SIZE_MIN = 4
 private const val QR_SIZE_MAX = 99
 
 /**
- * Field angka kompak utk ukuran teks (sp). Teksnya disimpan sbg String bebas
- * supaya user bisa menghapus sampai kosong lalu mengetik ulang (mis. 24 ->
- * hapus -> 7) tanpa "nyangkut" di nilai minimum. Nilai diteruskan HANYA saat
- * valid & dalam rentang; kosong / di luar rentang dibiarkan (ukuran terakhir
- * dipertahankan, tidak dipaksa balik).
+ * A compact number field for text size (sp). Its text is stored as a free String
+ * so the user can delete it down to empty and retype (e.g. 24 -> delete -> 7)
+ * without getting "stuck" at the minimum. The value is propagated ONLY when valid
+ * & within range; empty / out-of-range is left as-is (the last size is kept, not
+ * forced back).
  */
 @Composable
 private fun QrSizeField(
@@ -586,8 +568,6 @@ private fun QrSizeField(
     onSizeChange: (Float) -> Unit,
 ) {
     var text by remember { mutableStateOf(size.roundToInt().toString()) }
-    // Lacak nilai terakhir yg KITA kirim supaya perubahan `size` dari luar
-    // (mis. Clear all) me-resync teks, tapi ketikan sendiri tidak ikut ter-reset.
     var lastPushed by remember { mutableStateOf(size) }
     if (size != lastPushed) {
         text = size.roundToInt().toString()
@@ -612,7 +592,7 @@ private fun QrSizeField(
     )
 }
 
-/** Swatch warna -> buka color picker fleksibel (HSV + HEX + preset). */
+/** Color swatch -> opens a flexible color picker (HSV + HEX + preset). */
 @Composable
 private fun QrColorSwatch(
     color: Long,
@@ -641,9 +621,9 @@ private fun QrColorSwatch(
 }
 
 /**
- * Color picker fleksibel dibangun sendiri (tanpa dependency eksternal): panel
- * Saturation x Value, slider Hue, input HEX (#RRGGBB), plus baris preset cepat.
- * Warna dikembalikan sbg Long ARGB (0xFFRRGGBB, alpha penuh).
+ * A flexible, self-built color picker (no external dependency): a Saturation x
+ * Value panel, a Hue slider, a HEX input (#RRGGBB), plus a quick preset row.
+ * The color is returned as a Long ARGB (0xFFRRGGBB, full alpha).
  */
 @Composable
 private fun QrColorPickerDialog(
@@ -682,7 +662,6 @@ private fun QrColorPickerDialog(
                     color = MaterialTheme.colorScheme.onSurface,
                 )
 
-                // Panel Saturation (sumbu X) x Value (sumbu Y).
                 Canvas(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -712,7 +691,6 @@ private fun QrColorPickerDialog(
                     drawCircle(Color.White, radius = 11f, center = Offset(cx, cy), style = Stroke(width = 2f))
                 }
 
-                // Slider Hue (0..360).
                 Canvas(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -739,7 +717,6 @@ private fun QrColorPickerDialog(
                     drawLine(Color.White, Offset(x, 0f), Offset(x, size.height), strokeWidth = 2f)
                 }
 
-                // Input HEX + preview warna terkini.
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(12.dp),
@@ -774,7 +751,6 @@ private fun QrColorPickerDialog(
                     )
                 }
 
-                // Preset cepat.
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     QR_PALETTE.chunked(5).forEach { rowColors ->
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -798,7 +774,6 @@ private fun QrColorPickerDialog(
                     }
                 }
 
-                // Aksi.
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.End,
@@ -815,14 +790,11 @@ private fun QrColorPickerDialog(
     }
 }
 
-// Palet preset color picker (ARGB 0xAARRGGBB). Baris 1 = netral (incl. default).
 private val QR_PALETTE = listOf(
     0xFF0A0A0A, 0xFF3A3A3A, 0xFF777777, 0xFFBDBDBD, 0xFFFFFFFF,
     0xFFB00020, 0xFFE53935, 0xFFFB8C00, 0xFFFDD835, 0xFF43A047,
     0xFF00897B, 0xFF1E88E5, 0xFF3949AB, 0xFF8E24AA, 0xFFD81B60,
 )
-
-// --- Helper konversi warna (Long ARGB 0xFFRRGGBB <-> HSV <-> HEX) ---
 
 private fun hsvToArgbLong(h: Float, s: Float, v: Float): Long {
     val argb = Color.hsv(h, s, v).toArgb()
@@ -845,7 +817,7 @@ private fun parseHex(hex: String): Long? {
     return 0xFF000000L or (rgb and 0xFFFFFF)
 }
 
-/** Segmented control ringan (dipakai utk gaya modul & target ekspor). */
+/** Lightweight segmented control (used for module style & export target). */
 @Composable
 private fun <T> QrSegmented(
     options: List<Pair<T, String>>,
@@ -908,7 +880,6 @@ private fun QrLogoPicker(
                 tint = MaterialTheme.colorScheme.onSurface,
             )
         }
-        // Foto (upload) ditaruh tepat setelah "No logo" sbg pilihan utama.
         LogoChip(selected = logo is QrLogo.Photo, onClick = onPickPhoto) {
             Icon(
                 imageVector = PhosphorIcons.Bold.Image,
@@ -916,7 +887,6 @@ private fun QrLogoPicker(
                 tint = MaterialTheme.colorScheme.onSurface,
             )
         }
-        // Ikon bawaan yang "bermakna" utk ditaruh di tengah (Hati, Lokasi).
         QrBuiltInLogo.entries.forEach { builtIn ->
             LogoChip(
                 selected = logo is QrLogo.BuiltIn && logo.logo == builtIn,
@@ -964,19 +934,17 @@ private fun builtInLogoIcon(logo: QrBuiltInLogo): ImageVector = when (logo) {
     QrBuiltInLogo.LOCATION -> PhosphorIcons.Bold.MapPin
 }
 
-// Skala ekspor: perbesar tangkapan supaya PNG hasil tajam (target ~2048px pada
-// sisi terlebar), dibatasi 1x..4x supaya tidak boros memori di layar besar.
 private const val EXPORT_TARGET_PX = 2048f
 
 private fun exportScaleFor(widthPx: Float): Float =
     if (widthPx <= 0f) 1f else (EXPORT_TARGET_PX / widthPx).coerceIn(1f, 4f)
 
 /**
- * Picker logo INTERNAL berbasis ALBUM (bukan photo-picker sistem). Alur meniru
- * "Create new album": tampilkan daftar folder/album dulu (grid 3 kolom), tap
- * satu album utk melihat foto di dalamnya, lalu tap satu foto -> langsung jadi
- * logo lewat [onPick]. Tombol Back device atau panah di header kembali dari
- * isi album ke daftar album.
+ * INTERNAL album-based logo picker (not the system photo picker). The flow
+ * mirrors "Create new album": show the folder/album list first (3-column grid),
+ * tap an album to see the photos inside it, then tap a photo -> it becomes the
+ * logo via [onPick]. The device Back button or the header arrow returns from the
+ * album content to the album list.
  */
 @Composable
 private fun QrInternalPhotoPickerDialog(
@@ -995,8 +963,6 @@ private fun QrInternalPhotoPickerDialog(
         onCloseAlbum()
     }
 
-    // Back device: dari isi album -> daftar album; dari daftar album -> tutup
-    // (dibiarkan ke perilaku default Dialog).
     BackHandler(enabled = openedAlbum != null) { backToAlbums() }
 
     Dialog(
@@ -1102,7 +1068,7 @@ private fun QrInternalPhotoPickerDialog(
     }
 }
 
-/** Kartu album (cover + nama + jumlah item) utk langkah pertama picker logo. */
+/** Album card (cover + name + item count) for the first step of the logo picker. */
 @Composable
 private fun QrPickerAlbumTile(
     album: Album,
@@ -1144,7 +1110,7 @@ private fun QrPickerAlbumTile(
     }
 }
 
-/** Sel foto (single-tap = pilih) utk langkah kedua picker logo. */
+/** Photo cell (single-tap = select) for the second step of the logo picker. */
 @Composable
 private fun QrPickerPhotoCell(
     item: MediaItem,

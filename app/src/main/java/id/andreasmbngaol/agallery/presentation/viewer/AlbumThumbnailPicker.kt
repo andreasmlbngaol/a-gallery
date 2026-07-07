@@ -46,15 +46,15 @@ import id.andreasmbngaol.agallery.R
 import id.andreasmbngaol.agallery.domain.model.album.Album
 
 /**
- * Dialog pemilih album berbasis THUMBNAIL (grid 3 kolom) untuk aksi Copy/Move.
- * Menggantikan daftar list vertikal lama supaya konsisten dgn tampilan tab
- * Albums: tiap album ditampilkan sebagai kartu cover + nama + jumlah item.
+ * THUMBNAIL-based album picker dialog (3-column grid) for the Copy/Move action.
+ * Replaces the old vertical list to stay consistent with the Albums tab view:
+ * each album is shown as a cover card + name + item count.
  *
- * Kalau [allowNewAlbum] true, ada kartu "+ New album" di depan: menekannya
- * memunculkan [NewAlbumNameDialog] untuk mengetik nama, lalu [onPick] dipanggil
- * dgn nama album baru itu (folder dibuat lewat proses copy/move di caller).
+ * When [allowNewAlbum] is true, a "+ New album" card is placed first: tapping it
+ * opens [NewAlbumNameDialog] to type a name, then [onPick] is called with that
+ * new album name (the folder is created by the copy/move process in the caller).
  *
- * [onPick] menerima NAMA album (folder tujuan), baik album lama maupun baru.
+ * [onPick] receives the album NAME (destination folder), whether existing or new.
  */
 @Composable
 fun AlbumThumbnailPickerDialog(
@@ -202,8 +202,8 @@ private fun NewAlbumTile(
 }
 
 /**
- * Dialog kecil untuk mengetik nama album baru. Tombol konfirmasi nonaktif saat
- * nama kosong. Dipakai bareng oleh picker Copy/Move dan alur "buat album baru".
+ * A small dialog to type a new album name. The confirm button is disabled when
+ * the name is empty. Shared by the Copy/Move picker and the "create new album" flow.
  */
 @Composable
 fun NewAlbumNameDialog(

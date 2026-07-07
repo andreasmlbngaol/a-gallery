@@ -7,7 +7,6 @@ import org.koin.core.module.dsl.viewModelOf
 import org.koin.dsl.module
 
 val viewerModule = module {
-    // Detector QR (ML Kit bundled) — single, dishare utk seluruh sesi viewer.
     single { QrDetector(androidContext()) }
     viewModelOf(::PhotoViewerViewModel)
 }

@@ -8,8 +8,9 @@ plugins {
     alias(libs.plugins.kotlin.serialization)
 }
 
-// Kredensial signing dibaca dari keystore.properties (lokal) ATAU environment variable (CI).
-// Kalau dua-duanya nggak ada, release build fallback ke debug signing biar build lokal nggak error.
+// Signing credentials come from keystore.properties (local) or environment
+// variables (CI). If neither is present, the release build falls back to debug
+// signing so local builds still succeed.
 val keystorePropertiesFile = rootProject.file("keystore.properties")
 val keystoreProperties = Properties().apply {
     if (keystorePropertiesFile.exists()) {
@@ -17,7 +18,7 @@ val keystoreProperties = Properties().apply {
     }
 }
 
-// Ambil nilai dari keystore.properties dulu, baru fallback ke env var (dipakai di GitHub Actions).
+// Prefer keystore.properties, then fall back to env vars (used by GitHub Actions).
 fun signingValue(propKey: String, envKey: String): String? =
     keystoreProperties.getProperty(propKey) ?: System.getenv(envKey)
 
@@ -41,7 +42,7 @@ android {
 
     signingConfigs {
         create("release") {
-            // storeFile cuma di-set kalau path-nya tersedia (lokal atau CI).
+            // storeFile is only set when a path is available (local or CI).
             val storeFilePath = signingValue("storeFile", "KEYSTORE_FILE")
             if (storeFilePath != null) {
                 storeFile = rootProject.file(storeFilePath)
@@ -54,7 +55,7 @@ android {
 
     buildTypes {
         release {
-            // Pakai release signing kalau keystore tersedia; kalau nggak, fallback ke debug.
+            // Use release signing when a keystore is available; otherwise fall back to debug.
             val releaseSigning = signingConfigs.getByName("release")
             signingConfig = if (releaseSigning.storeFile != null) {
                 releaseSigning
@@ -62,8 +63,8 @@ android {
                 signingConfigs.getByName("debug")
             }
 
-            // R8: shrink + obfuscate kode yang nggak kepakai, plus buang resource
-            // yang nggak dipakai. Ini yang bikin APK jauh lebih kecil & enteng.
+            // R8: shrink and obfuscate unused code and strip unused resources,
+            // which keeps the APK small.
             isMinifyEnabled = true
             isShrinkResources = true
             proguardFiles(
@@ -72,15 +73,13 @@ android {
             )
         }
     }
-    // ABI splits — hasilkan APK terpisah per arsitektur, biar tiap file cuma
-    // memuat native lib (.so) untuk arsitekturnya sendiri. ML Kit (bundled)
-    // bawa .so besar per-ABI; tanpa split, APK universal mengemas SEMUA ABI
-    // sekaligus (itu yang bikin 1.7 membengkak ke ~26MB).
-    //   arm64-v8a = (hampir) semua HP Android modern (64-bit ARM)
-    //   x86_64    = emulator / sebagian ChromeOS & perangkat Intel
-    // armeabi-v7a (ARM 32-bit lawas) sengaja TIDAK diikutkan; tambahkan di
-    // include(...) kalau mau menjangkau HP 32-bit lama.
-    // isUniversalApk=false -> tidak ada APK gabungan, hanya per-ABI.
+
+    // ABI splits: emit one APK per architecture so each file only carries the
+    // native libs (.so) for its own ABI. ML Kit (bundled) ships large per-ABI
+    // .so files; a universal APK would pack every ABI at once.
+    //   arm64-v8a = virtually all modern Android phones (64-bit ARM)
+    //   x86_64    = emulators / some ChromeOS and Intel devices
+    // armeabi-v7a (legacy 32-bit ARM) is intentionally excluded.
     splits {
         abi {
             isEnable = true
@@ -89,6 +88,7 @@ android {
             isUniversalApk = false
         }
     }
+
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
@@ -113,24 +113,24 @@ dependencies {
     implementation(libs.androidx.compose.ui.tooling.preview)
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
+
     // Coil
     implementation(libs.coil.compose)
     implementation(libs.coil.video)
 
-    // Media3 ExoPlayer — pemutar video di viewer (autoplay + kontrol custom).
+    // Media3 ExoPlayer — the video player in the viewer (autoplay + custom controls).
     implementation(libs.androidx.media3.exoplayer)
     implementation(libs.androidx.media3.ui)
 
-    // Liquid glass (Kyant backdrop) untuk floating nav bar. Efek lens butuh API 33+.
+    // Liquid glass (Kyant backdrop) for the floating nav bar. The lens effect needs API 33+.
     implementation(libs.kyant.backdrop)
     implementation(libs.kyant.shapes)
-    // implementation(libs.coil.network.okhttp) // aktifkan kalau perlu load dari URL
 
     // Paging
     implementation(libs.androidx.paging.runtime)
     implementation(libs.androidx.paging.compose)
 
-    // ViewModel + lifecycle Compose
+    // ViewModel + Compose lifecycle
     implementation(libs.androidx.lifecycle.viewmodel.compose)
     implementation(libs.androidx.lifecycle.runtime.compose)
 
@@ -145,12 +145,12 @@ dependencies {
     // Pinch-to-zoom
     implementation(libs.telephoto.zoomable.coil)
 
-    // Room (cache metadata)
+    // Room (metadata cache)
     implementation(libs.androidx.room.runtime)
     implementation(libs.androidx.room.ktx)
     ksp(libs.androidx.room.compiler)
 
-    // Koin (DI) — pakai BOM biar versi modul sinkron
+    // Koin (DI) — the BOM keeps module versions in sync
     implementation(platform(libs.koin.bom))
     implementation(libs.koin.android)
     implementation(libs.koin.androidx.compose)
@@ -164,30 +164,28 @@ dependencies {
     implementation(libs.kotlinx.serialization.json)
     implementation(libs.phosphor.icon)
 
-    // Baseline Profile installer — masang baseline profile (kalau ada) pas app
-    // dipasang, biar startup & scroll lebih ngebut (ART AOT-compile jalur panas).
+    // Baseline Profile installer — applies the baseline profile (if present) at
+    // install time so startup and scrolling are faster (ART AOT-compiles hot paths).
     implementation(libs.androidx.profileinstaller)
 
-    // WorkManager — auto-purge Trash 30 hari di background.
+    // WorkManager — background auto-purge of the 30-day Trash.
     implementation(libs.androidx.work.runtime)
 
-    // EXIF metadata reader (foto) — androidx.exifinterface
+    // EXIF metadata reader (photos) — androidx.exifinterface
     implementation(libs.androidx.exifinterface)
 
-    // HEIC/HEIF encoder (AndroidX) — Format Converter 1.5.0. NB: android.media.HeifWriter
-    // itu class @hide (bukan API publik), jadi wajib pakai androidx.heifwriter.
+    // HEIC/HEIF encoder (AndroidX) for the Format Converter. Note: android.media.HeifWriter
+    // is a @hide class (not public API), so androidx.heifwriter is required.
     implementation(libs.androidx.heifwriter)
 
-    // ZXing core — encoder QR (pure-Java, offline, tanpa izin INTERNET) utk QR
-    // Code Generator 1.6.0. Matriks per-modul dirender sendiri di Compose Canvas.
+    // ZXing core — QR encoder (pure-Java, offline, no INTERNET permission) for
+    // the QR Code Generator. The per-module matrix is rendered in a Compose Canvas.
     implementation(libs.zxing.core)
 
-    // ML Kit Barcode Scanning (bundled) — decoder QR on-device/offline (tanpa izin
-    // INTERNET) utk QR Detection 1.7.0. Model di-embed di APK (~2.4MB), balik
-    // struktur terklasifikasi (URL/WiFi/kontak/email/telepon/geo) — hal yang tak
-    // bisa diberikan ZXing (yang cuma dipakai buat encode di 1.6.0).
+    // ML Kit Barcode Scanning (bundled) — on-device/offline QR decoder (no
+    // INTERNET permission) for QR Detection. The model is embedded in the APK
+    // (~2.4MB) and returns classified structures (URL/WiFi/contact/email/phone/geo).
     implementation(libs.mlkit.barcode.scanning)
-
 
     testImplementation(libs.junit)
     androidTestImplementation(platform(libs.androidx.compose.bom))

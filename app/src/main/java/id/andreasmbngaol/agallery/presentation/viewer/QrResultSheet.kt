@@ -44,9 +44,10 @@ import id.andreasmbngaol.agallery.domain.model.settings.ComponentStyle
 import id.andreasmbngaol.agallery.domain.model.qr.QrContent
 
 /**
- * Chip kaca kecil yang muncul di pojok kanan-bawah foto saat ada QR terdeteksi
- * (hanya tampil kalau chrome/tombol tampil). Ditekan -> buka [QrResultSheet].
- * Pakai [GlassActionButton] biar seragam dgn tema app (SOLID/FROSTED/GLASS).
+ * A small glass chip that appears at the bottom-right of a photo when a QR is
+ * detected (shown only while the chrome/buttons are visible). Tapping it opens
+ * [QrResultSheet]. Uses [GlassActionButton] to stay consistent with the app
+ * theme (SOLID/FROSTED/GLASS).
  */
 @Composable
 fun QrDetectedChip(
@@ -71,10 +72,10 @@ fun QrDetectedChip(
 }
 
 /**
- * Bottom sheet berisi daftar SEMUA QR yang terdeteksi di foto. Tiap kartu
- * menampilkan tipe konten + nilai utama + field pendukung (SSID/kata sandi utk
- * WiFi, telepon/email utk kontak, dll), plus tombol Salin dan tombol Buka
- * kontekstual (link -> browser, telepon -> dialer, email -> mailto, geo -> peta).
+ * Bottom sheet listing ALL QR codes detected in the photo. Each card shows the
+ * content type + primary value + supporting fields (SSID/password for WiFi,
+ * phone/email for contacts, etc.), plus a Copy button and a contextual Open
+ * button (link -> browser, phone -> dialer, email -> mailto, geo -> maps).
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -84,7 +85,7 @@ fun QrResultSheet(
 ) {
     val sheetState = rememberBottomSheetState(
         initialValue = SheetValue.Hidden,
-        enabledValues = setOf(SheetValue.Hidden, SheetValue.Expanded), // skip PartiallyExpanded
+        enabledValues = setOf(SheetValue.Hidden, SheetValue.Expanded),
     )
     ModalBottomSheet(onDismissRequest = onDismiss, sheetState = sheetState) {
         Column(
@@ -132,7 +133,6 @@ private fun QrResultCard(content: QrContent) {
                 style = MaterialTheme.typography.bodyLarge,
                 color = MaterialTheme.colorScheme.onSurface,
             )
-            // Field pendukung terlokalisasi per tipe.
             when (content) {
                 is QrContent.Wifi -> {
                     content.password?.let { DetailLine(stringResource(R.string.qr_wifi_password), it) }
@@ -175,7 +175,7 @@ private fun QrResultCard(content: QrContent) {
     }
 }
 
-/** Baris "Label: value" kecil utk field pendukung (WiFi/kontak/email). */
+/** A small "Label: value" row for supporting fields (WiFi/contact/email). */
 @Composable
 private fun DetailLine(label: String, value: String) {
     Spacer(Modifier.height(4.dp))
@@ -186,14 +186,14 @@ private fun DetailLine(label: String, value: String) {
     )
 }
 
-/** Salin teks mentah QR ke clipboard sistem (framework, bukan Compose API). */
+/** Copy the raw QR text to the system clipboard (framework, not the Compose API). */
 private fun copyToClipboard(context: Context, text: String) {
     val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager
     clipboard?.setPrimaryClip(ClipData.newPlainText("QR", text))
     Toast.makeText(context, context.getString(R.string.qr_detect_copied), Toast.LENGTH_SHORT).show()
 }
 
-/** Buka [uri] via ACTION_VIEW; toast kalau tak ada app yg menangani. */
+/** Open [uri] via ACTION_VIEW; toast if no app can handle it. */
 private fun openUri(context: Context, uri: String) {
     val ok = runCatching {
         context.startActivity(Intent(Intent.ACTION_VIEW, uri.toUri()))
@@ -203,7 +203,7 @@ private fun openUri(context: Context, uri: String) {
     }
 }
 
-/** Nilai utama yang ditonjolkan di kartu (baris pertama tebal). */
+/** The primary value highlighted on the card (first line, bold). */
 private fun QrContent.primaryText(): String = when (this) {
     is QrContent.Url -> url
     is QrContent.Email -> address

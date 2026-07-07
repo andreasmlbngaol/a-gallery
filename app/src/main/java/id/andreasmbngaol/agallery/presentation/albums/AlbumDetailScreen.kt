@@ -14,13 +14,14 @@ import id.andreasmbngaol.agallery.presentation.gallery.GalleryViewModel
 import org.koin.androidx.compose.koinViewModel
 
 /**
- * Layar isi satu album -- me-REUSE [GalleryGridScreen] apa adanya (grid,
- * long-press preview, favorite/trash/delete, pull-to-refresh) hanya di-scope
- * ke [albumKey]. VM di-key per album biar tak nabrak instance galeri utama.
+ * Single-album content screen -- REUSES [GalleryGridScreen] as-is (grid,
+ * long-press preview, favorite/trash/delete, pull-to-refresh), just scoped to
+ * [albumKey]. The VM is keyed per album so it does not clash with the main
+ * gallery instance.
  *
- * Wrapper Box memakai [sharedPhotoElement] dgn key yang sama seperti cover di
- * AlbumsScreen -> transisi container-transform: album meluas dari tile-nya
- * ke full screen.
+ * The wrapper Box uses [sharedPhotoElement] with the same key as the cover in
+ * AlbumsScreen -> container-transform transition: the album expands from its
+ * tile to full screen.
  */
 @Composable
 fun AlbumDetailScreen(

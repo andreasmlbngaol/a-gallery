@@ -26,13 +26,13 @@ private val LightColorScheme = lightColorScheme(
 )
 
 /**
- * Tema utama AGallery.
+ * The main AGallery theme.
  *
- * Best practice: content di-wrap dengan [Surface] ber-warna
- * [MaterialTheme.colorScheme.background] di level tema — bukan di MainActivity —
- * sehingga setiap consumer AGalleryTheme (viewer, preview, dsb.) otomatis dapat
- * latar yang benar. Ini juga membereskan glitch fade transition Nav3 yang
- * sempat menembus ke window default berwarna terang saat berpindah layar di
+ * Best practice: content is wrapped in a [Surface] colored
+ * [MaterialTheme.colorScheme.background] at the theme level — not in MainActivity —
+ * so every AGalleryTheme consumer (viewer, preview, etc.) automatically gets the
+ * correct background. This also fixes the Nav3 fade-transition glitch that
+ * sometimes bled through to the light default window when switching screens in
  * dark mode.
  */
 @Composable

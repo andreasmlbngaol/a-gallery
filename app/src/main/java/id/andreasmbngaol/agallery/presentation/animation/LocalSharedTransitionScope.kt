@@ -4,12 +4,12 @@ import androidx.compose.animation.SharedTransitionScope
 import androidx.compose.runtime.compositionLocalOf
 
 /**
- * CompositionLocal untuk mem-propagate [SharedTransitionScope] dari
- * `SharedTransitionLayout` di [id.andreasmbngaol.agallery.core.navigation.AGalleryNavDisplay]
- * ke seluruh layar tanpa perlu di-drill lewat parameter tiap composable.
+ * CompositionLocal for propagating [SharedTransitionScope] from the
+ * `SharedTransitionLayout` in [id.andreasmbngaol.agallery.core.navigation.AGalleryNavDisplay]
+ * to every screen without drilling it through each composable's parameters.
  *
  * Default `null`: [Modifier.sharedPhotoElement][id.andreasmbngaol.agallery.presentation.animation.sharedPhotoElement]
- * akan no-op bila dipakai di luar `SharedTransitionLayout` (mis. di dalam
- * `@Preview` atau sebelum navigasi ter-inisialisasi).
+ * is a no-op when used outside a `SharedTransitionLayout` (e.g. inside a
+ * `@Preview` or before navigation is initialized).
  */
 val LocalSharedTransitionScope = compositionLocalOf<SharedTransitionScope?> { null }

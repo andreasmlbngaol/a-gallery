@@ -21,16 +21,16 @@ import kotlin.math.min
 import kotlin.math.roundToInt
 
 /**
- * Renderer QR kustom di Compose Canvas. Menggambar matriks per-modul dgn gaya
- * [dotStyle] (kotak / titik). Untuk gaya titik, ketiga "mata" finder pattern
- * digambar sebagai bentuk membulat (bukan titik lepas) supaya tetap terbaca
- * scanner + terlihat modern.
+ * Custom QR renderer on a Compose Canvas. Draws the matrix per module with the
+ * [dotStyle] style (square / dot). For the dot style, the three finder-pattern
+ * "eyes" are drawn as rounded shapes (not loose dots) so they stay
+ * scanner-readable and look modern.
  *
- * Logo tengah (foto ATAU ikon) digambar SEAMLESS: modul QR di area logo
- * di-skip (tidak digambar) sehingga logo menyatu dgn latar tanpa kotak putih --
- * penting utk PNG transparan biar tidak muncul "background" kotak. ECC level H
- * (di [QrMatrix]) menjaga QR tetap terbaca walau tengahnya tertutup. Foto
- * di-center-crop supaya tidak gepeng.
+ * The center logo (photo OR icon) is drawn SEAMLESSLY: QR modules in the logo
+ * area are skipped (not drawn) so the logo blends with the background without a
+ * white box -- important for transparent PNGs so no boxed "background" appears.
+ * ECC level H (in [QrMatrix]) keeps the QR readable even when the center is
+ * covered. The photo is center-cropped so it is not stretched.
  */
 @Composable
 fun QrCodeView(
@@ -58,8 +58,6 @@ fun QrCodeView(
         fun isFinder(x: Int, y: Int): Boolean =
             (x < 7 && y < 7) || (x >= n - 7 && y < 7) || (x < 7 && y >= n - 7)
 
-        // Area logo (kalau ada). Modul yang pusatnya jatuh di area ini di-skip
-        // supaya logo tampil seamless tanpa kotak putih.
         val logoPresent = logoBitmap != null || logoPainter != null
         val logoSize = if (logoPresent) dim * 0.24f else 0f
         val logoLeft = originX + (dim - logoSize) / 2f
@@ -70,10 +68,8 @@ fun QrCodeView(
         val clearRight = logoLeft + logoSize + clearPad
         val clearBottom = logoTop + logoSize + clearPad
 
-        // Latar (quiet zone) putih.
         drawRect(color = lightColor, topLeft = Offset(originX, originY), size = Size(dim, dim))
 
-        // Modul data.
         for (y in 0 until n) {
             for (x in 0 until n) {
                 if (!matrix.isDark(x, y)) continue
@@ -98,7 +94,6 @@ fun QrCodeView(
             }
         }
 
-        // Mata finder membulat (hanya utk gaya non-kotak).
         if (dotStyle != QrDotStyle.SQUARE) {
             val eyes = listOf(0 to 0, n - 7 to 0, 0 to (n - 7))
             eyes.forEach { (fx, fy) ->
@@ -124,9 +119,7 @@ fun QrCodeView(
             }
         }
 
-        // Logo tengah (foto atau ikon) -- TANPA kotak putih (seamless).
         if (logoBitmap != null) {
-            // Center-crop supaya foto tidak gepeng saat dipaksa ke area persegi.
             val srcDim = min(logoBitmap.width, logoBitmap.height)
             val srcX = (logoBitmap.width - srcDim) / 2
             val srcY = (logoBitmap.height - srcDim) / 2

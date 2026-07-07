@@ -74,14 +74,14 @@ import id.andreasmbngaol.agallery.presentation.viewer.NewAlbumNameDialog
 import org.koin.androidx.compose.koinViewModel
 
 /**
- * Alur buat album baru:
- * 1) Minta nama album (dialog, textfield squircle).
- * 2) Pilih album sumber (grid 3 kolom) -> buka -> pilih foto (grid 3 kolom).
- * 3) Tekan Create (FAB kanan-bawah) -> copy semua ke DCIM/<nama>/.
- * Batal = album baru tidak dibuat (konsep copy, sumber tetap utuh).
+ * New-album flow:
+ * 1) Ask for the album name (dialog, squircle text field).
+ * 2) Pick a source album (3-column grid) -> open -> pick photos (3-column grid).
+ * 3) Press Create (bottom-right FAB) -> copy everything to DCIM/<name>/.
+ * Cancel = the new album is not created (copy concept, the source stays intact).
  *
- * Top bar, edge effect, dan gaya komponen mengikuti setting global
- * (Solid / Frosted / Glass) seperti layar lain.
+ * The top bar, edge effect, and component style follow the global setting
+ * (Solid / Frosted / Glass) like the other screens.
  */
 @Composable
 fun CreateAlbumScreen(
@@ -107,7 +107,6 @@ fun CreateAlbumScreen(
 
     val name = albumName
     if (name == null) {
-        // Gate nama dulu; batal di sini = keluar tanpa membuat apa pun.
         NewAlbumNameDialog(
             title = stringResource(R.string.new_album),
             confirmLabel = stringResource(R.string.action_next),
@@ -172,7 +171,6 @@ fun CreateAlbumScreen(
                 }
             }
 
-            // FAB Create: kanan-bawah (bukan lagi di top bar).
             if (selected.isNotEmpty()) {
                 CreateFab(
                     count = selected.size,
@@ -242,7 +240,7 @@ fun CreateAlbumScreen(
     }
 }
 
-/** FAB Create kanan-bawah dengan gaya liquid glass (kapsul). */
+/** Bottom-right Create FAB with a liquid-glass (capsule) style. */
 @Composable
 private fun CreateFab(
     count: Int,
@@ -376,7 +374,7 @@ private fun PickPhotoCell(
     }
 }
 
-/** Lingkaran centang (ikon Phosphor Check saat terpilih). */
+/** Check circle (Phosphor Check icon when selected). */
 @Composable
 private fun SelectionCheck(
     selected: Boolean,

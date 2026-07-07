@@ -11,8 +11,9 @@ at the repository root:
 
 | License | Libraries |
 |---|---|
-| **Apache License 2.0** | All AndroidX / Jetpack (Compose, Material 3, Room, Paging, DataStore, Navigation 3, Media3, WorkManager, Lifecycle, SplashScreen, ProfileInstaller, Core KTX), Kotlin & kotlinx (Coroutines, Serialization), Coil, Koin, Accompanist, Telephoto, Haze, Kyant Backdrop & Shapes |
+| **Apache License 2.0** | All AndroidX / Jetpack (Compose, Material 3, Room, Paging, DataStore, Navigation 3, Media3, WorkManager, Lifecycle, SplashScreen, ProfileInstaller, Core KTX, ExifInterface, HeifWriter), Kotlin & kotlinx (Coroutines, Serialization), Coil, Koin, Accompanist, Telephoto, Haze, Kyant Backdrop & Shapes, ZXing Core |
 | **MIT** | Phosphor Icons (Compose port + icon set) |
+| **Google ML Kit Terms** | ML Kit Barcode Scanning (bundled, on-device) |
 
 Test-only and build-only tools (JUnit, Espresso, AndroidX Test, AGP, KSP) are
 **not** shipped inside the released APK and therefore carry no distribution

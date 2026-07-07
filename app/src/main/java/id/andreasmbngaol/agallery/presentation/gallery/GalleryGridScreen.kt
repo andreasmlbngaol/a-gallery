@@ -168,42 +168,24 @@ import java.util.Locale
 import kotlin.math.ceil
 import kotlin.time.Duration.Companion.milliseconds
 
-// Tinggi visual TopAppBar (sedikit di atas M3 default 64dp untuk
-// mengakomodasi judul 26sp SemiBold + FilledTonalIconButton 44dp).
 private val GalleryTopAppBarHeight = 72.dp
 
-// Jarak maksimum konten "ikut ketarik" turun saat pull-to-refresh (iOS-style).
-// Dipetakan dari distanceFraction: 1f (pas di ambang) = geser sejauh ini.
 private val PullContentMaxOffset = 80.dp
 
-// Diameter kontainer indikator pull-to-refresh.
 private val PullIndicatorSize = 40.dp
 
-// Ukuran (px) decode thumbnail grid — kecil & seragam biar ringan +
-// cache-friendly (satu cache key untuk semua cell).
 private const val GridThumbnailPx = 400
-// Jendela prefetch (dalam satuan BARIS) per mode performa. Angka lebih besar =
-// lebih banyak thumbnail dimuat lebih awal ke RAM sebelum masuk layar.
-// first = baris DI DEPAN viewport, second = baris DI ATAS (untuk scroll balik).
 private fun PerformanceMode.prefetchRows(): Pair<Int, Int> = when (this) {
     PerformanceMode.LOW -> 2 to 0
     PerformanceMode.BALANCED -> 6 to 2
     PerformanceMode.HIGH -> 12 to 4
 }
 
-// Fast-scroll scrollbar (grip di tepi kanan grid).
-// Lebar area sentuh drag (lebih lebar dari thumb biar gampang ditangkap jari).
 private val ScrollbarTouchWidth = 32.dp
-// Lebar visual thumb (pill) — lebih tebal biar gampang dilihat & ditarik.
 private val ScrollbarThumbWidth = 8.dp
-// Lebar thumb saat sedang ditekan/di-drag — membesar biar gampang dipegang.
 private val ScrollbarThumbDragWidth = 16.dp
-// Tinggi thumb tetap, gaya "grip handle" (bukan proporsional).
 private val ScrollbarThumbHeight = 52.dp
-// Jarak thumb dari tepi kanan area sentuh.
 private val ScrollbarEndPadding = 4.dp
-// Inset seluruh strip scrollbar dari tepi kanan layar, supaya thumb tidak
-// menempel ke edge (susah diraih + kadang memicu gesture "back" sistem).
 private val ScrollbarEdgeInset = 4.dp
 
 private fun titleDateFormatter(): DateTimeFormatter =
@@ -216,51 +198,40 @@ private fun formatTitleDate(epochSeconds: Long): String =
         .replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale.getDefault()) else it.toString() }
 
 /**
- * Konten tab Gallery (grid foto).
+ * The Gallery tab content (photo grid).
  *
- * Di-host di dalam pager
- * [id.andreasmbngaol.agallery.presentation.home.HomeTabsScreen]; floating bar
- * (Gallery/Albums, Settings, Sort) digambar oleh host itu, BUKAN di sini.
- * Dulu screen ini membungkus dirinya sendiri dengan `GalleryTabScaffold`.
+ * Hosted inside the pager
+ * [id.andreasmbngaol.agallery.presentation.home.HomeTabsScreen]; the floating bar
+ * (Gallery/Albums, Settings, Sort) is drawn by that host, NOT here.
+ * This screen used to wrap itself in a `GalleryTabScaffold`.
  *
- * Preferensi (sortOrder, jumlah kolom, edge effect) dibaca dari
- * [GalleryViewModel] yang mem-persist ke DataStore, jadi reaktif terhadap
- * perubahan di layar Settings dan TETAP walau aplikasi ditutup.
+ * Preferences (sortOrder, column count, edge effect) are read from
+ * [GalleryViewModel], which persists them to DataStore, so they react to
+ * changes in the Settings screen and PERSIST even after the app is closed.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun GalleryGridScreen(
     onMediaClick: (mediaId: Long, index: Int, sortOrder: GallerySortOrder) -> Unit,
     onScrollStateChange: (Boolean) -> Unit = {},
-    // Mode album: kalau di-set, top bar memakai judul statis ([staticTitle]) +
-    // tombol Back ([onBack]) dan ruang bawah tak lagi menyisakan floating bar.
     staticTitle: String? = null,
     onBack: (() -> Unit)? = null,
-    // Aktifkan multi-select (Copy/Move/Delete batch). Hanya dipakai layar
-    // detail album; tab Gallery utama memakai default false.
     selectionEnabled: Boolean = false,
     albumKey: String? = null,
     viewModel: GalleryViewModel = koinViewModel(),
 ) {
-    // Semua preferensi bersumber dari DataStore lewat VM (reaktif & persisten).
     val sortOrder by viewModel.sortOrder.collectAsState()
     val gridColumns by viewModel.gridColumns.collectAsState()
     val performanceMode by viewModel.performanceMode.collectAsState()
     val chosenMode by viewModel.edgeEffectMode.collectAsState()
     val effectiveMode = rememberEffectiveEdgeEffectMode(chosenMode)
-    // Gaya komponen (Solid/Frosted/Glass) untuk tombol & overlay. Terpisah dari
-    // edge effect (yang cuma untuk scrim tepi layar). GLASS = refraction live.
     val componentStyleChosen by viewModel.componentStyle.collectAsState()
     val componentStyle = rememberEffectiveComponentStyle(componentStyleChosen)
-    // Backdrop khusus top bar: menandai KONTEN grid (bukan overlay app bar)
-    // sebagai sumber, supaya tombol Search membiaskan foto di belakangnya.
     val topBarBackdrop = rememberLayerBackdrop()
 
     val gridState = rememberLazyGridState()
     val items = viewModel.media.collectAsLazyPagingItems()
 
-    // Laporkan status scroll grid ke host supaya floating nav bar FROSTED bisa
-    // MEMBEKUKAN capture backdrop saat scroll (hemat GPU). GLASS tetap live.
     LaunchedEffect(gridState) {
         snapshotFlow { gridState.isScrollInProgress }
             .distinctUntilChanged()
@@ -290,13 +261,8 @@ fun GalleryGridScreen(
 
     val safeDrawingPadding = WindowInsets.safeDrawing.asPaddingValues()
     val layoutDirection = LocalLayoutDirection.current
-    // Bottom = safeArea (nav bar) + tinggi floating bar. Grid tetap edge-to-
-    // edge (fillMaxSize), item terakhir cukup padded supaya tidak ke-tutup
-    // pill segmented bar.
     val gridContentPadding = PaddingValues(
         top = safeDrawingPadding.calculateTopPadding() + GalleryTopAppBarHeight,
-        // Mode album (onBack != null) tak punya floating tab bar → cukup safe
-        // area; mode galeri sisakan tinggi floating bar juga.
         bottom = safeDrawingPadding.calculateBottomPadding() +
             (if (onBack != null) 0.dp else FloatingTabBarHeight),
         start = safeDrawingPadding.calculateStartPadding(layoutDirection),
@@ -306,12 +272,9 @@ fun GalleryGridScreen(
     val previewItem by viewModel.previewItem.collectAsState()
     val favoriteIds by viewModel.favoriteIds.collectAsState()
 
-    // ---- Multi-select batch (aktif hanya bila selectionEnabled = detail album) ----
     val albums by viewModel.albums.collectAsState()
     var selectionMode by remember { mutableStateOf(false) }
     val selected = remember { mutableStateMapOf<Long, MediaItem>() }
-    // Copy/Move/Delete berlaku di SEMUA album KECUALI album khusus.
-    // Album khusus = Recent (AllMedia), Videos (AllVideos), Favorites -> hanya Delete.
     val isSpecialAlbum = remember(albumKey) {
         when (albumKey?.let { mediaScopeFromKey(it) }) {
             MediaScope.AllMedia, MediaScope.AllVideos, MediaScope.Favorites -> true
@@ -328,7 +291,6 @@ fun GalleryGridScreen(
     }
     BackHandler(enabled = selectionMode) { exitSelection() }
 
-    // Launcher untuk konfirmasi hapus scoped-storage (dialog sistem, API 30+).
     val deleteLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.StartIntentSenderForResult(),
     ) { result ->
@@ -351,7 +313,6 @@ fun GalleryGridScreen(
             exitSelection()
         }
     }
-    // Consent SATU-kali untuk batch move (API 30+); saat disetujui, VM lanjut.
     val writeLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.StartIntentSenderForResult(),
     ) { result ->
@@ -370,7 +331,6 @@ fun GalleryGridScreen(
         }
     }
 
-    // Background (galeri) di-blur saat preview long-press aktif.
     val backgroundBlur by animateDpAsState(
         targetValue = if (previewItem != null) 24.dp else 0.dp,
         label = "preview-bg-blur",
@@ -405,9 +365,6 @@ fun GalleryGridScreen(
                                     blurRadius = 4f,
                                 ),
                             ),
-                            // Beri jarak dari tombol back ketika mode album (onBack != null);
-                            // di mode gallery utama padding kiri ekstra tidak diperlukan
-                            // karena tak ada navigationIcon.
                             modifier = if (onBack != null) {
                                 Modifier.padding(start = 12.dp)
                             } else {
@@ -418,8 +375,6 @@ fun GalleryGridScreen(
                 },
                 navigationIcon = {
                     if (onBack != null) {
-                        // Extra kiri (16.dp) supaya tombol back TIDAK menempel
-                        // ke tepi layar dan ada nafas dgn safe-area.
                         Box(modifier = Modifier.padding(start = 16.dp)) {
                             StyledCircleBackButton(
                                 style = componentStyle,
@@ -438,9 +393,6 @@ fun GalleryGridScreen(
         },
     ) { sourceModifier ->
         val gridBackdropModifier = if (componentStyle.drawsBackdrop() && (previewItem != null || onBack != null)) {
-            // Capture backdrop HANYA saat overlay preview aktif (grid diam) supaya
-            // scroll biasa tak kena render layer. GLASS & FROSTED sama-sama kaca;
-            // SOLID / < API 33 tak pernah nempel modifier ini (drawsBackdrop=false).
             Modifier.fillMaxSize().layerBackdrop(topBarBackdrop)
         } else {
             Modifier.fillMaxSize()
@@ -461,7 +413,7 @@ fun GalleryGridScreen(
             )
         }
     }
-        } // tutup Box background (blur)
+        }
 
         var pendingDeleteUri by remember { mutableStateOf<String?>(null) }
 
@@ -473,7 +425,6 @@ fun GalleryGridScreen(
                 isFavorite = preview.id in favoriteIds,
                 onDismiss = { viewModel.dismissPreview() },
                 onFavoriteClick = {
-                    // Toggle: kirim kebalikan dari status favorit saat ini.
                     viewModel.onToggleFavorite(preview.id, preview.id !in favoriteIds)
                 },
                 onTrashClick = { viewModel.moveToTrash(preview) },
@@ -492,7 +443,6 @@ fun GalleryGridScreen(
             )
         }
 
-        // ---------- Island multi-select (hanya di detail album) ----------
         if (selectionEnabled && items.itemCount > 0) {
             var batchAlbumMode by remember { mutableStateOf<BatchAlbumMode?>(null) }
             var showBatchTrashConfirm by remember { mutableStateOf(false) }
@@ -515,8 +465,6 @@ fun GalleryGridScreen(
                 horizontalArrangement = Arrangement.spacedBy(4.dp),
             ) {
                 if (!selectionMode) {
-                    // SATU-SATUNYA pemicu multi-select. Long-press item TETAP
-                    // membuka menu preview (Favorite / Trash / Delete) seperti semula.
                     IslandAction(
                         icon = PhosphorIcons.Bold.CheckSquare,
                         label = stringResource(R.string.action_select),
@@ -524,7 +472,6 @@ fun GalleryGridScreen(
                         onClick = { selectionMode = true },
                     )
                 } else {
-                    // Select all / Select none (gaya & warna sama dgn island Trash).
                     IslandAction(
                         icon = if (allSelected) PhosphorIcons.Bold.Square
                         else PhosphorIcons.Bold.CheckSquare,
@@ -540,7 +487,6 @@ fun GalleryGridScreen(
                         },
                     )
                     if (selCount > 0) {
-                        // Copy & Move di SEMUA album kecuali khusus (Recent/Videos/Favorites).
                         if (!isSpecialAlbum) {
                             IslandAction(
                                 icon = PhosphorIcons.Bold.Copy,
@@ -561,8 +507,6 @@ fun GalleryGridScreen(
                                 },
                             )
                         }
-                        // Tap = ke Trash (konfirmasi ringan); tahan = hapus permanen
-                        // (animasi gradient sama seperti di photo/video viewer).
                         HoldToDeleteButton(
                             onTap = { showBatchTrashConfirm = true },
                             onHoldComplete = { showBatchDeleteConfirm = true },
@@ -578,7 +522,6 @@ fun GalleryGridScreen(
                 }
             }
 
-            // Picker album (grid thumbnail) utk Copy/Move batch.
             batchAlbumMode?.let { mode ->
                 AlbumThumbnailPickerDialog(
                     title = if (mode == BatchAlbumMode.COPY) stringResource(R.string.action_copy_to_album) else stringResource(R.string.action_move_to_album),
@@ -618,14 +561,14 @@ fun GalleryGridScreen(
             }
         }
 
-    } // tutup Box root
+    }
 }
 
-/** Mode picker album utk aksi batch di island seleksi. */
+/** Album picker mode for batch actions in the selection island. */
 private enum class BatchAlbumMode { COPY, MOVE }
 
 /**
- * Modifier kapsul liquid-glass (pola identik dgn island Trash/PhotoViewer).
+ * A liquid-glass capsule modifier (identical pattern to the Trash/PhotoViewer island).
  * GLASS = blur + lens; FROSTED = vibrancy + veil; SOLID/API<33 = fallback fill.
  */
 @Composable
@@ -652,7 +595,7 @@ private fun Modifier.selectionGlass(style: ComponentStyle, backdrop: Backdrop): 
     }
 }
 
-/** Satu aksi di island: ikon Phosphor saja (label utk contentDescription). */
+/** A single action in the island: just a Phosphor icon (label for contentDescription). */
 @Composable
 private fun IslandAction(
     label: String,
@@ -676,7 +619,7 @@ private fun IslandAction(
     }
 }
 
-/** Lingkaran check: kosong (outline putih) atau terisi primary + centang. */
+/** Check circle: empty (white outline) or filled primary + a checkmark. */
 @Composable
 private fun SelectionCheck(
     selected: Boolean,
@@ -702,7 +645,6 @@ private fun SelectionCheck(
     }
 }
 
-
 @Composable
 private fun GalleryPagingContent(
     items: LazyPagingItems<MediaItem>,
@@ -723,8 +665,6 @@ private fun GalleryPagingContent(
         }
 
         is LoadState.Error if items.itemCount == 0 -> {
-            // Error awal juga dibungkus pull-to-refresh: selain tombol Retry,
-            // user bisa tarik-untuk-refresh seperti biasa.
             GalleryPullToRefresh(
                 items = items,
                 contentPadding = contentPadding,
@@ -741,9 +681,6 @@ private fun GalleryPagingContent(
         }
 
         is LoadState.NotLoading if items.itemCount == 0 -> {
-            // PENTING: empty state pun dibungkus pull-to-refresh. Ini kejadian
-            // tepat setelah izin baru diberikan — galeri masih kosong sesaat,
-            // dan user harus bisa menarik untuk memicu reload MediaStore.
             GalleryPullToRefresh(
                 items = items,
                 contentPadding = contentPadding,
@@ -773,28 +710,28 @@ private fun GalleryPagingContent(
 }
 
 /**
- * Pembungkus pull-to-refresh gaya iOS yang dipakai BARENG oleh grid, empty
- * state, dan error state — supaya user tetap bisa tarik-untuk-refresh WALAU
- * galeri masih kosong (mis. tepat setelah izin diberikan, konten belum sempat
- * ke-load).
+ * An iOS-style pull-to-refresh wrapper SHARED by the grid, empty
+ * state, and error state — so the user can still pull-to-refresh EVEN WHEN the
+ * gallery is still empty (e.g. right after permission is granted, before content
+ * has loaded).
  *
- * [content] menerima sebuah Modifier `translationY` (contentOffset) yang
- * HARUS dipasang ke elemen scrollable-nya, supaya konten ikut ketarik turun
- * mengikuti jari dan indikator muncul di celah atasnya.
+ * [content] receives a `translationY` Modifier (contentOffset) that
+ * MUST be attached to its scrollable element, so the content is dragged down
+ * following the finger and the indicator appears in the gap above it.
  *
- * Catatan penting: elemen di dalam [content] HARUS scrollable
- * (LazyVerticalGrid untuk grid; LazyColumn untuk empty/error) supaya
- * nested-scroll pull bisa ke-detect meski isinya sedikit/kosong. Column biasa
- * tidak akan memicu pull-to-refresh.
+ * Important note: the element inside [content] MUST be scrollable
+ * (LazyVerticalGrid for the grid; LazyColumn for empty/error) so the
+ * nested-scroll pull can be detected even when there is little/no content. A plain
+ * Column will not trigger pull-to-refresh.
  *
- * Beda sama default Material3 (indikator ngambang, konten diam): di sini
- * KONTEN ikut ketarik turun lewat `graphicsLayer`
- * `translationY = distanceFraction * maxOffset`, indikator MENGAMBANG di
- * TENGAH celah yang kebuka. Urutannya:
- *   1. Jari narik → konten geser turun, indikator muncul di celah atasnya.
- *   2. Lepas setelah lewat ambang → `items.refresh()` jalan, spinner muter.
- *   3. Refresh selesai (`isRefreshing` false) → state balik ke hidden, konten
- *      naik lagi & indikator fade-out. Semua otomatis dari PullToRefreshBox.
+ * Different from the Material3 default (floating indicator, static content): here
+ * the CONTENT is dragged down via `graphicsLayer`
+ * `translationY = distanceFraction * maxOffset`, and the indicator FLOATS in the
+ * MIDDLE of the opened gap. The sequence:
+ *   1. Finger pulls → content shifts down, the indicator appears in the gap above it.
+ *   2. Release past the threshold → `items.refresh()` runs, the spinner spins.
+ *   3. Refresh done (`isRefreshing` false) → state returns to hidden, the content
+ *      rises again & the indicator fades out. All automatic from PullToRefreshBox.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -806,13 +743,8 @@ private fun GalleryPullToRefresh(
 ) {
     val isRefreshing = items.loadState.refresh is LoadState.Loading
 
-    // State di-share antara PullToRefreshBox, indikator, dan geseran konten
-    // supaya semuanya baca distanceFraction yang sama.
     val pullState = rememberPullToRefreshState()
 
-    // Konversi dp → px sekali di composition. `density` dipakai bareng buat
-    // jarak geser konten, inset atas (di bawah app bar), dan separuh tinggi
-    // indikator (buat nge-tengah-in di celah).
     val density = LocalDensity.current
     val maxOffsetPx = with(density) { PullContentMaxOffset.toPx() }
     val topInsetPx = with(density) { contentPadding.calculateTopPadding().toPx() }
@@ -826,11 +758,6 @@ private fun GalleryPullToRefresh(
             .fillMaxSize()
             .then(modifier),
         indicator = {
-            // Indikator MENGAMBANG di TENGAH celah yang kebuka saat konten
-            // ketarik turun — bukan nempel di pinggir gambar. Celah = dari
-            // bawah app bar (topInset) sampai top konten yang kegeser
-            // (topInset + fraction*maxOffset). Titik tengah = topInset +
-            // (fraction*maxOffset)/2, dikurangi separuh tinggi indikator.
             Surface(
                 modifier = Modifier
                     .align(Alignment.TopCenter)
@@ -839,8 +766,6 @@ private fun GalleryPullToRefresh(
                         val fraction = pullState.distanceFraction.coerceAtLeast(0f)
                         translationY =
                             topInsetPx + (fraction * maxOffsetPx) / 2f - indicatorHalfPx
-                        // Fade-in ngikutin tarikan; saat refreshing fraction ≈ 1
-                        // jadi tetap keliatan penuh.
                         alpha = fraction.coerceIn(0f, 1f)
                     },
                 shape = CircleShape,
@@ -849,13 +774,11 @@ private fun GalleryPullToRefresh(
             ) {
                 Box(contentAlignment = Alignment.Center) {
                     if (isRefreshing) {
-                        // Muter terus selama reload.
                         CircularProgressIndicator(
                             modifier = Modifier.size(22.dp),
                             strokeWidth = 2.5.dp,
                         )
                     } else {
-                        // Sebelum lepas: arc determinate ngisi sesuai tarikan.
                         CircularProgressIndicator(
                             progress = { pullState.distanceFraction.coerceIn(0f, 1f) },
                             modifier = Modifier.size(22.dp),
@@ -866,7 +789,6 @@ private fun GalleryPullToRefresh(
             }
         },
     ) {
-        // Modifier geser konten (draw phase, tanpa recompose per-frame).
         val contentOffset = Modifier.graphicsLayer {
             translationY = pullState.distanceFraction.coerceAtLeast(0f) * maxOffsetPx
         }
@@ -896,45 +818,26 @@ private fun GalleryGrid(
     ) { contentOffset ->
         val context = LocalContext.current
 
-        // === Early loading (prefetch thumbnail) ===
-        // Muat thumbnail beberapa baris DI DEPAN viewport ke cache sebelum
-        // ke-scroll ke sana, supaya saat sampai gambar sudah siap dan tidak
-        // nge-decode mendadak di tengah scroll (sumber patah/teleport).
         val imageLoader = SingletonImageLoader.get(context)
         val (rowsAhead, rowsBack) = performanceMode.prefetchRows()
-        // Prefetch HANYA saat scroll berhenti (settle) & loop-nya di background
-        // thread. Pas fling, decoder dibiarkan fokus ke thumbnail yang DI LAYAR;
-        // jangan direbut kerjaan prefetch offscreen (itu yang dulu bikin mode
-        // agresif malah patah-patah + numpuk enqueue di main thread tiap frame).
         LaunchedEffect(gridState, items, gridColumns, rowsAhead, rowsBack) {
             snapshotFlow { gridState.isScrollInProgress }
                 .distinctUntilChanged()
                 .collectLatest { scrolling ->
                     if (scrolling) return@collectLatest
-                    // Jeda kecil biar benar-benar diam. Kalau user scroll lagi,
-                    // collectLatest membatalkan blok ini (prefetch stale dibuang).
                     delay(120.milliseconds)
                     val info = gridState.layoutInfo.visibleItemsInfo
                     val firstVisible = info.firstOrNull()?.index ?: return@collectLatest
                     val lastVisible = info.lastOrNull()?.index ?: return@collectLatest
                     val lastIndex = items.itemCount - 1
                     if (lastIndex < 0) return@collectLatest
-                    // Enqueue di Default dispatcher -> lepas dari main thread biar
-                    // build request + peek tidak nyendat frame.
                     withContext(Dispatchers.Default) {
-                        // Jendela prefetch: beberapa baris DI ATAS (scroll balik)
-                        // & DI DEPAN viewport. Makin agresif mode -> jendela makin
-                        // lebar -> makin banyak RAM dipakai. Karena cuma jalan pas
-                        // settle, ini tidak lagi ganggu kelancaran fling.
                         val start = (firstVisible - gridColumns * rowsBack)
                             .coerceAtLeast(0)
                         val end = (lastVisible + gridColumns * rowsAhead)
                             .coerceAtMost(lastIndex)
                         for (i in start..end) {
-                            // Lewati item yang sedang di layar (sudah dirender).
                             if (i in firstVisible..lastVisible) continue
-                            // peek(): baca item yang sudah ada tanpa trigger load
-                            // hint paging. Yang belum ke-load dilewati.
                             val media = items.peek(i) ?: continue
                             imageLoader.enqueue(
                                 ImageRequest.Builder(context)
@@ -969,9 +872,6 @@ private fun GalleryGrid(
             ) { index ->
                 val item = items[index]
                 if (item == null) {
-                    // Slot placeholder saat halaman belum ter-load
-                    // (enablePlaceholders=true): pertahankan rasio 1:1 supaya
-                    // posisi grid & proporsi scrollbar tetap akurat.
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -1007,19 +907,13 @@ private fun GalleryGrid(
                     AsyncImage(
                         model = remember(item.uri, item.type) {
                             ImageRequest.Builder(context)
-                                // Ambil thumbnail bawaan MediaStore (bukan decode
-                                // file penuh) -> jauh lebih ringan & cepat.
                                 .data(
                                     MediaStoreThumbnail(
                                         uri = item.uri,
                                         isVideo = item.type == MediaType.VIDEO,
                                     ),
                                 )
-                                // Ukuran seragam -> cache key sama utk semua cell.
                                 .size(GridThumbnailPx, GridThumbnailPx)
-                                // Tanpa crossfade: hindari animasi fade tiap cell
-                                // muncul saat scroll cepat (salah satu sumber
-                                // patah-patah).
                                 .crossfade(false)
                                 .build()
                         },
@@ -1063,9 +957,9 @@ private fun GalleryGrid(
 }
 
 /**
- * Badge kecil di pojok thumbnail untuk item video: ikon play + durasi
- * (m:ss / h:mm:ss). Latar semi-transparan hitam biar tetap kebaca di atas
- * frame apa pun.
+ * A small badge in the thumbnail corner for video items: a play icon + duration
+ * (m:ss / h:mm:ss). A semi-transparent black background so it stays readable over
+ * any frame.
  */
 @Composable
 private fun VideoBadge(
@@ -1096,7 +990,7 @@ private fun VideoBadge(
     }
 }
 
-/** Format durasi video: m:ss, atau h:mm:ss kalau >= 1 jam. */
+/** Format video duration: m:ss, or h:mm:ss when >= 1 hour. */
 private fun formatVideoDuration(durationMs: Long): String {
     val totalSeconds = (durationMs / 1000).coerceAtLeast(0)
     val hours = totalSeconds / 3600
@@ -1122,10 +1016,10 @@ private fun LoadingState(contentPadding: PaddingValues) {
 }
 
 /**
- * Empty state. Dibungkus [LazyColumn] (bukan Column biasa) + item
- * `fillParentMaxSize` supaya: (a) pesan tetap ke-tengah di viewport, dan
- * (b) kontainernya scrollable sehingga nested-scroll pull-to-refresh bisa
- * ke-trigger walau kontennya cuma sedikit.
+ * Empty state. Wrapped in a [LazyColumn] (not a plain Column) + a
+ * `fillParentMaxSize` item so: (a) the message stays centered in the viewport, and
+ * (b) the container is scrollable so nested-scroll pull-to-refresh can be
+ * triggered even when there is little content.
  */
 @Composable
 private fun EmptyState(
@@ -1167,7 +1061,7 @@ private fun EmptyState(
     }
 }
 
-/** Error state — scrollable (LazyColumn) supaya pull-to-refresh tetap jalan. */
+/** Error state — scrollable (LazyColumn) so pull-to-refresh still works. */
 @Composable
 private fun ErrorState(
     contentPadding: PaddingValues,
@@ -1215,9 +1109,9 @@ private fun ErrorState(
 }
 
 /**
- * Fling dengan sensitivitas lebih tinggi: velocity awal dikalikan supaya
- * lemparan scroll terasa lebih responsif & meluncur lebih jauh (mengurangi
- * kesan "nyendat" saat flick cepat). Delegasi ke fling default Compose.
+ * Higher-sensitivity fling: the initial velocity is multiplied so a scroll
+ * throw feels more responsive & glides farther (reducing the "stutter"
+ * feel on a fast flick). Delegates to Compose's default fling.
  */
 @Composable
 private fun rememberSensitiveFlingBehavior(
@@ -1234,12 +1128,12 @@ private fun rememberSensitiveFlingBehavior(
 }
 
 /**
- * Overlay preview saat foto ditahan (long-press): foto membesar ke aspect
- * ratio ASLI-nya (dibatasi maxWidth/maxHeight biar tak keluar layar),
- * background galeri di-blur oleh pemanggil, dan muncul menu konteks
- * (liquid glass) untuk 1 foto tsb.
+ * A preview overlay when a photo is held (long-press): the photo grows to its
+ * ORIGINAL aspect ratio (bounded by maxWidth/maxHeight so it stays on screen),
+ * the gallery background is blurred by the caller, and a context menu
+ * (liquid glass) appears for that single photo.
  *
- * Tap area gelap / tombol back = tutup. Tap area konten tidak menutup.
+ * Tapping the dark area / back button = close. Tapping the content area does not close.
  */
 @Composable
 private fun PhotoPreviewOverlay(
@@ -1270,11 +1164,8 @@ private fun PhotoPreviewOverlay(
             modifier = Modifier.fillMaxSize(),
             contentAlignment = Alignment.Center,
         ) {
-            // Batas maksimum: foto tidak boleh melebihi ini walau aslinya besar.
             val maxImageWidth = maxWidth * 0.9f
             val maxImageHeight = maxHeight * 0.62f
-            // Animasi "membesar": media tumbuh dari kecil ke penuh (spring),
-            // TANPA fade opacity — sesuai permintaan (bukan fadeOut + scale).
             val enterScale = remember { Animatable(0.7f) }
             LaunchedEffect(Unit) {
                 enterScale.animateTo(
@@ -1288,7 +1179,6 @@ private fun PhotoPreviewOverlay(
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(16.dp),
-                // Konsumsi tap di area konten supaya tidak ikut menutup overlay.
                 modifier = Modifier
                     .graphicsLayer {
                         scaleX = enterScale.value
@@ -1312,7 +1202,6 @@ private fun PhotoPreviewOverlay(
                             .build()
                     },
                     contentDescription = item.displayName,
-                    // Fit = pertahankan aspect ratio asli, muat dalam batas.
                     contentScale = ContentScale.Fit,
                     modifier = Modifier
                         .sizeIn(maxWidth = maxImageWidth, maxHeight = maxImageHeight)
@@ -1332,12 +1221,12 @@ private fun PhotoPreviewOverlay(
 }
 
 /**
- * Tombol "Back" bulat 40dp yang gaya-nya mengikuti [ComponentStyle] aktif:
- *  - SOLID   : lingkaran hitam semi-transparan (drawsBackdrop=false).
- *  - FROSTED : haze putih tebal (drawBackdrop tanpa blur/lens).
- *  - GLASS   : blur + lens Kyant untuk efek kaca cair.
+ * A round 40dp "Back" button whose style follows the active [ComponentStyle]:
+ *  - SOLID   : a semi-transparent black circle (drawsBackdrop=false).
+ *  - FROSTED : a thick white haze (drawBackdrop without blur/lens).
+ *  - GLASS   : Kyant blur + lens for a liquid-glass effect.
  *
- * Dipakai di TopBar Gallery HANYA saat onBack non-null (mode album-detail).
+ * Used in the Gallery TopBar ONLY when onBack is non-null (album-detail mode).
  */
 @Composable
 private fun StyledCircleBackButton(
@@ -1346,10 +1235,6 @@ private fun StyledCircleBackButton(
     onClick: () -> Unit,
 ) {
     val size = 40.dp
-    // Untuk mode SOLID (tanpa backdrop) di light-theme, lingkaran hitam +
-    // ikon putih tetap kontras. Untuk FROSTED/GLASS, backdrop-nya diwarnai
-    // dgn `Color.White.copy(...)` yg cocok utk dark tapi tak terlihat di
-    // light mode -> pakai onBackground.copy supaya kontras di kedua tema.
     val onBg = MaterialTheme.colorScheme.onBackground
     val circleModifier = if (style.drawsBackdrop()) {
         Modifier
@@ -1368,9 +1253,6 @@ private fun StyledCircleBackButton(
                     }
                 },
                 onDrawSurface = {
-                    // Pakai onBackground.copy alpha rendah supaya di light-mode
-                    // lingkaran ini gelap-tembus, di dark-mode terang-tembus
-                    // -> tetap terbaca di kedua tema.
                     drawRect(
                         onBg.copy(
                             alpha = if (style == ComponentStyle.FROSTED) 0.18f else 0.14f,
@@ -1382,8 +1264,6 @@ private fun StyledCircleBackButton(
         Modifier
             .size(size)
             .clip(CircleShape)
-            // SOLID: kontras kuat pakai onBackground.copy alpha rendah
-            // (bukan Color.Black hard-coded) supaya adaptif thd tema.
             .background(onBg.copy(alpha = 0.16f))
     }
 
@@ -1394,8 +1274,6 @@ private fun StyledCircleBackButton(
         Icon(
             imageVector = PhosphorIcons.Bold.ArrowLeft,
             contentDescription = stringResource(R.string.action_back),
-            // Ikon ikut theme (onBackground): di light-mode gelap, di dark-mode
-            // terang -- tidak lagi "selalu putih" (yg invisible di light mode).
             tint = onBg,
             modifier = Modifier.size(20.dp),
         )
@@ -1403,11 +1281,11 @@ private fun StyledCircleBackButton(
 }
 
 /**
- * Menu konteks 1-foto dengan latar LIQUID GLASS (Kyant drawBackdrop; fallback
- * frosted untuk API < 33). Berisi 3 aksi berdampingan:
- *  - Favorite : toggle favorit (Room lokal). Ikon hati TERISI saat aktif.
- *  - Trash    : pindah ke Trash (soft-delete, bisa dipulihkan 30 hari).
- *  - Delete   : hapus PERMANEN dari device (dialog sistem scoped-storage).
+ * A single-photo context menu with a LIQUID GLASS background (Kyant drawBackdrop;
+ * frosted fallback for API < 33). Contains 3 side-by-side actions:
+ *  - Favorite : toggle favorite (local Room). A FILLED heart icon when active.
+ *  - Trash    : move to Trash (soft-delete, recoverable for 30 days).
+ *  - Delete   : PERMANENTLY delete from the device (scoped-storage system dialog).
  */
 @Composable
 private fun PhotoContextMenu(
@@ -1418,10 +1296,9 @@ private fun PhotoContextMenu(
     onTrashClick: () -> Unit,
     onDeleteClick: () -> Unit,
 ) {
-    // Pill shape supaya konsisten dgn lens Capsule() di drawBackdrop.
     val menuShape = RoundedCornerShape(percent = 50)
-    val deleteColor = Color(0xFFFF453A) // merah destructive gaya iOS
-    val favoriteColor = Color(0xFFFF375F) // pink/merah muda utk hati aktif
+    val deleteColor = Color(0xFFFF453A)
+    val favoriteColor = Color(0xFFFF375F)
     val neutralColor = Color.White
 
     val glassModifier = if (style.drawsBackdrop()) {
@@ -1432,11 +1309,6 @@ private fun PhotoContextMenu(
                 shape = { Capsule() },
                 effects = {
                     vibrancy()
-                    // Selalu blur backdrop di preview overlay supaya foto-foto lain
-                    // di belakang TIDAK bocor tajam lewat kaca (khususnya FROSTED
-                    // yg tanpa lens). Hasilnya latar yg tampak = blurry, konsisten
-                    // dgn background overlay yg memang diblur. GLASS pakai blur
-                    // lebih tipis karena sudah dikombinasi dgn lens.
                     blur((if (style.usesLens()) 8.dp else 24.dp).toPx())
                     if (style.usesLens()) {
                         lens(12.dp.toPx(), 16.dp.toPx())
@@ -1481,8 +1353,8 @@ private fun PhotoContextMenu(
 }
 
 /**
- * Satu tombol aksi di [PhotoContextMenu]: ikon di atas, label kecil di bawah,
- * dgn area tap sendiri (rounded) supaya 3 aksi tidak saling tumpang tindih.
+ * A single action button in [PhotoContextMenu]: icon on top, small label below,
+ * with its own (rounded) tap area so the 3 actions don't overlap each other.
  */
 @Composable
 private fun MenuAction(
@@ -1514,13 +1386,13 @@ private fun MenuAction(
 }
 
 /**
- * Scrollbar fast-scroll utk grid galeri: grip pill di tepi kanan yg muncul saat
- * scrolling / di-drag, lalu fade-out. Bisa DITARIK utk loncat cepat ke posisi
- * mana pun (mis. langsung ke paling bawah).
+ * A fast-scroll scrollbar for the gallery grid: a pill grip at the right edge that
+ * appears while scrolling / dragging, then fades out. Can be DRAGGED to jump
+ * quickly to any position (e.g. straight to the very bottom).
  *
- * Posisi thumb dihitung dari proporsi baris pertama yg tampak terhadap total
- * baris (`firstVisibleItemIndex / kolom`). `translationY` + `alpha` dibaca di
- * dalam `graphicsLayer` (draw phase) supaya update tiap frame TANPA recompose.
+ * The thumb position is computed from the proportion of the first visible row to the
+ * total rows (`firstVisibleItemIndex / columns`). `translationY` + `alpha` are read
+ * inside `graphicsLayer` (draw phase) so they update every frame WITHOUT recompose.
  */
 @Composable
 private fun GridFastScrollbar(
@@ -1533,7 +1405,6 @@ private fun GridFastScrollbar(
     val columnsSafe = columns.coerceAtLeast(1)
     var dragging by remember { mutableStateOf(false) }
 
-    // Cukup di-scroll kalau total item lebih banyak dari yang tampak.
     val scrollable by remember {
         derivedStateOf {
             val info = gridState.layoutInfo
@@ -1542,7 +1413,6 @@ private fun GridFastScrollbar(
         }
     }
 
-    // Progres 0..1 = baris pertama tampak / (total baris - baris tampak).
     val progress by remember(columnsSafe) {
         derivedStateOf {
             val info = gridState.layoutInfo
@@ -1591,7 +1461,6 @@ private fun GridFastScrollbar(
     ) {
         val trackHeightPx = with(density) { maxHeight.toPx() }
         val thumbHeightPx = with(density) { ScrollbarThumbHeight.toPx() }
-        // Thumb melebar saat ditekan/di-drag supaya gampang dipegang.
         val thumbWidth by animateDpAsState(
             targetValue = if (dragging) ScrollbarThumbDragWidth else ScrollbarThumbWidth,
             animationSpec = tween(durationMillis = 150),

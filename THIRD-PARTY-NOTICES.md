@@ -5,7 +5,7 @@ copyright of its respective authors and is used under the license listed below.
 This file is distributed with AGallery to satisfy the attribution requirements
 of the Apache License 2.0 and the MIT License.
 
-Last reviewed for AGallery **v1.7.0**. Dependency versions are defined in
+Last reviewed for AGallery **v1.7.1**. Dependency versions are defined in
 [`gradle/libs.versions.toml`](./gradle/libs.versions.toml).
 
 ---
@@ -31,6 +31,8 @@ The full text of the Apache License 2.0 is included [below](#apache-license-20-f
 | AndroidX ProfileInstaller | `androidx.profileinstaller:profileinstaller` | © The Android Open Source Project |
 | AndroidX Media3 (ExoPlayer, UI) | `androidx.media3:*` | © The Android Open Source Project |
 | AndroidX WorkManager | `androidx.work:work-runtime-ktx` | © The Android Open Source Project |
+| AndroidX ExifInterface | `androidx.exifinterface:exifinterface` | © The Android Open Source Project |
+| AndroidX HeifWriter | `androidx.heifwriter:heifwriter` | © The Android Open Source Project |
 | Accompanist Permissions | `com.google.accompanist:accompanist-permissions` | © Google LLC |
 | Kotlin Standard Library | `org.jetbrains.kotlin:*` | © JetBrains s.r.o. and Kotlin Programming Language contributors |
 | KotlinX Serialization (core, json) | `org.jetbrains.kotlinx:kotlinx-serialization-*` | © JetBrains s.r.o. and contributors |
@@ -40,6 +42,7 @@ The full text of the Apache License 2.0 is included [below](#apache-license-20-f
 | Haze | `dev.chrisbanes.haze:haze` | © Chris Banes |
 | Kyant Backdrop (Liquid Glass) | `io.github.kyant0:backdrop` | © Kyant0 |
 | Kyant Shapes | `io.github.kyant0:shapes` | © Kyant0 |
+| ZXing Core | `com.google.zxing:core` | © ZXing Authors |
 
 ### MIT License
 
@@ -49,6 +52,18 @@ The full text of the MIT License is included [below](#mit-license-full-text).
 |---|---|---|
 | Phosphor Icons (Compose port) | `com.adamglin:phosphor-icon` | © adamglin (Compose port) |
 | Phosphor Icons (icon set) | https://phosphoricons.com | © 2020–2023 Phosphor Icons (Helena Zhang & Tobias Fried) |
+
+### Google ML Kit terms
+
+ML Kit's on-device Barcode Scanning model is **bundled** in the released APK and
+powers offline QR Detection (no `INTERNET` permission). It is not distributed
+under Apache-2.0 or MIT; its use is governed by the **Google ML Kit Terms**
+(free, on-device). The library also embeds third-party open-source components
+covered by Google's own bundled notices.
+
+| Library | Coordinates | License |
+|---|---|---|
+| ML Kit Barcode Scanning (bundled) | `com.google.mlkit:barcode-scanning` | Google ML Kit Terms (proprietary, free, on-device) |
 
 ---
 

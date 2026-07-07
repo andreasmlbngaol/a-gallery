@@ -29,13 +29,13 @@ import id.andreasmbngaol.agallery.R
 import id.andreasmbngaol.agallery.domain.model.metadata.MetadataCategory
 
 /**
- * Dialog "Hapus metadata" (1.4.0).
+ * "Remove metadata" dialog (1.4.0).
  *
- * - User pilih apa yang mau dibuang: Lokasi, Kamera, atau Semua (selektif).
- *   Kalau "Semua" dicentang, pilihan lain ikut ke-nonaktif (sudah tercakup).
- * - User pilih output: timpa file asli, atau simpan salinan bersih.
+ * - The user chooses what to strip: Location, Camera, or All (selective).
+ *   When "All" is checked, the other options are disabled (already covered).
+ * - The user chooses the output: overwrite the original file, or save a clean copy.
  *
- * [onConfirm] dipanggil dengan set kategori final + flag saveAsCopy.
+ * [onConfirm] is called with the final category set + the saveAsCopy flag.
  */
 @Composable
 fun RemoveMetadataDialog(
@@ -110,7 +110,7 @@ fun RemoveMetadataDialog(
     )
 }
 
-/** Header section, dibuat identik dgn SectionHeader di MediaDetailsSheet. */
+/** Section header, made identical to SectionHeader in MediaDetailsSheet. */
 @Composable
 private fun SectionLabel(text: String) {
     Spacer(Modifier.height(20.dp))

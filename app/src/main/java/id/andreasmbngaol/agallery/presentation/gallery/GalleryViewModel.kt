@@ -43,8 +43,8 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
 /**
- * State galeri (dipakai tab Gallery utama + detail album via key VM terpisah).
- * Sumber preferensi: DataStore lewat [GetSettingsUseCase].
+ * Gallery state (used by the main Gallery tab + album detail via a separate keyed VM).
+ * Preference source: DataStore via [GetSettingsUseCase].
  */
 class GalleryViewModel(
     getSettings: GetSettingsUseCase,
@@ -60,7 +60,6 @@ class GalleryViewModel(
     private val moveToAlbumUseCase: MoveMediaToAlbumUseCase,
     private val requestWriteAccess: RequestWriteAccessUseCase,
 ) : ViewModel() {
-
     private val settings: StateFlow<AppSettings> = getSettings()
         .stateIn(
             scope = viewModelScope,
@@ -117,8 +116,8 @@ class GalleryViewModel(
         )
 
     /**
-     * Scope media yang ditampilkan. Default [MediaScope.Camera] = tab Gallery
-     * utama; layar detail album memakai instance VM terpisah lalu memanggil
+     * The media scope being shown. Default [MediaScope.Camera] = the main Gallery
+     * tab; the album detail screen uses a separate VM instance and then calls
      * [setScope].
      */
     private val _scope = MutableStateFlow<MediaScope>(MediaScope.Camera)
@@ -137,19 +136,14 @@ class GalleryViewModel(
     }
 
     /**
-     * Paksa re-index sumber media. Dipanggil saat izin akses media baru
-     * diberikan (grant tidak selalu memicu ContentObserver MediaStore). Satu
-     * panggilan menyegarkan grid galeri DAN daftar album karena keduanya
-     * berbagi trigger di repository.
+     * Force a re-index of the media source. Called when new media-access permission
+     * is granted (a grant does not always trigger the MediaStore ContentObserver). A
+     * single call refreshes the gallery grid AND the album list because both
+     * share a trigger in the repository.
      */
     fun refreshMedia() {
         refreshMediaUseCase()
     }
-
-//    fun setSortOrder(order: GallerySortOrder) {
-//        if (sortOrder.value == order) return
-//        viewModelScope.launch { setSortOrderPref(order) }
-//    }
 
     fun toggleSortOrder() {
         val next = when (sortOrder.value) {
@@ -200,33 +194,25 @@ class GalleryViewModel(
         }
     }
 
-    // ---------------------------------------------------------------------
-    // Multi-select batch (khusus dipakai di layar detail album; tab Gallery
-    // utama tidak mengaktifkan seleksi -> anggota ini tak terpakai di sana).
-    // ---------------------------------------------------------------------
-
     private val _albums = MutableStateFlow<List<Album>>(emptyList())
     val albums: StateFlow<List<Album>> = _albums.asStateFlow()
 
-    /** Muat daftar album folder (album cerdas disaring) untuk picker Copy/Move. */
+    /** Load the folder album list (smart albums filtered out) for the Copy/Move picker. */
     fun loadAlbums() {
         viewModelScope.launch {
             _albums.value = getAlbums().filter { !it.isSmart }.sortedBy { it.name.lowercase() }
         }
     }
 
-    // Batch move butuh SATU consent untuk semua uri (API 30+).
     private val _writeRequests = MutableSharedFlow<IntentSender>(extraBufferCapacity = 1)
     val writeRequests: SharedFlow<IntentSender> = _writeRequests.asSharedFlow()
 
-    // Ditembakkan saat aksi batch copy/move selesai -> UI keluar dari mode
-    // seleksi & refresh grid.
     private val _selectionActionDone = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
     val selectionActionDone: SharedFlow<Unit> = _selectionActionDone.asSharedFlow()
 
     private var pendingWriteAction: (suspend () -> Unit)? = null
 
-    /** Pindahkan banyak item ke Trash (soft-delete). */
+    /** Move multiple items to Trash (soft-delete). */
     fun moveManyToTrash(items: List<MediaItem>) {
         viewModelScope.launch {
             items.forEach { moveToTrashUseCase(it) }
@@ -234,7 +220,7 @@ class GalleryViewModel(
         }
     }
 
-    /** Hapus permanen banyak item (dialog sistem scoped-storage bila perlu). */
+    /** Permanently delete multiple items (scoped-storage system dialog when needed). */
     fun deleteMany(uris: List<String>) {
         viewModelScope.launch {
             val sender = deleteMedia(uris)
@@ -246,7 +232,7 @@ class GalleryViewModel(
         }
     }
 
-    /** Salin banyak item ke album [albumName] (buat file baru; tanpa consent). */
+    /** Copy multiple items to album [albumName] (creates new files; no consent). */
     fun copyManyToAlbum(items: List<MediaItem>, albumName: String) {
         val path = albumRelativePath(albumName)
         viewModelScope.launch {
@@ -257,8 +243,8 @@ class GalleryViewModel(
     }
 
     /**
-     * Pindahkan banyak item ke album [albumName] (in-place). Minta SATU consent
-     * untuk semua uri; setelah disetujui, pemindahan dijalankan di [doMoveAll].
+     * Move multiple items to album [albumName] (in-place). Requests ONE consent
+     * for all uris; once approved, the move runs in [doMoveAll].
      */
     fun moveManyToAlbum(items: List<MediaItem>, albumName: String) {
         val path = albumRelativePath(albumName)

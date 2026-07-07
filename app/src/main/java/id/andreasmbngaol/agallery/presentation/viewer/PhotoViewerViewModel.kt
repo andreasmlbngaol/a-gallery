@@ -51,9 +51,9 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 /**
- * ViewModel untuk [PhotoViewerScreen]. Sekarang scope berupa [MediaScope]
- * supaya viewer bisa dibuka dari album cerdas apapun (Recent, Videos,
- * Screenshots, Favorites) selain dari folder biasa.
+ * ViewModel for [PhotoViewerScreen]. The scope is now a [MediaScope] so the
+ * viewer can be opened from any smart album (Recent, Videos, Screenshots,
+ * Favorites) besides a regular folder.
  */
 class PhotoViewerViewModel(
     private val appContext: Context,
@@ -73,7 +73,6 @@ class PhotoViewerViewModel(
     private val setAlbumCoverUseCase: SetAlbumCoverUseCase,
     private val qrDetector: QrDetector,
 ) : ViewModel() {
-
     private data class ViewerParams(
         val sortOrder: GallerySortOrder,
         val scope: MediaScope,
@@ -132,16 +131,14 @@ class PhotoViewerViewModel(
 
     private var pendingWriteAction: (suspend () -> Unit)? = null
 
-    // --- QR Detection (1.7.0) ---
-    // Hasil scan QR per media-id (cache): tiap foto cukup di-scan sekali.
     private val _qrDetections = MutableStateFlow<Map<Long, List<QrContent>>>(emptyMap())
     val qrDetections: StateFlow<Map<Long, List<QrContent>>> = _qrDetections.asStateFlow()
     private val qrInFlight = mutableSetOf<Long>()
 
     /**
-     * Scan QR pada [item] (khusus foto), sekali per media-id lalu hasilnya
-     * di-cache. Dipanggil dari viewer setelah halaman diam beberapa saat
-     * (debounce di UI). Aman dipanggil berulang — dedup lewat cache + inFlight.
+     * Scan the QR in [item] (photos only), once per media id, then cache the
+     * result. Called from the viewer after the page stays idle for a moment
+     * (debounced in the UI). Safe to call repeatedly — deduped via cache + inFlight.
      */
     fun detectQr(item: MediaItem) {
         if (item.type != MediaType.IMAGE) return
@@ -166,8 +163,6 @@ class PhotoViewerViewModel(
     suspend fun loadDetails(uri: String): MediaDetails? = getMediaDetails(uri)
 
     fun loadAlbums() {
-        // Picker Move/Copy hanya perlu folder nyata; album cerdas disaring
-        // supaya user tak keliru "pindahkan foto ke Recent" (nonsens).
         viewModelScope.launch {
             _albums.value = getAlbums().filter { !it.isSmart }
         }
@@ -178,8 +173,8 @@ class PhotoViewerViewModel(
     }
 
     /**
-     * Jadikan [mediaId] sebagai cover album [albumKey] ("Set as Cover").
-     * Reaktif: daftar album otomatis memakai cover baru lewat observeAlbums().
+     * Make [mediaId] the cover of album [albumKey] ("Set as Cover").
+     * Reactive: the album list automatically uses the new cover via observeAlbums().
      */
     fun setAlbumCover(albumKey: String, mediaId: Long) {
         viewModelScope.launch {
@@ -252,9 +247,9 @@ class PhotoViewerViewModel(
     }
 
     /**
-     * Hapus metadata terpilih dari [item]. Kalau file bukan milik app, jalur
-     * consent tulis yang sudah ada dipakai ulang (pendingWriteAction) lalu
-     * operasi diulang otomatis setelah user setuju.
+     * Remove the selected metadata from [item]. If the file is not owned by the
+     * app, the existing write-consent path is reused (pendingWriteAction) and the
+     * operation is retried automatically after the user approves.
      */
     fun removeMetadata(
         item: MediaItem,
@@ -291,9 +286,9 @@ class PhotoViewerViewModel(
     }
 
     /**
-     * Konversi [item] ke [target] format ([quality] 1..100 utk lossy). Konversi
-     * selalu bikin file baru; kalau [deleteOriginal] true, asli dipindah ke
-     * Trash (soft-trash berbasis Room, tanpa dialog consent MediaStore).
+     * Convert [item] to the [target] format ([quality] 1..100 for lossy). Conversion
+     * always creates a new file; if [deleteOriginal] is true, the original is moved
+     * to Trash (Room-based soft-trash, without a MediaStore consent dialog).
      */
     fun convertFormat(
         item: MediaItem,

@@ -67,21 +67,15 @@ import kotlinx.coroutines.delay
 import org.koin.androidx.compose.koinViewModel
 import kotlin.time.Duration.Companion.milliseconds
 
-// ---- Tuning "frosted glass" segmented control ----
-// Track: kaca tipis. Karena layar Settings latarnya rata (bukan foto), efek
-// dibuat frosted/translucent, bukan refraction penuh seperti bar mengambang
-// di atas grid (refraction butuh konten kaya di belakang biar kelihatan).
 private const val TrackGlassAlpha = 0.4f
 private val SegmentedControlHeight = 48.dp
 private val SegmentedTrackRadius = 24.dp
 private val SegmentedChipRadius = 20.dp
 
-// ---- Kartu section bergaya system settings (biar pemisahan jelas) ----
 private val SettingsCardRadius = 20.dp
 private val SettingsCardPadding = 16.dp
 private val SettingsSectionGap = 24.dp
 
-// Opsi jumlah kolom grid = [MIN_GRID_COLUMNS..MAX_GRID_COLUMNS] (3..5).
 private val GridColumnChoices: List<Int> = (MIN_GRID_COLUMNS..MAX_GRID_COLUMNS).toList()
 
 @Composable
@@ -102,16 +96,14 @@ fun SettingsScreen(
 }
 
 /**
- * Satu pilihan mode efek tepi.label = teks pendek di segmen; deskripsi
- * panjang ada di [edgeEffectDescription] (helper text di bawah kontrol).
+ * One edge-effect mode option. label = the short text in the segment; the long
+ * description lives in [edgeEffectDescription] (helper text below the control).
  */
 private data class EdgeEffectChoice(
     val mode: EdgeEffectMode,
     @StringRes val labelRes: Int,
 )
 
-// Urutan sengaja ringan -> berat (kiri -> kanan), konsisten dengan
-// PerformanceMode (Low -> High): makin ke kanan = makin "berat"/intens.
 private val EdgeEffectChoices = listOf(
     EdgeEffectChoice(EdgeEffectMode.OFF, R.string.edge_off),
     EdgeEffectChoice(EdgeEffectMode.DARKEN, R.string.edge_darken),
@@ -129,8 +121,6 @@ private fun SettingsContent(
     performanceMode: PerformanceMode,
     onSelectPerformanceMode: (PerformanceMode) -> Unit,
 ) {
-    // Pakai nilai TER-RESOLVE (bukan mentah) supaya opsi yang tak didukung
-    // perangkat tak pernah tampak "terpilih" padahal sebenarnya jatuh ke fallback.
     val shownSelection = resolveEdgeEffectMode(chosenMode, Build.VERSION.SDK_INT)
     val blurrySupported = isBlurryEdgeSupported()
     val shownComponentStyle = resolveComponentStyle(componentStyle, Build.VERSION.SDK_INT)
@@ -139,8 +129,6 @@ private fun SettingsContent(
     val safeDrawing = WindowInsets.safeDrawing.asPaddingValues()
     val layoutDirection = LocalLayoutDirection.current
 
-    // Topbar "Settings" seragam ala Gallery. Efek tepi (Off/Darken/Blurry) yang
-    // dipilih user ikut diterapkan ke area topbar lewat SystemBarScrim.
     EdgeEffectTopBarScaffold(
         title = stringResource(R.string.tab_settings),
         edgeEffectMode = chosenMode,
@@ -152,14 +140,10 @@ private fun SettingsContent(
             .padding(
                 start = safeDrawing.calculateStartPadding(layoutDirection) + 16.dp,
                 end = safeDrawing.calculateEndPadding(layoutDirection) + 16.dp,
-                // Turun di bawah topbar (status bar + tinggi topbar).
                 top = safeDrawing.calculateTopPadding() + ScreenTopBarHeight + 8.dp,
-                // Ruang ekstra di bawah supaya item terakhir tak ketutup floating
-                // nav bar (Settings kini jadi salah satu tab di dalam scaffold).
                 bottom = safeDrawing.calculateBottomPadding() + 12.dp + FloatingTabBarHeight,
             ),
     ) {
-        // ===== Section: Gallery =====
         SettingsSectionHeader(title = stringResource(R.string.tab_gallery))
         SettingsCard {
             SettingsItem(
@@ -175,7 +159,6 @@ private fun SettingsContent(
 
         Spacer(Modifier.height(SettingsSectionGap))
 
-        // ===== Section: Performance =====
         SettingsSectionHeader(title = stringResource(R.string.settings_section_performance))
         SettingsCard {
             SettingsItem(
@@ -193,7 +176,6 @@ private fun SettingsContent(
 
         Spacer(Modifier.height(SettingsSectionGap))
 
-        // ===== Section: Appearance (SATU island, dua setting sekategori) =====
         SettingsSectionHeader(title = stringResource(R.string.settings_section_appearance))
         SettingsCard {
             SettingsItem(
@@ -238,11 +220,9 @@ private fun SettingsContent(
     }
 }
 
-// ---- Building block section bergaya system settings ----
-
 /**
- * Label kategori kecil di atas tiap kartu. Pakai warna aksen + typography label
- * biar kebaca sebagai pemisah kelompok, mirip header di system settings.
+ * A small category label above each card. Uses the accent color + label typography
+ * so it reads as a group separator, similar to headers in system settings.
  */
 @Composable
 private fun SettingsSectionHeader(title: String) {
@@ -255,8 +235,8 @@ private fun SettingsSectionHeader(title: String) {
 }
 
 /**
- * Kartu pembungkus satu section: rounded container solid (bukan kaca) supaya
- * batas antar kelompok setting tegas, seperti kartu di system settings.
+ * A wrapper card for one section: a solid rounded container (not glass) so the
+ * boundaries between setting groups are clear, like cards in system settings.
  */
 @Composable
 private fun SettingsCard(
@@ -272,16 +252,16 @@ private fun SettingsCard(
     )
 }
 
-/** Durasi helper text (penjelasan pilihan) tampil setelah user mengubah pilihan. */
+/** How long the helper text (choice explanation) stays visible after the user changes a choice. */
 private const val HelperVisibleMillis = 4000L
 
 /**
- * Satu baris setting di dalam kartu: judul, deskripsi singkat, kontrol, lalu
- * helper text opsional ([helperText]) yang menjelaskan PILIHAN aktif.
+ * A single setting row inside a card: title, short description, control, then
+ * optional helper text ([helperText]) explaining the active CHOICE.
  *
- * Helper text kini TRANSIEN: hanya muncul beberapa detik ketika user MENGUBAH
- * pilihan ([selectionKey] berubah), lalu otomatis menghilang. Tidak tampil saat
- * layar pertama dibuka sehingga daftar setting tetap ringkas.
+ * The helper text is now TRANSIENT: it only appears for a few seconds when the
+ * user CHANGES a choice ([selectionKey] changes), then disappears automatically.
+ * It does not show on first open, keeping the settings list compact.
  */
 @Composable
 private fun SettingsItem(
@@ -302,7 +282,6 @@ private fun SettingsItem(
         )
         Spacer(Modifier.height(12.dp))
         control()
-        // Catatan PERMANEN (mis. alasan opsi ter-nonaktif karena batas OS).
         if (footnote != null) {
             Spacer(Modifier.height(10.dp))
             Text(
@@ -318,9 +297,9 @@ private fun SettingsItem(
 }
 
 /**
- * Helper text yang muncul sesaat (fade + expand) tiap kali [selectionKey]
- * berubah, lalu hilang sendiri setelah [HelperVisibleMillis]. Sengaja TIDAK
- * tampil pada komposisi pertama (hanya reaksi atas perubahan pilihan user).
+ * Helper text that appears briefly (fade + expand) whenever [selectionKey]
+ * changes, then disappears on its own after [HelperVisibleMillis]. Intentionally
+ * NOT shown on the first composition (only reacts to the user's choice changes).
  */
 @Composable
 private fun TransientHelperText(text: String, selectionKey: Any?) {
@@ -352,8 +331,8 @@ private fun TransientHelperText(text: String, selectionKey: Any?) {
 }
 
 /**
- * Garis pemisah tipis antar setting DI DALAM satu island (mis. Component style
- * <-> Screen edge effect di kategori Appearance).
+ * A thin divider between settings WITHIN one island (e.g. Component style
+ * <-> Screen edge effect in the Appearance category).
  */
 @Composable
 private fun SettingsItemDivider() {
@@ -364,9 +343,9 @@ private fun SettingsItemDivider() {
 }
 
 /**
- * Segmented control bergaya frosted glass (menggantikan M3 button group).
- * Track kaca tipis + chip terpilih yang lebih pekat, konsisten dengan pill
- * tab & tombol mengambang di galeri.
+ * A frosted-glass styled segmented control (replacing the M3 button group).
+ * A thin glass track + a denser selected chip, consistent with the pill
+ * tabs & floating buttons in the gallery.
  */
 @Composable
 private fun EdgeEffectSegmentedControl(
@@ -376,7 +355,6 @@ private fun EdgeEffectSegmentedControl(
 ) {
     SegmentedGlassTrack {
         EdgeEffectChoices.forEach { choice ->
-            // BLURRY butuh API 32; di bawah itu di-nonaktifkan (bukan disembunyikan).
             val enabled = choice.mode != EdgeEffectMode.BLURRY || blurrySupported
             SegmentedGlassItem(
                 label = stringResource(choice.labelRes),
@@ -389,7 +367,7 @@ private fun EdgeEffectSegmentedControl(
     }
 }
 
-/** Segmented control untuk jumlah kolom grid (3/4/5), gaya frosted glass. */
+/** Segmented control for the grid column count (3/4/5), frosted-glass style. */
 @Composable
 private fun GridColumnsSegmentedControl(
     selected: Int,
@@ -408,8 +386,8 @@ private fun GridColumnsSegmentedControl(
 }
 
 /**
- * Satu pilihan mode performa. label = teks pendek di segmen; penjelasan
- * panjang ada di [performanceModeDescription] (helper text di bawah kontrol).
+ * One performance-mode option. label = the short text in the segment; the long
+ * explanation lives in [performanceModeDescription] (helper text below the control).
  */
 private data class PerformanceChoice(
     val mode: PerformanceMode,
@@ -422,7 +400,7 @@ private val PerformanceChoices = listOf(
     PerformanceChoice(PerformanceMode.HIGH, R.string.perf_high),
 )
 
-/** Segmented control untuk mode performa (Low/Balanced/High), gaya frosted glass. */
+/** Segmented control for the performance mode (Low/Balanced/High), frosted-glass style. */
 @Composable
 private fun PerformanceModeSegmentedControl(
     selected: PerformanceMode,
@@ -452,14 +430,13 @@ private data class ComponentStyleChoice(
     @StringRes val labelRes: Int,
 )
 
-// Urutan ringan -> berat (kiri -> kanan), konsisten dgn PerformanceMode.
 private val ComponentStyleChoices = listOf(
     ComponentStyleChoice(ComponentStyle.SOLID, R.string.style_solid),
     ComponentStyleChoice(ComponentStyle.FROSTED, R.string.style_frosted),
     ComponentStyleChoice(ComponentStyle.GLASS, R.string.style_glass),
 )
 
-/** Segmented control gaya komponen (Solid/Frosted/Glass), gaya frosted glass. */
+/** Segmented control for the component style (Solid/Frosted/Glass), frosted-glass style. */
 @Composable
 private fun ComponentStyleSegmentedControl(
     selected: ComponentStyle,
@@ -468,7 +445,6 @@ private fun ComponentStyleSegmentedControl(
 ) {
     SegmentedGlassTrack {
         ComponentStyleChoices.forEach { choice ->
-            // GLASS butuh API 33; di bawah itu di-nonaktifkan (bukan disembunyikan).
             val enabled = choice.style != ComponentStyle.GLASS || glassSupported
             SegmentedGlassItem(
                 label = stringResource(choice.labelRes),
@@ -495,7 +471,7 @@ private fun componentStyleDescription(
     }
 }
 
-/** Track kaca yang membungkus segmen-segmen (dipakai ulang beberapa kontrol). */
+/** The glass track wrapping the segments (reused by several controls). */
 @Composable
 private fun SegmentedGlassTrack(
     content: @Composable androidx.compose.foundation.layout.RowScope.() -> Unit,
@@ -523,10 +499,6 @@ private fun SegmentedGlassItem(
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
 ) {
-    // Chip terpilih memakai secondaryContainer (warna solid, bukan sekadar
-    // surface transparan) supaya KONTRAS-nya jelas dgn track di light mode.
-    // Sebelumnya selected & track sama-sama surfaceContainerHighest -> nyaris
-    // tak terlihat mana yg dipilih terutama di light mode.
     val backgroundColor by animateColorAsState(
         targetValue = if (selected) {
             MaterialTheme.colorScheme.secondaryContainer
@@ -538,7 +510,6 @@ private fun SegmentedGlassItem(
     )
     val contentColor by animateColorAsState(
         targetValue = when {
-            // Ter-nonaktif: teks diredupkan (tak bisa dipilih).
             !enabled -> MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.38f)
             selected -> MaterialTheme.colorScheme.onSecondaryContainer
             else -> MaterialTheme.colorScheme.onSurfaceVariant

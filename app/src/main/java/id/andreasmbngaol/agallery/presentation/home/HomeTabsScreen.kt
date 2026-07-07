@@ -51,10 +51,6 @@ fun HomeTabsScreen(
 ) {
     val galleryViewModel: GalleryViewModel = koinViewModel()
 
-    // Auto re-index begitu izin media diberikan. Grant permission tidak selalu
-    // memicu ContentObserver MediaStore, jadi pertama kali akses didapat kita
-    // paksa refresh -> grid & daftar album langsung terisi tanpa perlu
-    // pull-to-refresh atau tutup-buka app.
     val mediaPermissions = rememberMultiplePermissionsState(MediaPermissions.required())
     val hasMediaAccess = mediaPermissions.permissions.any { it.status.isGranted }
     LaunchedEffect(hasMediaAccess) {
@@ -63,8 +59,6 @@ fun HomeTabsScreen(
     val sortOrder by galleryViewModel.sortOrder.collectAsState()
     val toggleSort: () -> Unit = { galleryViewModel.toggleSortOrder() }
     val previewItem by galleryViewModel.previewItem.collectAsState()
-    // Long-press preview aktif: dari GalleryGridScreen (foto ditahan) ATAU
-    // dari AlbumsScreen (album ditahan). Keduanya menutup nav bar.
     var albumPreviewActive by remember { mutableStateOf(false) }
     val previewActive = previewItem != null || albumPreviewActive
 
@@ -135,9 +129,6 @@ fun HomeTabsScreen(
                 )
                 PageAlbums -> AlbumsScreen(
                     edgeEffectMode = edgeEffectMode,
-                    // Diteruskan supaya tombol Pin/Unpin di hold-overlay
-                    // ikut styling SOLID / FROSTED / GLASS (sama dgn pattern
-                    // StyledCircleBackButton & PhotoContextMenu di Gallery).
                     componentStyle = componentStyle,
                     onAlbumClick = onOpenAlbum,
                     onOpenTrash = onOpenTrash,

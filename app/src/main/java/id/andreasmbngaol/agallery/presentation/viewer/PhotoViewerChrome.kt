@@ -74,41 +74,36 @@ import id.andreasmbngaol.agallery.core.ui.usesBlur
 import id.andreasmbngaol.agallery.core.ui.usesLens
 import id.andreasmbngaol.agallery.domain.model.settings.ComponentStyle
 
-// ---- Tuning liquid glass (samain dgn floating nav bar di GalleryTabScaffold) ----
 private val GlassBlurRadius = 4.dp
 private val GlassRefractionHeight = 12.dp
 private val GlassRefractionAmount = 16.dp
 private const val GlassTintAlpha = 0.3f
-// Veil "haze" FROSTED (drawBackdrop TANPA blur/lens) -> sedikit lebih pekat.
 private const val FrostedHazeAlpha = 0.4f
-// Fallback fill (API < 33): FROSTED translusen (masih berkesan kaca), SOLID hampir opaque.
 private const val FrostedFallbackAlpha = 0.55f
 private const val SolidFallbackAlpha = 0.95f
 
-/** Durasi tahan Trash sampai memicu hapus permanen. */
+/** Hold duration on Trash before triggering permanent delete. */
 private const val HoldToDeleteMs = 700
 
 private val DangerRed = Color(0xFFFF453A)
 private val FavoritePink = Color(0xFFFF375F)
 
-// Gradient "playful" merah -> pink -> ungu untuk animasi tahan-hapus. Sweep biar
-// warnanya muter warna-warni; balik ke merah di akhir supaya sambungannya mulus.
 private val HoldDeleteGradient = Brush.sweepGradient(
     listOf(
-        Color(0xFFFF453A), // red
-        Color(0xFFFF2D92), // pink
-        Color(0xFFAF52DE), // purple
-        Color(0xFFFF453A), // balik merah
+        Color(0xFFFF453A),
+        Color(0xFFFF2D92),
+        Color(0xFFAF52DE),
+        Color(0xFFFF453A),
     ),
 )
 
 /**
- * Modifier container **liquid glass** (Kyant backdrop, API 33+ & setting ON).
- * Kalau tidak didukung / glass OFF -> fallback frosted solid.
+ * A **liquid glass** container modifier (Kyant backdrop, API 33+ & setting ON).
+ * If unsupported / glass OFF -> falls back to a frosted solid.
  *
- * [style] menentukan render: GLASS = liquid glass (Kyant refraction),
- * FROSTED/SOLID = fallback fill (translusen / hampir opaque). Di-resolve di
- * [PhotoViewerScreen] sama seperti nav bar gallery.
+ * [style] determines the render: GLASS = liquid glass (Kyant refraction),
+ * FROSTED/SOLID = fallback fill (translucent / nearly opaque). Resolved in
+ * [PhotoViewerScreen] the same way as the gallery nav bar.
  */
 @Composable
 private fun Modifier.liquidGlass(
@@ -127,8 +122,6 @@ private fun Modifier.liquidGlass(
             shape = { Capsule() },
             effects = {
                 vibrancy()
-                // GLASS = blur + lens. FROSTED = keduanya off -> vibrancy + veil
-                // haze saja (kabut); bentuk tetap kaca tapi tanpa distorsi & blur.
                 if (style.usesBlur()) {
                     blur(GlassBlurRadius.toPx())
                 }
@@ -144,8 +137,8 @@ private fun Modifier.liquidGlass(
 }
 
 /**
- * Tombol lingkaran liquid glass (Back, Info, More). Konten diberi warna
- * `onSurface` oleh pemanggil supaya kontras di light & dark.
+ * A round liquid-glass button (Back, Info, More). The content is colored
+ * `onSurface` by the caller for contrast in both light & dark.
  */
 @Composable
 fun GlassIconButton(
@@ -171,10 +164,10 @@ fun GlassIconButton(
 }
 
 /**
- * Tombol aksi LEBAR bergaya kaca (SOLID/FROSTED/GLASS) untuk dipakai di luar
- * island — mis. tombol "Hapus metadata" di detail sheet — biar seragam dgn
- * tema app. Bentuk kapsul (CircleShape = pill utk elemen lebar), konten diberi
- * warna onSurface supaya kontras di light & dark.
+ * A WIDE glass-style action button (SOLID/FROSTED/GLASS) for use outside an
+ * island — e.g. the "Remove metadata" button in the detail sheet — to stay
+ * consistent with the app theme. Capsule shape (CircleShape = a pill for wide
+ * elements), content colored onSurface for contrast in both light & dark.
  */
 @Composable
 fun GlassActionButton(
@@ -203,9 +196,9 @@ fun GlassActionButton(
 }
 
 /**
- * "Island" kapsul liquid glass yang membungkus sebaris tombol (mis. Share ·
- * Delete · Favorite). Tombol di dalamnya transparan; hanya island yang berkaca
- * (mirip pola track pill di nav bar gallery).
+ * A liquid-glass capsule "island" wrapping a row of buttons (e.g. Share ·
+ * Delete · Favorite). The buttons inside are transparent; only the island has
+ * glass (similar to the pill-track pattern in the gallery nav bar).
  */
 @Composable
 fun GlassIsland(
@@ -227,9 +220,9 @@ fun GlassIsland(
 }
 
 /**
- * Top bar viewer: Back (kiri) + Info (kanan) sebagai tombol liquid glass
- * (tergantung setting). Tidak ada lagi gradient scrim penuh — tiap tombol
- * berdiri sendiri di atas kaca.
+ * Viewer top bar: Back (left) + Info (right) as liquid-glass buttons
+ * (depending on the setting). No more full gradient scrim — each button
+ * stands on its own over the glass.
  */
 @Composable
 fun ViewerTopBar(
@@ -269,9 +262,9 @@ fun ViewerTopBar(
 }
 
 /**
- * Action bar bawah untuk FOTO: dua island terpisah.
- * - Island A (kapsul): Share · Delete(tahan) · Favorite.
- * - Island B (terpisah): tombol More (⋮).
+ * Bottom action bar for PHOTOS: two separate islands.
+ * - Island A (capsule): Share · Delete(hold) · Favorite.
+ * - Island B (separate): the More button (⋮).
  */
 @Composable
 fun ViewerActionBar(
@@ -301,7 +294,6 @@ fun ViewerActionBar(
         horizontalArrangement = Arrangement.spacedBy(12.dp, Alignment.CenterHorizontally),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        // Island A: Share · Delete(tahan) · Favorite (urutan sesuai permintaan).
         GlassIsland(style, backdrop) {
             IconButton(onClick = onShare) {
                 Icon(PhosphorIcons.Bold.ShareNetwork, contentDescription = stringResource(R.string.action_share), tint = tint)
@@ -315,7 +307,6 @@ fun ViewerActionBar(
                 )
             }
         }
-        // Island B: More (terpisah).
         GlassMoreButton(
             style = style,
             backdrop = backdrop,
@@ -333,9 +324,9 @@ fun ViewerActionBar(
 }
 
 /**
- * Baris aksi untuk VIDEO: Share · Delete(tahan) · Favorite · More, semuanya
- * digabung dalam SATU baris tanpa kaca sendiri (dipasang di dalam island video
- * gabungan milik [VideoPlayerContent], di bawah baris kontrol).
+ * Action row for VIDEO: Share · Delete(hold) · Favorite · More, all combined
+ * into ONE row without its own glass (mounted inside the combined video island
+ * owned by [VideoPlayerContent], below the controls row).
  */
 @Composable
 fun ViewerVideoActionRow(
@@ -381,7 +372,7 @@ fun ViewerVideoActionRow(
     }
 }
 
-/** Tombol More versi kaca (untuk island foto terpisah). */
+/** Glass version of the More button (for the separate photo island). */
 @Composable
 private fun GlassMoreButton(
     style: ComponentStyle,
@@ -421,7 +412,7 @@ private fun GlassMoreButton(
     }
 }
 
-/** Tombol More versi polos (untuk baris aksi video di dalam island gabungan). */
+/** Plain version of the More button (for the video action row inside the combined island). */
 @Composable
 private fun PlainMoreButton(
     tint: Color,
@@ -437,7 +428,6 @@ private fun PlainMoreButton(
         IconButton(onClick = { expanded = true }) {
             Icon(PhosphorIcons.Bold.DotsThreeVertical, contentDescription = stringResource(R.string.action_more), tint = tint)
         }
-        // Video: TANPA "Set as wallpaper" (wallpaper hanya relevan utk gambar).
         ViewerMoreDropdown(
             expanded = expanded,
             onDismiss = { expanded = false },
@@ -463,9 +453,7 @@ private fun ViewerMoreDropdown(
     onDelete: () -> Unit,
     onSetAs: () -> Unit = {},
     onSetAsCover: () -> Unit = {},
-    // "Ubah format" hanya untuk gambar; video menyembunyikannya (null).
     onConvertFormat: (() -> Unit)? = null,
-    // "Set as wallpaper" hanya untuk gambar; video menyembunyikannya.
     showSetAs: Boolean = true,
 ) {
     DropdownMenu(expanded = expanded, onDismissRequest = onDismiss) {
@@ -541,13 +529,13 @@ private fun ViewerMoreDropdown(
 }
 
 /**
- * Tombol Trash dengan afordans "tahan untuk Delete":
- * - Tap biasa -> pindah ke Trash (kini lewat dialog konfirmasi di layar).
- * - Ditahan -> lingkaran gradient warna-warni (merah/pink/ungu) tumbuh dari
- *   tengah mengisi tombol (~700ms). Penuh -> haptic LongPress + [onHoldComplete]
- *   (hapus permanen; konfirmasi diserahkan ke dialog sistem Android).
+ * Trash button with a "hold to Delete" affordance:
+ * - A normal tap -> move to Trash (now via an on-screen confirmation dialog).
+ * - Held -> a colorful gradient circle (red/pink/purple) grows from the center
+ *   filling the button (~700ms). When full -> LongPress haptic + [onHoldComplete]
+ *   (permanent delete; confirmation deferred to the Android system dialog).
  *
- * Getaran kecil saat mulai menekan menandakan tombol ini bisa ditahan.
+ * A small vibration when the press starts signals that this button can be held.
  */
 @Composable
 fun HoldToDeleteButton(
@@ -591,7 +579,6 @@ fun HoldToDeleteButton(
             },
         contentAlignment = Alignment.Center,
     ) {
-        // Lingkaran gradient warna-warni yg membesar mengisi tombol seiring tekan.
         if (progress > 0.01f) {
             Box(
                 modifier = Modifier
@@ -619,12 +606,9 @@ fun RenameDialog(
     onConfirm: (String) -> Unit,
     onDismiss: () -> Unit,
 ) {
-    // Pisahkan base + ekstensi: user hanya mengedit base, ekstensi asli SELALU
-    // dipertahankan (ditampilkan sbg suffix read-only). Mencegah kasus nama jadi
-    // "Renamed" tanpa ekstensi -> yg bikin hasil convert ikut aneh (Renamed.webp).
     val dotIndex = initialName.lastIndexOf('.')
     val hasExt = dotIndex > 0
-    val extension = if (hasExt) initialName.substring(dotIndex) else "" // termasuk titik
+    val extension = if (hasExt) initialName.substring(dotIndex) else ""
     var text by remember { mutableStateOf(if (hasExt) initialName.substring(0, dotIndex) else initialName) }
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -647,7 +631,6 @@ fun RenameDialog(
             TextButton(
                 onClick = {
                     val entered = text.trim()
-                    // Re-append ekstensi asli (kecuali user sudah mengetiknya).
                     val finalName = if (
                         extension.isNotEmpty() && !entered.endsWith(extension, ignoreCase = true)
                     ) {
@@ -665,8 +648,8 @@ fun RenameDialog(
 }
 
 /**
- * Konfirmasi PINDAH KE TRASH. Ditambahkan supaya tidak langsung ke-trash saat
- * tombol tak sengaja kepencet (aksi ini reversible, jadi konfirmasinya ringan).
+ * MOVE TO TRASH confirmation. Added so items are not trashed immediately when the
+ * button is accidentally tapped (this action is reversible, so the confirmation is light).
  */
 @Composable
 fun MoveToTrashConfirmDialog(

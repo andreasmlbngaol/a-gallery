@@ -31,7 +31,6 @@ class CreateAlbumViewModel(
     private val refreshMediaUseCase: RefreshMediaUseCase,
     getSettings: GetSettingsUseCase,
 ) : ViewModel() {
-
     private val _albums = MutableStateFlow<List<Album>>(emptyList())
     val albums: StateFlow<List<Album>> = _albums.asStateFlow()
 
@@ -44,8 +43,6 @@ class CreateAlbumViewModel(
     private val _done = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
     val done: SharedFlow<Unit> = _done.asSharedFlow()
 
-    // Gaya komponen (Solid/Frosted/Glass) & efek tepi -> top bar, FAB, dan scrim
-    // dibuat seragam dengan layar lain (Trash/Gallery).
     val componentStyle: StateFlow<ComponentStyle?> = getSettings()
         .map { it.componentStyle }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000L), null)
@@ -54,7 +51,7 @@ class CreateAlbumViewModel(
         .map { it.edgeEffectMode }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000L), null)
 
-    /** Semua album, diurutkan berdasarkan nama (bukan urutan acak). */
+    /** All albums, sorted by name (not in random order). */
     fun loadAlbums() {
         viewModelScope.launch {
             _albums.value = getAlbums().sortedBy { it.name.lowercase() }
@@ -71,7 +68,7 @@ class CreateAlbumViewModel(
         _albumMedia.value = emptyList()
     }
 
-    /** Buat album baru dengan menyalin (copy) item terpilih ke DCIM/<nama>/. */
+    /** Create a new album by copying the selected items to DCIM/<name>/. */
     fun create(name: String, items: List<MediaItem>) {
         if (items.isEmpty() || _creating.value) return
         val path = albumRelativePath(name)

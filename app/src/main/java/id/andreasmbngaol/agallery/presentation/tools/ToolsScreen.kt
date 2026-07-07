@@ -47,16 +47,16 @@ import id.andreasmbngaol.agallery.core.ui.ScreenTopBarHeight
 import id.andreasmbngaol.agallery.domain.model.settings.EdgeEffectMode
 
 /**
- * Tab "Tools": hub berisi utilitas non-galeri (mis. QR Code Generator). Grid 2
- * kolom berisi kartu tool. Setiap tool nantinya punya layar sendiri; untuk saat
- * ini tool yang belum jadi ditampilkan sebagai kartu ber-badge "Segera hadir"
- * dan TIDAK bisa ditap (disabled).
+ * The "Tools" tab: a hub of non-gallery utilities (e.g. QR Code Generator). A
+ * 2-column grid of tool cards. Each tool will eventually get its own screen; for
+ * now, tools that are not ready are shown as cards with a "Coming soon" badge and
+ * CANNOT be tapped (disabled).
  *
- * Registry tool bersifat DEKLARATIF (lihat [toolRegistry]) supaya menambah tool
- * baru cukup menambah satu entri + mengubah `enabled`/`onClick`-nya nanti,
- * tanpa mengutak-atik layout.
+ * The tool registry is DECLARATIVE (see [toolRegistry]) so adding a new tool only
+ * requires adding one entry + wiring up its `enabled`/`onClick` later, without
+ * touching the layout.
  *
- * Topbar & efek tepi mengikuti pola tab lain lewat [EdgeEffectTopBarScaffold].
+ * The top bar & edge effect follow the other tabs' pattern via [EdgeEffectTopBarScaffold].
  */
 @Composable
 fun ToolsScreen(
@@ -77,15 +77,12 @@ fun ToolsScreen(
             contentPadding = PaddingValues(
                 start = safeDrawing.calculateStartPadding(layoutDirection) + 16.dp,
                 end = safeDrawing.calculateEndPadding(layoutDirection) + 16.dp,
-                // Turun di bawah topbar (status bar + tinggi topbar).
                 top = safeDrawing.calculateTopPadding() + ScreenTopBarHeight + 8.dp,
-                // Ruang ekstra supaya kartu terakhir tak ketutup floating nav bar.
                 bottom = safeDrawing.calculateBottomPadding() + 12.dp + FloatingTabBarHeight,
             ),
             horizontalArrangement = Arrangement.spacedBy(12.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            // Section header "Utilities" membentang penuh (2 kolom).
             item(span = { GridItemSpan(maxLineSpan) }) {
                 ToolsSectionHeader(stringResource(R.string.tools_section_utilities))
             }
@@ -97,9 +94,9 @@ fun ToolsScreen(
 }
 
 /**
- * Definisi satu tool di hub. [enabled]=false -> kartu tampil ber-badge "Segera
- * hadir" & tak bisa ditap. Nanti saat tool-nya jadi, set enabled=true dan isi
- * [onClick] (mis. navigasi ke layar tool).
+ * Definition of a single tool in the hub. [enabled]=false -> the card shows a
+ * "Coming soon" badge & cannot be tapped. Later, when the tool is ready, set
+ * enabled=true and fill in [onClick] (e.g. navigate to the tool screen).
  */
 private data class ToolEntry(
     val icon: ImageVector,
@@ -110,9 +107,9 @@ private data class ToolEntry(
 )
 
 /**
- * Daftar tool (deklaratif). Untuk sekarang hanya QR Code Generator sebagai
- * placeholder disabled -- fungsionalitasnya menyusul setelah desain QR final.
- * Tambah tool baru cukup menambah [ToolEntry] di sini.
+ * Tool list (declarative). For now only the QR Code Generator, as a disabled
+ * placeholder -- its functionality follows once the QR design is finalized. To
+ * add a new tool, just add a [ToolEntry] here.
  */
 private fun toolRegistry(
     onOpenQrGenerator: () -> Unit,
@@ -126,7 +123,7 @@ private fun toolRegistry(
     ),
 )
 
-/** Label kategori kecil di atas grid, gaya sama dgn header section Settings. */
+/** Small category label above the grid, same style as the Settings section header. */
 @Composable
 private fun ToolsSectionHeader(title: String) {
     Text(
@@ -138,9 +135,9 @@ private fun ToolsSectionHeader(title: String) {
 }
 
 /**
- * Kartu satu tool: ikon dalam "chip" warna, judul, deskripsi 1-2 baris, plus
- * badge "Segera hadir" bila belum aktif. Kartu disabled diredupkan (alpha) &
- * tak menerima klik.
+ * A single tool card: an icon in a colored "chip", title, 1-2 line description,
+ * plus a "Coming soon" badge when not yet active. Disabled cards are dimmed
+ * (alpha) & do not accept clicks.
  */
 @Composable
 private fun ToolCard(tool: ToolEntry) {
@@ -194,7 +191,7 @@ private fun ToolCard(tool: ToolEntry) {
     }
 }
 
-/** Badge kecil "Segera hadir" untuk tool yang belum aktif. */
+/** Small "Coming soon" badge for tools that are not yet active. */
 @Composable
 private fun ComingSoonBadge() {
     Text(

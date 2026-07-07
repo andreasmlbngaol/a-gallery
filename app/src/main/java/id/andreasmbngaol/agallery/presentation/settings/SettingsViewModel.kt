@@ -23,7 +23,6 @@ class SettingsViewModel(
     private val setGridColumns: SetGridColumnsUseCase,
     private val setPerformanceMode: SetPerformanceModeUseCase,
 ) : ViewModel() {
-
     val settings: StateFlow<AppSettings> = getSettings()
         .stateIn(
             scope = viewModelScope,

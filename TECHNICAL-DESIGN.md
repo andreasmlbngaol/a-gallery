@@ -45,11 +45,12 @@
 |---|---|
 | `namespace` / `applicationId` | `id.andreasmbngaol.agallery` |
 | `minSdk` | **29 (Android 10)** |
-| `targetSdk` / `compileSdk` | 37 |
-| `versionCode` / `versionName` | `17` / `1.7.0` |
+| `targetSdk` / `compileSdk` | 37 (compileSdk minor `37.1`) |
+| `versionCode` / `versionName` | `18` / `1.7.1` |
 | Language | Kotlin `2.4.0` (KSP `2.3.9`) |
 | UI | Jetpack Compose (BOM `2026.06.01`), Material 3 `1.5.0-alpha23` |
-| Build | AGP `9.2.1`, R8 full mode (minify + shrink resources) |
+| Build | AGP `9.2.1`, R8 (minify + shrink resources; **full mode disabled** so ML Kit consumer rules survive) |
+| Packaging | Per-ABI APK splits (`arm64-v8a`, `x86_64`); no universal APK |
 
 Signing/release is wired: `keystore.properties` locally or `KEYSTORE_*` env
 vars in CI; a GitHub Actions workflow builds a signed release APK on a `v*` tag.
@@ -60,7 +61,9 @@ Release asset is named `AGallery-*.apk`.
 Coil 3 (images/video thumbs), Paging 3, Navigation 3, Telephoto (pinch-zoom),
 Room (local cache), DataStore (settings), Koin (DI), Media3 (video),
 WorkManager (background jobs), Haze + Kyant backdrop/shapes (glass UI),
-Phosphor icons (Bold).
+Phosphor icons (Bold), AndroidX ExifInterface (metadata read/write),
+AndroidX HeifWriter (HEIC/HEIF encode), ZXing core (offline QR encode),
+ML Kit Barcode Scanning (bundled, on-device QR/barcode decode).
 
 > Any new dependency must be offline-capable with a compatible license (prefer
 > Apache-2.0 / MIT), added to `gradle/libs.versions.toml` **and**
@@ -126,7 +129,7 @@ milestone, not strictly an API break — this is an app, not a library).
 
 ### 3.1 Release map
 
-**`1.x` — the localization & offline-utilities era (no `INTERNET` permission, no AI).** **Shipped through `1.7.0`; this era is complete.**
+**`1.x` — the localization & offline-utilities era (no `INTERNET` permission, no AI).** **Shipped through `1.7.1`; this era is complete.**
 
 | Version | Scope | Status |
 |---|---|---|
@@ -346,6 +349,25 @@ specific models are still open (Section 9).
 - **Licensing.** App license: **PolyForm Noncommercial 1.0.0** (© 2026
   andreasmlbngaol). Every new dependency is added to `THIRD-PARTY-NOTICES.md`;
   each imported AI **model** has its own license — record and surface it.
+
+### 8.1 Code style & documentation conventions
+
+Established during the codebase-wide cleanup; all layers now follow these:
+
+- **Documentation is English KDoc only.** Every file that needs explanation
+  carries professional English KDoc. Do **not** write inline `//` narration —
+  only KDoc, plus the rare short comment where truly unavoidable. UI strings
+  and resource text are never rewritten by this rule.
+- **One top-level declaration per file (Java style).** Each class / interface /
+  object / enum lives in its own file named after it; no piggy-backed types.
+- **Constructor-DSL Koin bindings.** Prefer `factoryOf(::Type)` /
+  `singleOf(::Type)` over the lambda form (`factory { Type(get()) }`) wherever
+  the constructor maps cleanly.
+- **Sectioned packages.** Keep each feature's files grouped by package section
+  (screen, view model, UI state, DI) so a feature stays self-contained.
+- **Build config is documented too.** Gradle / version-catalog / properties
+  files carry concise English comments for non-obvious build decisions only —
+  no "check latest" style personal reminders.
 
 ---
 

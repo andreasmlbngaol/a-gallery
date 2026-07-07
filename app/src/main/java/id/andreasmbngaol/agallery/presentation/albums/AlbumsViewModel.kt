@@ -10,7 +10,6 @@ import id.andreasmbngaol.agallery.domain.model.media.MediaScope
 import id.andreasmbngaol.agallery.domain.usecase.settings.GetSettingsUseCase
 import id.andreasmbngaol.agallery.domain.usecase.media.ObserveAlbumsUseCase
 import id.andreasmbngaol.agallery.domain.usecase.trash.ObserveTrashItemsUseCase
-import id.andreasmbngaol.agallery.domain.usecase.media.RefreshMediaUseCase
 import id.andreasmbngaol.agallery.domain.usecase.settings.SetPinnedAlbumsUseCase
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -20,23 +19,20 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
 /**
- * VM tab Albums. Memuat daftar album (folder + cerdas) secara REAKTIF lewat
- * [ObserveAlbumsUseCase], lalu memecahnya jadi Pinned + More berdasarkan
- * daftar kunci tersimpan di [GetSettingsUseCase] (DataStore).
+ * Albums tab VM. Loads the album list (folders + smart albums) REACTIVELY via
+ * [ObserveAlbumsUseCase], then splits it into Pinned + More based on the list of
+ * keys stored in [GetSettingsUseCase] (DataStore).
  *
- * Karena sumbernya sekarang `Flow`, album auto re-index saat: izin media
- * diberikan, ada foto/video baru, item difavoritkan/di-trash, atau cover
- * album diubah -- tanpa perlu tutup-buka app.
+ * Because the source is now a `Flow`, albums auto re-index when: media
+ * permission is granted, a new photo/video appears, an item is favorited/trashed,
+ * or an album cover is changed -- with no need to close and reopen the app.
  */
 class AlbumsViewModel(
     observeAlbums: ObserveAlbumsUseCase,
     getSettings: GetSettingsUseCase,
     private val setPinnedAlbums: SetPinnedAlbumsUseCase,
     observeTrashItems: ObserveTrashItemsUseCase,
-    private val refreshMedia: RefreshMediaUseCase,
 ) : ViewModel() {
-
-    // Sumber album REAKTIF. null = belum ada emisi pertama (state Loading).
     private val albums: StateFlow<List<Album>?> = observeAlbums()
         .map<List<Album>, List<Album>?> { it }
         .stateIn(
@@ -45,7 +41,6 @@ class AlbumsViewModel(
             initialValue = null,
         )
 
-    // Urutan pinned dari settings (null di storage -> pakai default).
     private val pinnedKeys: StateFlow<List<String>> = getSettings()
         .map { it.pinnedAlbumKeys ?: DEFAULT_PINNED_ALBUM_KEYS }
         .stateIn(
@@ -54,7 +49,6 @@ class AlbumsViewModel(
             initialValue = DEFAULT_PINNED_ALBUM_KEYS,
         )
 
-    // Jumlah item di Trash. 0 -> row Trash disembunyikan.
     private val trashCount: StateFlow<Int> = observeTrashItems()
         .map { it.size }
         .stateIn(
@@ -76,17 +70,7 @@ class AlbumsViewModel(
             initialValue = AlbumsUiState.Loading,
         )
 
-    /**
-     * Paksa re-index. Dipakai terutama setelah izin media diberikan (grant
-     * tidak selalu memicu ContentObserver). Cukup satu panggilan: grid galeri
-     * & daftar album sama-sama tersegarkan lewat trigger di repository.
-     */
-    fun refresh() {
-        refreshMedia()
-    }
-
     fun pin(key: String) {
-        // Trash tidak boleh di-pin -- baris Trash punya lokasi tetap.
         if (key == ALBUM_KEY_TRASH) return
         val current = pinnedKeys.value
         if (key in current) return
@@ -94,7 +78,6 @@ class AlbumsViewModel(
     }
 
     fun unpin(key: String) {
-        // Recent / Videos / Favorites terkunci di section pinned.
         if (key in LOCKED_PIN_ALBUM_KEYS) return
         val current = pinnedKeys.value
         if (key !in current) return
@@ -102,8 +85,6 @@ class AlbumsViewModel(
     }
 
     fun setOrder(keys: List<String>) {
-        // Buang Trash (kalau tak sengaja ikut) sebelum persist supaya
-        // tidak muncul di section Pinned.
         val sanitized = keys.filter { it != ALBUM_KEY_TRASH }
         viewModelScope.launch { setPinnedAlbums(sanitized) }
     }
@@ -114,15 +95,8 @@ class AlbumsViewModel(
         trashCount: Int,
     ): AlbumsUiState.Content {
         val byKey = albums.associateBy { it.key }
-        // Locked album keys HARUS selalu ikut di section Pinned. Kalau DataStore
-        // user (dari sebelum fitur ini ada) tidak menyimpan salah satu dari
-        // Recent / Videos / Favorites, kita sisipkan ke pinned di posisi
-        // stabil (append di akhir, di atas custom folder yg mungkin di-pin
-        // user) sehingga selalu terlihat & konsisten dgn perilaku locked.
         val ensuredPins = buildList {
-            // Hormati urutan user untuk key yg sudah ada.
             pins.forEach { if (it != ALBUM_KEY_TRASH) add(it) }
-            // Tambahkan locked yg belum ada (Recent -> Videos -> Favorites).
             LOCKED_PIN_ALBUM_KEYS.forEach { locked -> if (locked !in this) add(locked) }
         }
         val pinned = ensuredPins.mapNotNull { byKey[it] }
@@ -130,9 +104,6 @@ class AlbumsViewModel(
         val more = albums
             .filter { it.key !in pinnedSet }
             .sortedBy { it.name.lowercase() }
-        // Trash SELALU dirender di paling bawah tab Albums (bahkan saat kosong)
-        // supaya user selalu bisa masuk ke layar Trash. Layar Trash sendiri
-        // yang menampilkan empty state kalau tidak ada item.
         val trash = Album(
             key = ALBUM_KEY_TRASH,
             scope = MediaScope.Trash,

@@ -7,10 +7,6 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import id.andreasmbngaol.agallery.data.qr.QrImageSaver
 import id.andreasmbngaol.agallery.domain.model.album.Album
-import id.andreasmbngaol.agallery.domain.model.settings.AppSettings
-import id.andreasmbngaol.agallery.domain.model.settings.ComponentStyle
-import id.andreasmbngaol.agallery.domain.model.settings.EdgeEffectMode
-import id.andreasmbngaol.agallery.domain.model.settings.GallerySortOrder
 import id.andreasmbngaol.agallery.domain.model.media.MediaItem
 import id.andreasmbngaol.agallery.domain.model.media.MediaScope
 import id.andreasmbngaol.agallery.domain.model.media.MediaType
@@ -19,29 +15,19 @@ import id.andreasmbngaol.agallery.domain.model.qr.QrBuiltInLogo
 import id.andreasmbngaol.agallery.domain.model.qr.QrCardConfig
 import id.andreasmbngaol.agallery.domain.model.qr.QrDotStyle
 import id.andreasmbngaol.agallery.domain.model.qr.QrLogo
+import id.andreasmbngaol.agallery.domain.model.settings.AppSettings
+import id.andreasmbngaol.agallery.domain.model.settings.GallerySortOrder
 import id.andreasmbngaol.agallery.domain.usecase.media.GetAlbumsUseCase
 import id.andreasmbngaol.agallery.domain.usecase.media.GetAllMediaUseCase
 import id.andreasmbngaol.agallery.domain.usecase.settings.GetSettingsUseCase
-import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-
-/**
- * State layar QR Generator: konfigurasi kartu + bitmap logo (kalau foto) +
- * gaya komponen & edge effect (dibaca dari settings, biar tombol/topbar
- * konsisten Solid/Frosted/Glass dgn layar lain).
- */
-data class QrGeneratorUiState(
-    val config: QrCardConfig = QrCardConfig(),
-    val logoBitmap: ImageBitmap? = null,
-    val componentStyleChosen: ComponentStyle? = null,
-    val edgeEffectMode: EdgeEffectMode? = null,
-)
 
 class QrGeneratorViewModel(
     getSettings: GetSettingsUseCase,
@@ -49,13 +35,9 @@ class QrGeneratorViewModel(
     private val getAllMedia: GetAllMediaUseCase,
     private val imageSaver: QrImageSaver,
 ) : ViewModel() {
-
     private val _config = MutableStateFlow(QrCardConfig())
-    // Bitmap logo hasil decode foto (transient, tidak masuk domain config).
     private val _logoBitmap = MutableStateFlow<ImageBitmap?>(null)
 
-    // Picker logo INTERNAL berbasis ALBUM: tampilkan daftar folder dulu, lalu
-    // foto di dalamnya. Alurnya meniru "Create new album".
     private val _albums = MutableStateFlow<List<Album>>(emptyList())
     val albums: StateFlow<List<Album>> = _albums.asStateFlow()
 
@@ -82,8 +64,6 @@ class QrGeneratorViewModel(
             QrGeneratorUiState(),
         )
 
-    // Alt text kini punya mode SAME/CUSTOM, jadi content tak perlu lagi
-    // "nyetir" altText otomatis.
     fun updateContent(value: String) = _config.update { it.copy(content = value) }
 
     fun updateTitle(value: String) = _config.update { it.copy(title = value) }
@@ -92,7 +72,6 @@ class QrGeneratorViewModel(
     fun updateSupporting(value: String) = _config.update { it.copy(supportingText = value) }
     fun setDotStyle(style: QrDotStyle) = _config.update { it.copy(dotStyle = style) }
 
-    // --- Per-field styling (ukuran & warna) ---
     fun setTitleSize(size: Float) = _config.update { it.copy(titleSize = size) }
     fun setTitleColor(color: Long) = _config.update { it.copy(titleColor = color) }
     fun setSubtitleSize(size: Float) = _config.update { it.copy(subtitleSize = size) }
@@ -121,9 +100,9 @@ class QrGeneratorViewModel(
     }
 
     /**
-     * Muat daftar album/folder utk picker logo. Lazy & sekali jalan: dipanggil
-     * saat user membuka picker; kalau sudah ada isinya atau sedang loading,
-     * tak melakukan apa-apa.
+     * Load the album/folder list for the logo picker. Lazy & one-shot: called when
+     * the user opens the picker; if it already has content or is loading, it does
+     * nothing.
      */
     fun loadAlbums() {
         if (_albums.value.isNotEmpty() || _pickerLoading.value) return
@@ -134,7 +113,7 @@ class QrGeneratorViewModel(
         }
     }
 
-    /** Buka satu album -> muat foto (gambar saja) di dalamnya. */
+    /** Open a single album -> load the photos (images only) inside it. */
     fun openAlbum(scope: MediaScope) {
         _pickerLoading.value = true
         viewModelScope.launch {
@@ -144,24 +123,25 @@ class QrGeneratorViewModel(
         }
     }
 
-    /** Kembali dari isi album ke daftar album (kosongkan media sementara). */
+    /** Return from album content to the album list (clear the temporary media). */
     fun closeAlbumMedia() {
         _albumMedia.value = emptyList()
     }
 
     /**
-     * Reset SEMUA input balik ke default. State ViewModel bertahan selama layar
-     * hidup (nggak ke-reset walau user keluar-masuk lewat back), jadi ini
-     * satu-satunya cara mengosongkan form -- dipicu tombol Clear all di top bar.
+     * Reset ALL inputs back to default. The ViewModel state survives while the
+     * screen is alive (it is not reset even when the user navigates back and
+     * forth), so this is the only way to clear the form -- triggered by the
+     * Clear all button in the top bar.
      */
     fun clearAll() {
         _config.value = QrCardConfig()
         _logoBitmap.value = null
     }
 
-    /** Simpan bitmap hasil capture ke galeri. Dipanggil dari layar (suspend). */
+    /** Save the captured bitmap to the gallery. Called from the screen (suspend). */
     suspend fun saveToGallery(bitmap: Bitmap): Boolean = imageSaver.saveToGallery(bitmap)
 
-    /** Siapkan uri share dari bitmap hasil capture. */
+    /** Prepare a share uri from the captured bitmap. */
     suspend fun buildShareUri(bitmap: Bitmap): Uri? = imageSaver.cacheForShare(bitmap)
 }

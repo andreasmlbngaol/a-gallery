@@ -97,19 +97,20 @@ import id.andreasmbngaol.agallery.presentation.animation.sharedPhotoElement
 import org.koin.androidx.compose.koinViewModel
 
 /**
- * Tab Albums. Grid 3 kolom dgn dua section: "Pinned" (album cerdas + folder
- * yang di-pin user) dan "More" (sisa folder, diurut nama).
+ * Albums tab. A 3-column grid with two sections: "Pinned" (smart albums + folders
+ * the user pinned) and "More" (the remaining folders, sorted by name).
  *
- * ## Interaksi hold (meniru long-press di GalleryGridScreen)
+ * ## Hold interactions (mirroring the long-press in GalleryGridScreen)
  *
- * - Tap tile -> buka layar detail (grid ter-scope).
- * - Long-press tile (tanpa geser) -> masuk mode PREVIEW: kartu "maju"
- *   (scale-up spring) di tengah layar, background grid di-blur, muncul SATU
- *   tombol Pin/Unpin. Nav bar bawah otomatis tertutup lewat callback
- *   [onPreviewActiveChange] (persis seperti photo-hold di gallery).
- * - Long-press tile pinned + GESER -> masuk mode REORDER in-place: kartu
- *   yang ditahan mengikuti jari, kartu lain di section Pinned reflow. Lepas
- *   jari -> commit urutan baru ke VM. Tidak ada layar terpisah lagi.
+ * - Tap a tile -> open the detail screen (scoped grid).
+ * - Long-press a tile (without dragging) -> enter PREVIEW mode: the card "steps
+ *   forward" (scale-up spring) in the center of the screen, the grid background
+ *   is blurred, and a SINGLE Pin/Unpin button appears. The bottom nav bar closes
+ *   automatically via the [onPreviewActiveChange] callback (just like photo-hold
+ *   in the gallery).
+ * - Long-press a pinned tile + DRAG -> enter in-place REORDER mode: the held
+ *   card follows the finger while the other cards in the Pinned section reflow.
+ *   Release the finger -> commit the new order to the VM. No separate screen.
  */
 @Composable
 fun AlbumsScreen(
@@ -123,29 +124,16 @@ fun AlbumsScreen(
     val state by viewModel.state.collectAsState()
     val haptic = LocalHapticFeedback.current
 
-    // #8 (scroll-position hilang saat back dari AlbumDetail): pertahankan
-    // konten terakhir. Ketika kembali, flow bisa sesaat re-emit Loading -> grid
-    // sempat KOSONG -> LazyGrid kehilangan anchor & reset ke atas. Dgn menahan
-    // Content terakhir saat state sedang Loading, grid tak pernah kosong
-    // mendadak sehingga posisi scroll ter-restore dgn benar.
     var lastContent by remember { mutableStateOf<AlbumsUiState.Content?>(null) }
     LaunchedEffect(state) { (state as? AlbumsUiState.Content)?.let { lastContent = it } }
     val effectiveState: AlbumsUiState =
         if (state is AlbumsUiState.Loading) lastContent ?: state else state
 
-    // ==== State long-press / drag ==================================
-    // holdingAlbum: kartu yang lagi ditahan (preview overlay muncul saat
-    // dragging == null).
     var holdingAlbum by remember { mutableStateOf<Pair<Album, Boolean>?>(null) }
-    // draggingKey != null -> mode reorder in-place aktif untuk pinned itu.
     var draggingKey by remember { mutableStateOf<String?>(null) }
 
     val previewOverlayActive = holdingAlbum != null && draggingKey == null
 
-    // Kabar ke HomeTabsScreen -> nav bar tertutup selama hold preview aktif.
-    // PENTING: panggil callback LANGSUNG di dalam setter agar tidak bergantung
-    // pada LaunchedEffect/derivedStateOf timing (yg pernah bikin nav bar
-    // telat tertutup / tidak tertutup sama sekali di sebagian device).
     val onPreviewActive = rememberUpdatedState(onPreviewActiveChange)
     val setHolding: (Pair<Album, Boolean>?) -> Unit = { value ->
         holdingAlbum = value
@@ -159,13 +147,7 @@ fun AlbumsScreen(
         onDispose { onPreviewActive.value(false) }
     }
 
-    // Local mutable copy dari list pinned untuk reorder real-time.
-    // Selalu resync tiap pinned dari VM berubah (kecuali sedang di-drag).
     val pinnedRaw = (effectiveState as? AlbumsUiState.Content)?.pinned.orEmpty()
-    // PENTING (fix scroll turun ke bawah saat back dari AlbumDetail): inisialisasi
-    // list SUDAH terisi pinnedRaw pada frame pertama. Kalau di-init kosong lalu
-    // baru diisi lewat LaunchedEffect (1 frame telat), frame pertama grid punya
-    // item lebih sedikit -> indeks scroll yg di-restore mendarat di bawah (Trash).
     val pinnedList: SnapshotStateList<Album> = remember { pinnedRaw.toMutableStateList() }
     LaunchedEffect(pinnedRaw, draggingKey) {
         if (draggingKey == null) {
@@ -178,9 +160,6 @@ fun AlbumsScreen(
     val layoutDirection = LocalLayoutDirection.current
     val gridState = rememberLazyGridState()
 
-    // Backdrop untuk styling liquid-glass tombol Pin/Unpin di overlay.
-    // Grid (yg sudah di-blur) menjadi sumber sample supaya pill mengikuti
-    // ComponentStyle (SOLID / FROSTED / GLASS) konsisten dgn tombol lain.
     val overlayBackdrop = rememberLayerBackdrop()
 
     EdgeEffectTopBarScaffold(
@@ -201,17 +180,12 @@ fun AlbumsScreen(
                 verticalArrangement = Arrangement.spacedBy(12.dp),
                 modifier = Modifier
                     .fillMaxSize()
-                    // layerBackdrop membuat grid ini jadi sumber sample untuk
-                    // drawBackdrop di pill overlay -- pill bakal "membiaskan"
-                    // grid yg sudah di-blur sesuai ComponentStyle.
                     .layerBackdrop(overlayBackdrop)
-                    // Grid di-blur saat preview overlay aktif (hold tanpa drag).
                     .then(if (previewOverlayActive) Modifier.blur(20.dp) else Modifier)
                     .graphicsLayer { alpha = if (previewOverlayActive) 0.9f else 1f },
             ) {
                 when (effectiveState) {
                     is AlbumsUiState.Content -> {
-                        // ---------- Pinned ----------
                         if (pinnedList.isNotEmpty()) {
                             item(span = { GridItemSpan(maxLineSpan) }) {
                                 SectionHeader(stringResource(R.string.albums_pinned))
@@ -229,14 +203,9 @@ fun AlbumsScreen(
                                     onClick = { onAlbumClick(album.key, album.name) },
                                     onLongPressStart = {
                                         haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                        // Untuk pinned yg locked (Recent/Videos/Favorites),
-                                        // hold tetap menampilkan preview -- HANYA tombol
-                                        // Unpin yg disembunyikan (lihat HoldPreviewOverlay).
                                         setHolding(album to true)
                                     },
                                     onDragEnter = {
-                                        // Begitu jari mulai bergeser: preview overlay
-                                        // ditutup, mode reorder in-place aktif.
                                         setHolding(null)
                                         setDragging(album.key)
                                     },
@@ -248,7 +217,6 @@ fun AlbumsScreen(
                                 )
                             }
                         }
-                        // ---------- More ----------
                         if (effectiveState.more.isNotEmpty()) {
                             item(span = { GridItemSpan(maxLineSpan) }) {
                                 SectionHeader(stringResource(R.string.action_more))
@@ -267,7 +235,6 @@ fun AlbumsScreen(
                                 )
                             }
                         }
-                        // ---------- Trash (row full-width, bukan kartu) ----------
                         effectiveState.trash?.let { trashAlbum ->
                             item(
                                 span = { GridItemSpan(maxLineSpan) },
@@ -288,8 +255,6 @@ fun AlbumsScreen(
                 }
             }
 
-            // Overlay preview (kartu-membesar + tombol Pin/Unpin) muncul HANYA
-            // saat hold tanpa drag. Jangan di-render saat reorder.
             holdingAlbum?.takeIf { draggingKey == null }?.let { (album, isPinned) ->
                 HoldPreviewOverlay(
                     album = album,
@@ -312,10 +277,6 @@ fun AlbumsScreen(
     }
 }
 
-// ---------------------------------------------------------------------
-//  Cards
-// ---------------------------------------------------------------------
-
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun MoreAlbumCard(
@@ -336,10 +297,10 @@ private fun MoreAlbumCard(
 }
 
 /**
- * Kartu di section "Pinned". Selain tap & long-press biasa, kartu ini juga
- * mendengarkan gesture DRAG-setelah-long-press (detectDragGesturesAfterLongPress)
- * -- kalau user menahan lalu MENGGESER, kartu ini pindah tempat langsung di
- * grid tanpa overlay reorder terpisah.
+ * A card in the "Pinned" section. Besides the usual tap & long-press, this card
+ * also listens for a DRAG-after-long-press gesture
+ * (detectDragGesturesAfterLongPress) -- if the user holds and then DRAGS, this
+ * card moves in place directly in the grid without a separate reorder overlay.
  */
 @Composable
 private fun PinnedAlbumCard(
@@ -352,11 +313,8 @@ private fun PinnedAlbumCard(
     onDragEnter: () -> Unit,
     onDragCommit: () -> Unit,
 ) {
-    // Offset kumulatif jari selama drag (px). Reset tiap drag berakhir.
     var dragOffset by remember { mutableStateOf(Offset.Zero) }
 
-    // rememberUpdatedState supaya lambda di dalam pointerInput (long-lived
-    // coroutine) selalu memanggil callback terbaru meski parent recompose.
     val onClickLatest by rememberUpdatedState(onClick)
     val onLongPressStartLatest by rememberUpdatedState(onLongPressStart)
     val onDragEnterLatest by rememberUpdatedState(onDragEnter)
@@ -370,24 +328,12 @@ private fun PinnedAlbumCard(
                 if (isDragging) {
                     translationX = dragOffset.x
                     translationY = dragOffset.y
-                    // Scale sengaja kecil (1.04) + kartu di-scale dari tengah.
-                    // Dikombinasikan dgn padding horizontal pd label (lihat
-                    // AlbumCardBody) supaya teks nama & jumlah item TIDAK
-                    // terpotong di kiri/kanan saat kartu terangkat.
                     scaleX = 1.04f
                     scaleY = 1.04f
-                    // clip=false: layer tidak memotong konten yg melewati batas
-                    // (bayangan & tepi kartu boleh menonjol saat diangkat).
                     clip = false
                     shadowElevation = 16f
                 }
             }
-            // SATU pointer input handler yang menangani tap, long-press-diam,
-            // dan long-press-lalu-geser. Menggabungkan semuanya di sini
-            // mencegah konflik saling-menelan-event antara combinedClickable
-            // (long-click) dan detectDragGesturesAfterLongPress -- itulah yg
-            // bikin long-press pinned card sebelumnya gagal menampilkan
-            // overlay preview.
             .pointerInput(album.key, pinnedList.size) {
                 val slop = viewConfiguration.touchSlop
                 val longPressTimeoutMs = viewConfiguration.longPressTimeoutMillis
@@ -402,10 +348,7 @@ private fun PinnedAlbumCard(
                         LongPressOutcome.Cancel -> return@awaitEachGesture
                         LongPressOutcome.LongPress -> Unit
                     }
-                    // Long-press terjadi -> munculkan preview overlay.
                     onLongPressStartLatest()
-                    // Tunggu: user angkat (preview stay open) atau user geser
-                    // (start reorder in-place).
                     var totalMove = Offset.Zero
                     var dragActive = false
                     while (true) {
@@ -424,7 +367,6 @@ private fun PinnedAlbumCard(
                         if (dragActive) {
                             change.consume()
                             dragOffset += delta
-                            // Reorder in-place.
                             val myIndex = pinnedList.indexOfFirst { it.key == album.key }
                             if (myIndex < 0) continue
                             val myItemInfo = gridState.layoutInfo.visibleItemsInfo
@@ -442,9 +384,6 @@ private fun PinnedAlbumCard(
                             val targetKey = (targetItem?.key as? String)?.removePrefix("pin:")
                             val targetIndex = pinnedList.indexOfFirst { it.key == targetKey }
                             if (targetItem != null && targetIndex >= 0 && targetIndex != myIndex) {
-                                // Kompensasi HARUS pakai targetItem.offset SEBELUM
-                                // mutate pinnedList -- LazyGrid belum re-layout
-                                // di frame yg sama. newDrag = (rumahLama - rumahBaru) + oldDrag.
                                 val newHome = targetItem.offset
                                 val oldHome = myItemInfo.offset
                                 dragOffset = Offset(
@@ -456,13 +395,10 @@ private fun PinnedAlbumCard(
                             }
                         }
                     }
-                    // Pointer up.
                     if (dragActive) {
                         dragOffset = Offset.Zero
                         onDragCommitLatest()
                     }
-                    // Kalau bukan drag: long-press-diam, overlay stay open;
-                    // di-dismiss lewat tap luar / tombol aksi pada overlay.
                 }
             },
     ) {
@@ -470,14 +406,14 @@ private fun PinnedAlbumCard(
     }
 }
 
-/** Hasil deteksi long-press vs tap vs cancel di [awaitLongPressOrTap]. */
+/** Result of long-press vs tap vs cancel detection in [awaitLongPressOrTap]. */
 private enum class LongPressOutcome { LongPress, Tap, Cancel }
 
 /**
- * Tunggu sampai salah satu terjadi:
- *  - Pointer diam >= [timeoutMs] -> [LongPressOutcome.LongPress].
- *  - Pointer up dalam batas slop -> [LongPressOutcome.Tap].
- *  - Pointer bergerak > slop sebelum timeout -> [LongPressOutcome.Cancel].
+ * Waits until one of the following happens:
+ *  - Pointer stays still >= [timeoutMs] -> [LongPressOutcome.LongPress].
+ *  - Pointer up within the slop bounds -> [LongPressOutcome.Tap].
+ *  - Pointer moves > slop before the timeout -> [LongPressOutcome.Cancel].
  */
 private suspend fun AwaitPointerEventScope.awaitLongPressOrTap(
     pointerId: androidx.compose.ui.input.pointer.PointerId,
@@ -521,8 +457,6 @@ private fun AlbumCardBody(album: Album) {
         }
     }
     Spacer(Modifier.height(6.dp))
-    // padding horizontal kecil -> memberi "ruang napas" supaya saat kartu
-    // pinned diangkat (di-scale) teks tidak menyentuh tepi sel & terpotong.
     Text(
         text = album.name,
         style = MaterialTheme.typography.bodyMedium,
@@ -535,8 +469,6 @@ private fun AlbumCardBody(album: Album) {
         text = albumSubtitle(album),
         style = MaterialTheme.typography.bodySmall,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
-        // Format 2-baris dipakai saat album punya foto DAN video sekaligus,
-        // biar tidak terpotong di grid 3-kolom yg lebar kartunya sempit.
         maxLines = 2,
         modifier = Modifier.padding(horizontal = 4.dp),
     )
@@ -553,12 +485,12 @@ private fun SectionHeader(text: String) {
 }
 
 /**
- * Subtitle album: jumlah foto & video.
+ * Album subtitle: photo & video counts.
  *
- * Grid 3-kolom membuat lebar kartu sempit, sehingga format satu-baris
- * lama ("5 photos, 2 videos") sering terpotong. Solusi: kalau kedua tipe
- * ada, tampilkan DUA BARIS. Dipadu `maxLines = 2` pada Text pemakainya
- * supaya seluruh info muat tanpa ellipsis.
+ * The 3-column grid makes cards narrow, so the old single-line format
+ * ("5 photos, 2 videos") often gets truncated. Solution: when both types exist,
+ * show TWO LINES. Paired with `maxLines = 2` on the consuming Text so all the
+ * info fits without an ellipsis.
  */
 @Composable
 private fun albumSubtitle(album: Album): String {
@@ -587,16 +519,13 @@ private fun EmptyState() {
     }
 }
 
-// ---------------------------------------------------------------------
-//  Hold-preview overlay (kartu-membesar + tombol Pin/Unpin)
-// ---------------------------------------------------------------------
-
 /**
- * Overlay saat album ditahan (tanpa geser). Meniru pola long-press di
+ * Overlay shown while an album is held (without dragging). Mirrors the
+ * long-press pattern in
  * [id.andreasmbngaol.agallery.presentation.gallery.GalleryGridScreen]:
- *  - Background gelap 45% + tap-outside dismiss.
- *  - Kartu "maju" (spring dari scale 0.85 -> 1.0) di tengah.
- *  - Satu tombol pill Pin/Unpin di bawah kartu.
+ *  - 45% dark background + tap-outside to dismiss.
+ *  - The card "steps forward" (spring from scale 0.85 -> 1.0) in the center.
+ *  - A single Pin/Unpin pill button below the card.
  */
 @Composable
 private fun HoldPreviewOverlay(
@@ -619,7 +548,6 @@ private fun HoldPreviewOverlay(
             },
         contentAlignment = Alignment.Center,
     ) {
-        // Animasi "membesar" persis seperti PhotoPreviewOverlay di Gallery.
         val enterScale = remember { Animatable(0.85f) }
         LaunchedEffect(Unit) {
             enterScale.animateTo(
@@ -638,13 +566,11 @@ private fun HoldPreviewOverlay(
                     scaleX = enterScale.value
                     scaleY = enterScale.value
                 }
-                // Konsumsi tap di area konten supaya tak menutup overlay.
                 .clickable(
                     interactionSource = remember { MutableInteractionSource() },
                     indication = null,
                 ) { /* no-op */ },
         ) {
-            // Kartu cover -- 60% lebar layar, jaga aspek 1:1.
             Box(
                 modifier = Modifier
                     .size(220.dp)
@@ -676,12 +602,6 @@ private fun HoldPreviewOverlay(
                     color = Color.White.copy(alpha = 0.75f),
                 )
             }
-            // Satu tombol pill: Pin atau Unpin -- styling MENGIKUTI
-            // ComponentStyle (SOLID / FROSTED / GLASS) sama seperti
-            // StyledCircleBackButton & PhotoContextMenu di Gallery:
-            //  - GLASS  : drawBackdrop + blur + lens (liquid glass)
-            //  - FROSTED: drawBackdrop tanpa blur/lens (veil haze)
-            //  - SOLID / < API 33: fallback background hitam semi-transparan
             val pillShape = RoundedCornerShape(percent = 50)
             val pillModifier = if (style.drawsBackdrop()) {
                 Modifier
@@ -712,9 +632,6 @@ private fun HoldPreviewOverlay(
                     .background(Color.Black.copy(alpha = 0.55f))
             }
 
-            // Pill Pin/Unpin -- disembunyikan untuk album locked (Recent /
-            // Videos / Favorites) supaya user tidak bisa unpin. Preview
-            // visual + kartu maju tetap muncul (hint bahwa hold berhasil).
             if (!(isPinned && isLocked)) {
                 Row(
                     modifier = pillModifier
@@ -741,12 +658,12 @@ private fun HoldPreviewOverlay(
 }
 
 /**
- * Baris Trash di paling bawah tab Albums. SENGAJA tidak berbentuk kartu
- * grid supaya beda dari album biasa -- ini bukan album, ini bucket khusus
- * yg juga tidak boleh di-pin / di-reorder.
+ * The Trash row at the very bottom of the Albums tab. DELIBERATELY not shaped as
+ * a grid card so it stands apart from regular albums -- this is not an album, it
+ * is a special bucket that also cannot be pinned / reordered.
  *
- * Visual: divider tipis di atas + row full-width dgn ikon lingkaran, judul,
- * jumlah item, dan chevron kanan. Klik -> [onClick] (buka layar Trash).
+ * Visual: a thin divider on top + a full-width row with a circular icon, title,
+ * item count, and a right chevron. Click -> [onClick] (open the Trash screen).
  */
 @Composable
 private fun TrashRow(
@@ -803,7 +720,3 @@ private fun TrashRow(
     }
 }
 
-// SnapshotStateList<Album> factory (typed helper agar tak perlu inline
-// annotation di call site).
-//private fun mutableStateListOfAlbums(): SnapshotStateList<Album> =
-//    emptyList<Album>().toMutableStateList()

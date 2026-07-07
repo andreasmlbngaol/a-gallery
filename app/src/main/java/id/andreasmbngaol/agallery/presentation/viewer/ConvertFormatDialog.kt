@@ -29,15 +29,15 @@ import id.andreasmbngaol.agallery.domain.model.conversion.ImageFormat
 import kotlin.math.roundToInt
 
 /**
- * Dialog "Ubah format" (1.5.0).
+ * "Convert format" dialog (1.5.0).
  *
- * - Pilih format tujuan (format sumber di-nonaktifkan supaya tak konversi ke
- *   dirinya sendiri).
- * - Slider kualitas muncul hanya untuk format lossy (JPG/WEBP/HEIC); PNG lossless.
- * - Pilih output: simpan file baru (asli aman) atau ganti asli (asli -> Trash).
- * - Catatan ditampilkan utk transparansi (flatten hitam) & HEIC (tergantung HW).
+ * - Choose the target format (the source format is disabled so it cannot convert
+ *   to itself).
+ * - The quality slider appears only for lossy formats (JPG/WEBP/HEIC); PNG is lossless.
+ * - Choose the output: save a new file (original safe) or replace the original (original -> Trash).
+ * - Notes are shown for transparency (black flatten) & HEIC (hardware-dependent).
  *
- * [onConfirm] dipanggil dgn format tujuan, quality (1..100), dan flag hapus asli.
+ * [onConfirm] is called with the target format, quality (1..100), and the delete-original flag.
  */
 @Composable
 fun ConvertFormatDialog(
@@ -122,7 +122,7 @@ fun ConvertFormatDialog(
     )
 }
 
-/** Header section, dibuat identik dgn SectionHeader di MediaDetailsSheet. */
+/** Section header, made identical to SectionHeader in MediaDetailsSheet. */
 @Composable
 private fun SectionLabelConvert(text: String) {
     Spacer(Modifier.height(20.dp))

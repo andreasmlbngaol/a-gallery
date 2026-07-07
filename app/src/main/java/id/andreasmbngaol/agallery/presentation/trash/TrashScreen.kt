@@ -114,33 +114,32 @@ import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
 import java.util.Locale
 
-// Thumbnail px target -- samain dgn GalleryGridScreen supaya cache & kualitas seragam.
 private const val GridThumbnailPx = 400
 
 /**
- * Layar app-level Trash (30-hari soft-delete).
+ * App-level Trash screen (30-day soft-delete).
  *
- * ## Konsistensi styling (mengikuti GalleryGridScreen / PhotoViewer)
- * - **Edge effect** via [SystemBarScrim] sesuai setting (Off/Darken/Blurry).
- * - **Topbar**: tombol Back kaca ([GlassIconButton]) + judul, mengikuti
+ * ## Styling consistency (following GalleryGridScreen / PhotoViewer)
+ * - **Edge effect** via [SystemBarScrim] per setting (Off/Darken/Blurry).
+ * - **Top bar**: a glass Back button ([GlassIconButton]) + title, following
  *   `componentStyle` (Solid/Frosted/Glass).
- * - **Action island** bawah: kapsul liquid-glass (pola sama dgn island
- *   PhotoViewer) berisi tombol Icon + label kecil di bawahnya.
- * - **Grid**: 3 kolom, thumbnail di-crop **1:1** (`ContentScale.Crop`) +
- *   badge durasi utk video + badge sisa-hari auto-delete.
+ * - **Bottom action island**: a liquid-glass capsule (same pattern as the
+ *   PhotoViewer island) with Icon buttons + a small label below each.
+ * - **Grid**: 3 columns, thumbnails cropped **1:1** (`ContentScale.Crop`) +
+ *   a duration badge for videos + a days-left auto-delete badge.
  *
- * ## Interaksi
- * - **Tap** item (mode normal) -> buka viewer in-screen (pager) dgn aksi
- *   TERBATAS: hanya **Restore** & **Permanently delete**.
- * - **Long-press** item -> masuk mode seleksi (langsung men-select item itu).
- * - **Action island** mode seleksi: Select all / Restore / Delete / Cancel.
+ * ## Interaction
+ * - **Tap** an item (normal mode) -> open the in-screen viewer (pager) with
+ *   LIMITED actions: only **Restore** & **Permanently delete**.
+ * - **Long-press** an item -> enter selection mode (selecting that item directly).
+ * - **Action island** in selection mode: Select all / Restore / Delete / Cancel.
  *
- * ## Auto-purge 30 hari
- * Auto-purge utama kini dijalankan di background oleh [id.andreasmbngaol.agallery.data.work.TrashPurgeWorker]
- * (harian) bila app punya All-files access -> hapus permanen tanpa dialog.
- * Sebagai cadangan, saat layar dibuka [TrashViewModel.autoPurgeExpired] juga
- * mengumpulkan item kedaluwarsa. Tanpa All-files access, hapus tetap lewat SAF
- * delete-many (1 dialog konfirmasi sistem).
+ * ## 30-day auto-purge
+ * The main auto-purge now runs in the background via [id.andreasmbngaol.agallery.data.work.TrashPurgeWorker]
+ * (daily) when the app has All-files access -> permanent delete without a dialog.
+ * As a fallback, [TrashViewModel.autoPurgeExpired] also collects expired items
+ * when the screen opens. Without All-files access, deletion still goes through a
+ * SAF delete-many (one system confirmation dialog).
  */
 @Composable
 fun TrashScreen(
@@ -154,18 +153,13 @@ fun TrashScreen(
     val effectiveMode = rememberEffectiveEdgeEffectMode(edgeModeChosen)
     val backdrop = rememberLayerBackdrop()
 
-    // --- Mode seleksi (multi-select) ---
     var selectionMode by remember { mutableStateOf(false) }
     val selectedIds = remember { mutableStateListOf<Long>() }
 
-    // --- Viewer in-screen (index item yg sedang dibuka; null = tertutup) ---
     var viewerIndex by remember { mutableStateOf<Int?>(null) }
 
-    // --- Pending SAF delete (id yg menunggu konfirmasi sistem) ---
     var pendingDeleteIds by remember { mutableStateOf<List<Long>>(emptyList()) }
 
-    // --- Pending konfirmasi hapus in-app (dipakai saat All-files access ON,
-    //     karena dialog konfirmasi sistem tak lagi muncul) ---
     var pendingConfirm by remember { mutableStateOf<List<TrashItem>?>(null) }
 
     LaunchedEffect(items) {
@@ -176,7 +170,6 @@ fun TrashScreen(
             selectedIds.clear()
             viewerIndex = null
         } else {
-            // Jaga viewerIndex tetap valid saat item berkurang (mis. setelah restore).
             viewerIndex?.let { idx -> if (idx >= items.size) viewerIndex = items.lastIndex }
         }
     }
@@ -199,7 +192,6 @@ fun TrashScreen(
         }
     }
 
-    // Auto-purge item kedaluwarsa sekali saat layar dibuka.
     LaunchedEffect(Unit) {
         val expired = viewModel.autoPurgeExpired()
         if (expired.isNotEmpty()) pendingDeleteIds = expired
@@ -217,7 +209,6 @@ fun TrashScreen(
     SystemBarScrim(
         mode = effectiveMode,
         topOverlay = {
-            // ---------- Top bar (glass back + title) ----------
             Row(
                 modifier = Modifier
                     .align(Alignment.TopCenter)
@@ -248,7 +239,6 @@ fun TrashScreen(
                 )
             }
 
-            // ---------- Action island (bawah) ----------
             if (items.isNotEmpty()) {
                 TrashActionIsland(
                     selectionMode = selectionMode,
@@ -272,7 +262,6 @@ fun TrashScreen(
                     onDelete = {
                         val toDelete = items.filter { it.id in selectedIds }
                         if (AllFilesAccess.isGranted()) {
-                            // Dialog sistem tak muncul -> konfirmasi in-app dulu.
                             pendingConfirm = toDelete
                         } else {
                             pendingDeleteIds = toDelete.map { it.id }
@@ -312,7 +301,6 @@ fun TrashScreen(
                     contentPadding = PaddingValues(
                         start = 2.dp,
                         end = 2.dp,
-                        // ScreenTopBarHeight (72) + status bar sudah ditangani; beri ruang atas.
                         top = 96.dp,
                         bottom = 128.dp,
                     ),
@@ -344,7 +332,6 @@ fun TrashScreen(
         }
     }
 
-    // ---------- Viewer in-screen (Restore / Permanently delete saja) ----------
     val openIndex = viewerIndex
     if (openIndex != null && openIndex in items.indices) {
         TrashViewer(
@@ -368,9 +355,6 @@ fun TrashScreen(
         )
     }
 
-    // ---------- Konfirmasi hapus permanen in-app ----------
-    // Saat All-files access ON, dialog konfirmasi sistem TIDAK muncul, jadi kita
-    // tampilkan konfirmasi sendiri sebagai jaring pengaman sebelum hapus permanen.
     val confirmItems = pendingConfirm
     if (confirmItems != null) {
         ConfirmDeleteDialog(
@@ -427,7 +411,6 @@ private fun TrashGridItem(
             modifier = Modifier.fillMaxSize(),
         )
 
-        // Badge durasi video (pojok KANAN-BAWAH) -- sama dgn GalleryGridScreen.
         if (item.isVideo) {
             VideoBadge(
                 durationMs = item.durationMs,
@@ -437,7 +420,6 @@ private fun TrashGridItem(
             )
         }
 
-        // Badge sisa hari auto-delete (pojok KANAN-ATAS).
         DaysLeftBadge(
             trashedAt = item.trashedAt,
             modifier = Modifier
@@ -445,7 +427,6 @@ private fun TrashGridItem(
                 .padding(4.dp),
         )
 
-        // Indikator seleksi (pojok KIRI-ATAS) hanya saat mode pilih.
         if (selectionMode) {
             SelectionCheck(
                 selected = selected,
@@ -457,7 +438,7 @@ private fun TrashGridItem(
     }
 }
 
-/** Badge durasi video (Play + m:ss) -- meniru VideoBadge GalleryGridScreen. */
+/** Video duration badge (Play + m:ss) -- mirrors VideoBadge in GalleryGridScreen. */
 @Composable
 private fun VideoBadge(
     durationMs: Long,
@@ -507,7 +488,7 @@ private fun DaysLeftBadge(
     }
 }
 
-/** Lingkaran check: kosong (outline putih) atau terisi primary + centang. */
+/** Check circle: empty (white outline) or filled primary + checkmark. */
 @Composable
 private fun SelectionCheck(
     selected: Boolean,
@@ -531,8 +512,8 @@ private fun SelectionCheck(
  * ------------------------------------------------------------------------ */
 
 /**
- * Modifier kapsul liquid-glass (pola identik dgn island PhotoViewer). GLASS =
- * blur + lens; FROSTED = vibrancy + veil; SOLID/API<33 = fallback fill.
+ * Liquid-glass capsule modifier (identical pattern to the PhotoViewer island).
+ * GLASS = blur + lens; FROSTED = vibrancy + veil; SOLID/API<33 = fallback fill.
  */
 @Composable
 private fun Modifier.trashGlass(style: ComponentStyle, backdrop: Backdrop): Modifier {
@@ -623,9 +604,9 @@ private fun TrashActionIsland(
 }
 
 /**
- * Satu aksi di island: HANYA ikon (tanpa teks) supaya seragam & clean.
- * [label] dipakai sbg contentDescription utk aksesibilitas. Bisa pakai [icon]
- * (ImageVector) atau slot [glyph] kustom (centang/silang/checks via Canvas).
+ * A single action in the island: ICON ONLY (no text) to stay uniform & clean.
+ * [label] is used as contentDescription for accessibility. Can use [icon]
+ * (ImageVector) or a custom [glyph] slot (check/cross/checks via Canvas).
  */
 @Composable
 private fun IslandAction(
@@ -633,7 +614,6 @@ private fun IslandAction(
     tint: Color,
     onClick: () -> Unit,
     icon: ImageVector? = null,
-    // glyph HARUS param terakhir supaya bisa dipakai sbg trailing lambda: IslandAction(...) { ... }
     glyph: (@Composable () -> Unit)? = null,
 ) {
     Box(
@@ -685,16 +665,11 @@ private fun TrashViewer(
     val dismissThresholdPx = with(density) { 120.dp.toPx() }
     val detailsThresholdPx = with(density) { 80.dp.toPx() }
     val dragOffsetY = remember { Animatable(0f) }
-    // Berapa jauh media diangkat saat panel detail terbuka (~22% tinggi layar),
-    // sama seperti PhotoViewer biasa supaya media tetap kelihatan di atas sheet.
-//    val y = LocalConfiguration.current.screenHeightDp
-//    val x = LocalWindowInfo.current.containerSize.height
     val liftPx = with(density) { (LocalWindowInfo.current.containerSize.height.dp * 0.22f).toPx() }
 
     Box(
         modifier = Modifier
             .fillMaxSize()
-            // Background ikut Material color scheme: light -> agak putih, dark -> hitam.
             .background(MaterialTheme.colorScheme.background),
     ) {
         val pagerModifier = if (style.drawsBackdrop()) {
@@ -709,8 +684,6 @@ private fun TrashViewer(
         ) { page ->
             val item = items[page]
             val isActive = page == pagerState.currentPage
-            // Saat panel detail terbuka, media diangkat ke atas supaya tetap
-            // kelihatan di atas sheet (perilaku sama dgn PhotoViewer biasa).
             val liftOffset by animateFloatAsState(
                 targetValue = if (showDetails && isActive) -liftPx else 0f,
                 animationSpec = tween(durationMillis = 280),
@@ -727,7 +700,6 @@ private fun TrashViewer(
                             onDragStart = { totalDy = 0f },
                             onVerticalDrag = { change, delta ->
                                 totalDy += delta
-                                // Hanya tangani tarikan ke bawah (drag-to-dismiss).
                                 if (delta > 0f || dragOffsetY.value > 0f) {
                                     change.consume()
                                     scope.launch {
@@ -739,9 +711,7 @@ private fun TrashViewer(
                             },
                             onDragEnd = {
                                 when {
-                                    // Swipe ke bawah cukup jauh -> tutup viewer.
                                     dragOffsetY.value >= dismissThresholdPx -> onClose()
-                                    // Swipe ke atas cukup jauh -> buka panel detail.
                                     totalDy <= -detailsThresholdPx -> {
                                         showDetails = true
                                         scope.launch { dragOffsetY.animateTo(0f) }
@@ -762,8 +732,6 @@ private fun TrashViewer(
                         controlsVisible = chromeVisible,
                         onToggleControls = { chromeVisible = !chromeVisible },
                         style = style,
-                        // Gabungkan aksi Trash ke dalam control island video (jadi SATU,
-                        // tidak terpisah/tumpang tindih). Hanya Restore/Delete + Details.
                         actionsSlot = if (isActive) {
                             {
                                 TrashActionRow(
@@ -791,7 +759,6 @@ private fun TrashViewer(
 
         val current = items.getOrNull(pagerState.currentPage)
         if (chromeVisible && current != null) {
-            // Top bar: hanya tombol Back kaca.
             Row(
                 modifier = Modifier
                     .align(Alignment.TopStart)
@@ -814,8 +781,6 @@ private fun TrashViewer(
                 }
             }
 
-            // Bottom island utk FOTO saja: Restore / Delete / Details.
-            // (Video pakai action island gabungan di dalam kontrol player.)
             if (!current.isVideo) {
                 Row(
                     modifier = Modifier
@@ -861,9 +826,9 @@ private fun TrashViewer(
 }
 
 /**
- * Baris aksi utk VIDEO di Trash, dipasang sbg [VideoPlayerContent] actionsSlot
- * supaya control player + aksi jadi SATU island. Hanya 2 aksi utama
- * (Restore/Delete) + tombol Details (karena di bawah cuma 2 aksi).
+ * The action row for a VIDEO in Trash, mounted as [VideoPlayerContent]'s
+ * actionsSlot so the player controls + actions form ONE island. Only the 2 main
+ * actions (Restore/Delete) + a Details button (because there are only 2 actions below).
  */
 @Composable
 private fun TrashActionRow(
@@ -898,7 +863,7 @@ private fun TrashActionRow(
     }
 }
 
-/** Panel detail item Trash (dibuka lewat swipe ke atas / tombol Details). */
+/** Detail panel for a Trash item (opened via swipe up / the Details button). */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun TrashDetailsSheet(
@@ -908,7 +873,7 @@ private fun TrashDetailsSheet(
 ) {
     val sheetState = rememberBottomSheetState(
         initialValue = SheetValue.Hidden,
-        enabledValues = setOf(SheetValue.Hidden, SheetValue.Expanded), // skip PartiallyExpanded
+        enabledValues = setOf(SheetValue.Hidden, SheetValue.Expanded),
     )
     var details by remember(item.id) { mutableStateOf<MediaDetails?>(null) }
     LaunchedEffect(item.id) {
@@ -951,7 +916,7 @@ private fun TrashDetailsSheet(
     }
 }
 
-/** Satu baris label + value pada panel detail. */
+/** A single label + value row in the detail panel. */
 @Composable
 private fun DetailRow(label: String, value: String) {
     Row(modifier = Modifier.fillMaxWidth()) {
@@ -998,7 +963,7 @@ private fun CheckGlyph(color: Color, modifier: Modifier = Modifier) {
     }
 }
 
-/** Silang manual (untuk Cancel). */
+/** Manual cross (for Cancel). */
 @Composable
 private fun CloseGlyph(color: Color, modifier: Modifier = Modifier) {
     Canvas(modifier = modifier) {
@@ -1022,7 +987,7 @@ private fun CloseGlyph(color: Color, modifier: Modifier = Modifier) {
     }
 }
 
-/** Ikon "Select" (masuk mode seleksi): kotak membulat + centang di dalam. */
+/** "Select" icon (enter selection mode): a rounded square + a checkmark inside. */
 @Composable
 private fun SelectGlyph(color: Color, modifier: Modifier = Modifier) {
     Canvas(modifier = modifier) {
@@ -1030,7 +995,6 @@ private fun SelectGlyph(color: Color, modifier: Modifier = Modifier) {
         val h = size.height
         val stroke = w * 0.10f
         val corner = w * 0.22f
-        // Kotak membulat (outline).
         drawRoundRect(
             color = color,
             topLeft = Offset(w * 0.14f, h * 0.14f),
@@ -1038,7 +1002,6 @@ private fun SelectGlyph(color: Color, modifier: Modifier = Modifier) {
             cornerRadius = CornerRadius(corner, corner),
             style = Stroke(width = stroke),
         )
-        // Centang di dalam.
         drawLine(
             color = color,
             start = Offset(w * 0.32f, h * 0.52f),
@@ -1056,7 +1019,7 @@ private fun SelectGlyph(color: Color, modifier: Modifier = Modifier) {
     }
 }
 
-/** Ikon "Select none": kotak membulat kosong (outline saja, tanpa isi). */
+/** "Select none" icon: an empty rounded square (outline only, no fill). */
 @Composable
 private fun SquareGlyph(color: Color, modifier: Modifier = Modifier) {
     Canvas(modifier = modifier) {
@@ -1074,7 +1037,7 @@ private fun SquareGlyph(color: Color, modifier: Modifier = Modifier) {
     }
 }
 
-/** Durasi video m:ss / h:mm:ss (sama dgn GalleryGridScreen). */
+/** Video duration m:ss / h:mm:ss (same as GalleryGridScreen). */
 private fun formatVideoDuration(durationMs: Long): String {
     val totalSeconds = (durationMs / 1000).coerceAtLeast(0)
     val hours = totalSeconds / 3600
@@ -1087,7 +1050,7 @@ private fun formatVideoDuration(durationMs: Long): String {
     }
 }
 
-/** Sisa hari sebelum auto-delete (30 hari sejak di-trash). Mis. "12d". */
+/** Days left before auto-delete (30 days since trashed). E.g. "12d". */
 private fun daysLeftCount(trashedAtMs: Long): Long {
     val diffMs = (System.currentTimeMillis() - trashedAtMs).coerceAtLeast(0L)
     val days = diffMs / 86_400_000L
@@ -1111,7 +1074,7 @@ private fun formatFileSize(bytes: Long, unknown: String): String {
     }
 }
 
-/** Epoch millis -> tanggal-waktu lokal ramah baca (kapan item di-trash). */
+/** Epoch millis -> a human-readable local date-time (when the item was trashed). */
 private fun formatTrashedDate(epochMillis: Long, unknown: String): String {
     if (epochMillis <= 0L) return unknown
     val formatter = DateTimeFormatter
