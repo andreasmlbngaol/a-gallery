@@ -14,6 +14,7 @@ import id.andreasmbngaol.agallery.domain.model.ai.ModelCatalog
 import id.andreasmbngaol.agallery.domain.model.ai.ModelStatus
 import id.andreasmbngaol.agallery.domain.model.ai.ModelSuitability
 import id.andreasmbngaol.agallery.domain.model.ai.ModelSuitabilityEvaluator
+import id.andreasmbngaol.agallery.domain.model.ai.RemovalQuality
 import id.andreasmbngaol.agallery.domain.model.settings.AppSettings
 import id.andreasmbngaol.agallery.domain.usecase.ai.ObserveModelStatusUseCase
 import id.andreasmbngaol.agallery.domain.usecase.ai.RemoveBackgroundUseCase
@@ -28,6 +29,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -56,9 +58,13 @@ class BackgroundRemoverViewModel(
     private val feature = AiFeature.BACKGROUND_REMOVAL
 
     private val selectedModelId = MutableStateFlow<AiModelId?>(null)
+    private val selectedQuality = MutableStateFlow(RemovalQuality.DEFAULT)
     private val resultPath = MutableStateFlow<String?>(null)
     private val processing = MutableStateFlow(false)
     private val saving = MutableStateFlow(false)
+
+    /** The in-flight inference coroutine, so a run can be cancelled. */
+    private var inferenceJob: Job? = null
 
     /** Live inference meter (elapsed time + process memory), updated while running. */
     private val meter = MutableStateFlow(ProcessingMeter())
@@ -78,19 +84,29 @@ class BackgroundRemoverViewModel(
         combine(processing, saving, meter) { p, s, m -> WorkState(p, s, m) }
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000L), WorkState())
 
+    // Folded together so the main uiState combine stays within combine()'s
+    // 5-flow typed arity.
+    private val selection: StateFlow<Selection> =
+        combine(selectedModelId, selectedQuality) { id, quality -> Selection(id, quality) }
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000L), Selection())
+
     val uiState: StateFlow<BackgroundRemoverUiState> = combine(
         statuses,
-        selectedModelId,
+        selection,
         resultPath,
         work,
         settings,
-    ) { statusList, selected, result, work, s ->
+    ) { statusList, selection, result, work, s ->
         val installed = statusList.orEmpty().filter { it.isInstalled }.map { it.spec }
+        val effectiveId = effectiveModelId(selection.modelId, installed.map { it.id })
+        val effectiveSpec = installed.firstOrNull { it.id == effectiveId }
         BackgroundRemoverUiState(
             sourceUri = sourceUri,
             sourceDisplayName = sourceDisplayName,
             installedModels = installed,
-            selectedModelId = effectiveModelId(selected, installed.map { it.id }),
+            selectedModelId = effectiveId,
+            selectedQuality = selection.quality,
+            qualitySelectable = effectiveSpec?.offersQualityChoice == true,
             resultPath = result,
             processing = work.processing,
             saving = work.saving,
@@ -113,6 +129,16 @@ class BackgroundRemoverViewModel(
         resultPath.value = null
     }
 
+    /**
+     * Choose the per-run quality/speed trade-off; clears any stale preview since
+     * it was produced at a different resolution.
+     */
+    fun selectQuality(quality: RemovalQuality) {
+        if (selectedQuality.value == quality) return
+        selectedQuality.value = quality
+        resultPath.value = null
+    }
+
     /** Run background removal with the effective model. No-op while busy. */
     fun removeBackground() {
         if (processing.value) return
@@ -123,57 +149,73 @@ class BackgroundRemoverViewModel(
             return
         }
         processing.value = true
-        viewModelScope.launch {
-            // Guard: never even start a run the device almost certainly cannot
-            // finish. Heavy models are killed by the OS Low-Memory-Killer (an
-            // uncatchable process death), so we fail fast with a clear message
-            // instead of letting the app force-close mid-inference.
-            val spec = ModelCatalog.byId(modelId)
-            if (spec != null && spec.estimatedPeakMemoryBytes > 0L) {
-                val capability = withContext(Dispatchers.Default) { deviceBenchmark.measure() }
-                val suitability = ModelSuitabilityEvaluator.evaluate(spec, capability)
-                if (suitability.rating == ModelSuitability.Rating.INSUFFICIENT_MEMORY) {
-                    processing.value = false
-                    messageChannel.send(
-                        AiUiMessage(R.string.msg_bg_insufficient_memory, spec.displayName),
-                    )
-                    return@launch
+        inferenceJob = viewModelScope.launch {
+            try {
+                // Guard: never even start a run the device almost certainly cannot
+                // finish. Heavy models are killed by the OS Low-Memory-Killer (an
+                // uncatchable process death), so we fail fast with a clear message
+                // instead of letting the app force-close mid-inference.
+                val spec = ModelCatalog.byId(modelId)
+                if (spec != null && spec.estimatedPeakMemoryBytes > 0L) {
+                    val capability = withContext(Dispatchers.Default) { deviceBenchmark.measure() }
+                    val suitability = ModelSuitabilityEvaluator.evaluate(spec, capability)
+                    if (suitability.rating == ModelSuitability.Rating.INSUFFICIENT_MEMORY) {
+                        messageChannel.send(
+                            AiUiMessage(R.string.msg_bg_insufficient_memory, spec.displayName),
+                        )
+                        return@launch
+                    }
                 }
-            }
 
-            meter.value = ProcessingMeter()
-            val meterJob = launch(Dispatchers.Default) {
-                val startedAt = SystemClock.elapsedRealtime()
-                while (isActive) {
-                    val elapsed = ((SystemClock.elapsedRealtime() - startedAt) / 1000L).toInt()
-                    val info = Debug.MemoryInfo()
-                    Debug.getMemoryInfo(info)
-                    meter.value = ProcessingMeter(elapsed, info.totalPss.toLong() * 1024L)
-                    delay(500L.milliseconds)
-                }
-            }
-
-            val outcome = try {
-                removeBackground(sourceUri, modelId)
-            } finally {
-                meterJob.cancel()
                 meter.value = ProcessingMeter()
-            }
-            processing.value = false
-            when (outcome) {
-                is BackgroundRemovalOutcome.Success -> resultPath.value = outcome.resultPath
-                is BackgroundRemovalOutcome.Failure -> messageChannel.send(
-                    AiUiMessage(
-                        when (outcome.reason) {
-                            BackgroundRemovalOutcome.Reason.NO_MODEL -> R.string.msg_bg_no_model
-                            BackgroundRemovalOutcome.Reason.SOURCE_UNREADABLE ->
-                                R.string.msg_bg_source_unreadable
-                            BackgroundRemovalOutcome.Reason.FAILED -> R.string.msg_bg_failed
-                        },
-                    ),
-                )
+                val meterJob = launch(Dispatchers.Default) {
+                    val startedAt = SystemClock.elapsedRealtime()
+                    while (isActive) {
+                        val elapsed = ((SystemClock.elapsedRealtime() - startedAt) / 1000L).toInt()
+                        val info = Debug.MemoryInfo()
+                        Debug.getMemoryInfo(info)
+                        meter.value = ProcessingMeter(elapsed, info.totalPss.toLong() * 1024L)
+                        delay(500L.milliseconds)
+                    }
+                }
+
+                val outcome = try {
+                    removeBackground(sourceUri, modelId, selectedQuality.value)
+                } finally {
+                    meterJob.cancel()
+                    meter.value = ProcessingMeter()
+                }
+                when (outcome) {
+                    is BackgroundRemovalOutcome.Success -> resultPath.value = outcome.resultPath
+                    is BackgroundRemovalOutcome.Failure -> messageChannel.send(
+                        AiUiMessage(
+                            when (outcome.reason) {
+                                BackgroundRemovalOutcome.Reason.NO_MODEL -> R.string.msg_bg_no_model
+                                BackgroundRemovalOutcome.Reason.SOURCE_UNREADABLE ->
+                                    R.string.msg_bg_source_unreadable
+                                BackgroundRemovalOutcome.Reason.FAILED -> R.string.msg_bg_failed
+                            },
+                        ),
+                    )
+                }
+            } finally {
+                processing.value = false
             }
         }
+    }
+
+    /**
+     * Cancel an in-progress run. The dialog dismisses immediately; the native
+     * inference call itself cannot be interrupted mid-run, so it finishes in the
+     * background and its (now discarded) result is ignored.
+     */
+    fun cancelRemoval() {
+        if (!processing.value) return
+        inferenceJob?.cancel()
+        inferenceJob = null
+        processing.value = false
+        meter.value = ProcessingMeter()
+        viewModelScope.launch { messageChannel.send(AiUiMessage(R.string.msg_bg_cancelled)) }
     }
 
     /** Save the current transparent preview into the gallery as a new file. */
@@ -204,6 +246,12 @@ class BackgroundRemoverViewModel(
         installedIds: List<AiModelId>,
     ): AiModelId? =
         selected?.takeIf { it in installedIds } ?: installedIds.firstOrNull()
+
+    /** The user's current model + quality picks, combined for the uiState flow. */
+    private data class Selection(
+        val modelId: AiModelId? = null,
+        val quality: RemovalQuality = RemovalQuality.DEFAULT,
+    )
 
     /** Live progress meter shown in the processing dialog. */
     private data class ProcessingMeter(

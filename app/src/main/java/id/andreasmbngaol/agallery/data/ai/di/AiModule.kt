@@ -1,5 +1,6 @@
 package id.andreasmbngaol.agallery.data.ai.di
 
+import id.andreasmbngaol.agallery.core.ai.AccelerationConfig
 import id.andreasmbngaol.agallery.core.ai.DeviceBenchmark
 import id.andreasmbngaol.agallery.core.ai.InferenceEngine
 import id.andreasmbngaol.agallery.core.ai.ModelPaths
@@ -19,7 +20,8 @@ import org.koin.dsl.module
 val aiModule = module {
     single { ModelPaths(androidContext()) }
     single { DeviceBenchmark(androidContext()) }
-    single<InferenceEngine> { OnnxInferenceEngine() }
+    single { AccelerationConfig(androidContext()) }
+    single<InferenceEngine> { OnnxInferenceEngine(get()) }
     single { BackgroundRemovalProcessor(androidContext(), get(), get()) }
 
     single<AiModelRepository> {

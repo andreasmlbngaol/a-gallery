@@ -32,6 +32,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -67,15 +68,19 @@ import com.kyant.backdrop.backdrops.rememberLayerBackdrop
 import id.andreasmbngaol.agallery.R
 import id.andreasmbngaol.agallery.domain.model.ai.AiModelId
 import id.andreasmbngaol.agallery.domain.model.ai.AiModelSpec
+import id.andreasmbngaol.agallery.domain.model.ai.RemovalQuality
 import id.andreasmbngaol.agallery.domain.model.settings.ComponentStyle
 import id.andreasmbngaol.agallery.core.ui.ScreenTopBarHeight
 import id.andreasmbngaol.agallery.core.ui.SystemBarScrim
 import id.andreasmbngaol.agallery.core.ui.drawsBackdrop
+import id.andreasmbngaol.agallery.core.ui.SegmentedGlassItem
+import id.andreasmbngaol.agallery.core.ui.SegmentedGlassTrack
 import id.andreasmbngaol.agallery.core.ui.rememberEffectiveComponentStyle
 import id.andreasmbngaol.agallery.core.ui.rememberEffectiveEdgeEffectMode
 import id.andreasmbngaol.agallery.presentation.viewer.GlassActionButton
 import id.andreasmbngaol.agallery.presentation.viewer.GlassIconButton
 import java.io.File
+import java.util.Locale
 import org.koin.androidx.compose.koinViewModel
 import org.koin.core.parameter.parametersOf
 
@@ -187,6 +192,20 @@ fun BackgroundRemoverScreen(
                 onSelect = { viewModel.selectModel(it) },
             )
 
+            if (state.qualitySelectable) {
+                Text(
+                    text = stringResource(R.string.bg_remover_quality),
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.primary,
+                )
+                QualitySelector(
+                    selected = state.selectedQuality,
+                    enabled = !state.processing,
+                    onSelect = { viewModel.selectQuality(it) },
+                    componentStyle = componentStyle,
+                )
+            }
+
             Text(
                 text = stringResource(R.string.bg_remover_source),
                 style = MaterialTheme.typography.labelLarge,
@@ -234,6 +253,7 @@ fun BackgroundRemoverScreen(
                 ProcessingDialog(
                     elapsedSeconds = state.processingElapsedSeconds,
                     usedMemoryBytes = state.processingUsedMemoryBytes,
+                    onCancel = viewModel::cancelRemoval,
                 )
             }
         }
@@ -298,6 +318,31 @@ private fun ModelDropdown(
 }
 
 @Composable
+private fun QualitySelector(
+    selected: RemovalQuality,
+    enabled: Boolean,
+    onSelect: (RemovalQuality) -> Unit,
+    componentStyle: ComponentStyle,
+) {
+    val options = listOf(
+        RemovalQuality.ECO to R.string.bg_remover_quality_eco,
+        RemovalQuality.BALANCED to R.string.bg_remover_quality_balanced,
+        RemovalQuality.HIGH to R.string.bg_remover_quality_high,
+    )
+    SegmentedGlassTrack(componentStyle = componentStyle) {
+        options.forEach { (quality, labelRes) ->
+            SegmentedGlassItem(
+                label = stringResource(labelRes),
+                selected = selected == quality,
+                onClick = { onSelect(quality) },
+                enabled = enabled,
+                modifier = Modifier.weight(1f),
+            )
+        }
+    }
+}
+
+@Composable
 private fun BottomActionBar(
     showSave: Boolean,
     removeEnabled: Boolean,
@@ -345,11 +390,11 @@ private fun BottomActionBar(
  */
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
-private fun ProcessingDialog(elapsedSeconds: Int, usedMemoryBytes: Long) {
+private fun ProcessingDialog(elapsedSeconds: Int, usedMemoryBytes: Long, onCancel: () -> Unit) {
     Dialog(
-        onDismissRequest = {},
+        onDismissRequest = onCancel,
         properties = DialogProperties(
-            dismissOnBackPress = false,
+            dismissOnBackPress = true,
             dismissOnClickOutside = false,
         ),
     ) {
@@ -357,35 +402,43 @@ private fun ProcessingDialog(elapsedSeconds: Int, usedMemoryBytes: Long) {
             shape = RoundedCornerShape(24.dp),
             color = MaterialTheme.colorScheme.surfaceContainerHigh,
         ) {
-            Row(
-                modifier = Modifier.padding(24.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(16.dp),
-            ) {
-                CircularWavyProgressIndicator(
-                    modifier = Modifier.size(32.dp),
-                )
-                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    Text(
-                        text = stringResource(R.string.bg_remover_processing),
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.SemiBold,
-                        color = MaterialTheme.colorScheme.onSurface,
+            Column(modifier = Modifier.padding(24.dp)) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(16.dp),
+                ) {
+                    CircularWavyProgressIndicator(
+                        modifier = Modifier.size(32.dp),
                     )
-                    Text(
-                        text = stringResource(R.string.bg_remover_processing_desc),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                    Text(
-                        text = stringResource(
-                            R.string.bg_remover_processing_stats,
-                            elapsedSeconds,
-                            formatUsedMemory(usedMemoryBytes),
-                        ),
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.primary,
-                    )
+                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        Text(
+                            text = stringResource(R.string.bg_remover_processing),
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.SemiBold,
+                            color = MaterialTheme.colorScheme.onSurface,
+                        )
+                        Text(
+                            text = stringResource(R.string.bg_remover_processing_desc),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                        Text(
+                            text = stringResource(
+                                R.string.bg_remover_processing_stats,
+                                elapsedSeconds,
+                                formatUsedMemory(usedMemoryBytes),
+                            ),
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.primary,
+                        )
+                    }
+                }
+                Spacer(Modifier.height(8.dp))
+                TextButton(
+                    onClick = onCancel,
+                    modifier = Modifier.align(Alignment.End),
+                ) {
+                    Text(stringResource(R.string.action_cancel))
                 }
             }
         }
@@ -396,7 +449,11 @@ private fun ProcessingDialog(elapsedSeconds: Int, usedMemoryBytes: Long) {
 private fun formatUsedMemory(bytes: Long): String {
     if (bytes <= 0L) return "\u2014"
     val mb = bytes / (1024L * 1024L)
-    return "$mb MB"
+    return if (mb >= 1024L) {
+        "%.1f GB".format(Locale.US, mb / 1024.0)
+    } else {
+        "$mb MB"
+    }
 }
 
 /**

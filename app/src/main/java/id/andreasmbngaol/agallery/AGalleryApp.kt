@@ -8,6 +8,7 @@ import coil3.memory.MemoryCache
 import coil3.request.CachePolicy
 import coil3.request.crossfade
 import coil3.video.VideoFrameDecoder
+import id.andreasmbngaol.agallery.core.ai.AccelerationConfig
 import id.andreasmbngaol.agallery.core.image.MediaStoreThumbnailFetcher
 import id.andreasmbngaol.agallery.core.image.MediaStoreThumbnailKeyer
 import id.andreasmbngaol.agallery.core.di.appModules
@@ -34,6 +35,11 @@ class AGalleryApp : Application(), SingletonImageLoader.Factory {
             androidContext(this@AGalleryApp)
             modules(appModules)
         }
+        // Self-heal: if the previous run crashed natively while building an
+        // XNNPACK session, permanently fall back to the CPU provider on this
+        // device. Must run before any inference (which only happens on user
+        // action, so onCreate is safe).
+        GlobalContext.get().get<AccelerationConfig>().recoverFromCrashIfNeeded()
         TrashPurgeWorker.schedule(this)
     }
 

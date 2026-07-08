@@ -2,6 +2,7 @@ package id.andreasmbngaol.agallery.presentation.ai
 
 import id.andreasmbngaol.agallery.domain.model.ai.AiModelId
 import id.andreasmbngaol.agallery.domain.model.ai.AiModelSpec
+import id.andreasmbngaol.agallery.domain.model.ai.RemovalQuality
 import id.andreasmbngaol.agallery.domain.model.settings.ComponentStyle
 import id.andreasmbngaol.agallery.domain.model.settings.EdgeEffectMode
 
@@ -12,6 +13,9 @@ import id.andreasmbngaol.agallery.domain.model.settings.EdgeEffectMode
  * @property sourceDisplayName the original file name, used to derive the saved name.
  * @property installedModels installed models the user can run, in display order.
  * @property selectedModelId the model chosen to run, or null to use the default.
+ * @property selectedQuality the per-run quality/speed trade-off chosen by the user.
+ * @property qualitySelectable whether the selected model exposes the quality
+ *   selector; when false the screen hides it and the model runs at native quality.
  * @property resultPath the transparent preview PNG path once produced, else null.
  * @property processing whether inference is currently running.
  * @property saving whether the result is currently being saved to the gallery.
@@ -27,6 +31,8 @@ data class BackgroundRemoverUiState(
     val sourceDisplayName: String = "",
     val installedModels: List<AiModelSpec> = emptyList(),
     val selectedModelId: AiModelId? = null,
+    val selectedQuality: RemovalQuality = RemovalQuality.DEFAULT,
+    val qualitySelectable: Boolean = false,
     val resultPath: String? = null,
     val processing: Boolean = false,
     val saving: Boolean = false,

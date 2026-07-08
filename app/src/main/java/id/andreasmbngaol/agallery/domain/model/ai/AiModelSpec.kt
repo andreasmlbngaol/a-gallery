@@ -17,6 +17,11 @@ package id.andreasmbngaol.agallery.domain.model.ai
  * @property io tensor I/O + normalization spec.
  * @property downloadUrl web page where the user can obtain the `.onnx` weights.
  * @property recommended whether this is the suggested default for its feature.
+ * @property offersQualityChoice whether this model exposes the per-run
+ *   Eco/Balanced/High quality selector. Only true for models with a large,
+ *   DYNAMIC input where scaling down gives a real speed/quality trade-off
+ *   (e.g. the IS-Net dynamic re-export). Small or fixed-size models leave this
+ *   false so the UI hides the selector and they always run at native quality.
  * @property estimatedPeakMemoryBytes rough peak RAM a single run needs (weights
  *   plus native activations), used to advise device suitability before import;
  *   0 skips the check.
@@ -32,5 +37,6 @@ data class AiModelSpec(
     val io: ModelIoSpec,
     val downloadUrl: String,
     val recommended: Boolean,
+    val offersQualityChoice: Boolean = false,
     val estimatedPeakMemoryBytes: Long = 0L,
 )

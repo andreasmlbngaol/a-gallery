@@ -8,6 +8,7 @@ import id.andreasmbngaol.agallery.domain.model.ai.AiModelId
 import id.andreasmbngaol.agallery.domain.model.ai.BackgroundRemovalOutcome
 import id.andreasmbngaol.agallery.domain.model.ai.BackgroundSaveOutcome
 import id.andreasmbngaol.agallery.domain.model.ai.ModelCatalog
+import id.andreasmbngaol.agallery.domain.model.ai.RemovalQuality
 import id.andreasmbngaol.agallery.domain.repository.AiModelRepository
 import id.andreasmbngaol.agallery.domain.repository.BackgroundRemovalRepository
 import kotlinx.coroutines.Dispatchers
@@ -32,6 +33,7 @@ class BackgroundRemovalRepositoryImpl(
     override suspend fun removeBackground(
         sourceUri: String,
         modelId: AiModelId,
+        quality: RemovalQuality,
     ): BackgroundRemovalOutcome {
         val spec = ModelCatalog.byId(modelId)
             ?: return BackgroundRemovalOutcome.Failure(BackgroundRemovalOutcome.Reason.NO_MODEL)
@@ -44,7 +46,7 @@ class BackgroundRemovalRepositoryImpl(
                     BackgroundRemovalOutcome.Reason.SOURCE_UNREADABLE,
                 )
             try {
-                val path = processor.removeBackground(bitmap, spec, modelPath)
+                val path = processor.removeBackground(bitmap, spec, modelPath, quality)
                 BackgroundRemovalOutcome.Success(path)
             } catch (t: Throwable) {
                 Log.e(TAG, "Background removal failed for ${modelId.value}", t)

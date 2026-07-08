@@ -315,6 +315,8 @@
     <string name="ai_model_action_import">Impor</string>
     <string name="ai_model_action_reimport">Impor ulang</string>
     <string name="ai_model_action_delete">Hapus</string>
+    <string name="ai_model_delete_confirm_title">Hapus model?</string>
+    <string name="ai_model_delete_confirm_message">%1$s akan dihapus dari perangkat ini. Kamu bisa mengimpornya lagi nanti.</string>
     <string name="ai_model_download_page">Unduh model</string>
     <string name="ai_model_importing">Lagi ngimpor\u2026</string>
     <string name="ai_model_verifying">Lagi ngecek\u2026</string>
@@ -337,6 +339,7 @@
     <string name="msg_model_import_invalid">File ini bukan model ONNX yang valid</string>
     <string name="msg_model_import_inference">Model ini nggak bisa dimuat buat inference</string>
     <string name="msg_model_deleted">%1$s dihapus</string>
+    <string name="msg_bg_cancelled">Penghapusan latar dibatalkan</string>
     <string name="action_remove_background">Hapus latar</string>
     <string name="ai_sheet_title">Alat AI</string>
     <string name="bg_remover_title">Hapus latar</string>
@@ -344,11 +347,15 @@
     <string name="bg_remover_no_model_desc">Impor dulu model hapus latar buat pakai fitur ini.</string>
     <string name="bg_remover_choose_model">Pilih model</string>
     <string name="bg_remover_source">Asli</string>
+    <string name="bg_remover_quality">Kualitas</string>
+    <string name="bg_remover_quality_eco">Eco</string>
+    <string name="bg_remover_quality_balanced">Seimbang</string>
+    <string name="bg_remover_quality_high">Tinggi</string>
     <string name="bg_remover_result">Hasil</string>
     <string name="bg_remover_remove">Hapus latar</string>
     <string name="bg_remover_processing">Lagi diproses\u2026</string>
     <string name="bg_remover_processing_desc">Diproses di perangkat, bisa makan beberapa detik.</string>
-    <string name="bg_remover_processing_stats">%1$d dtk \u00b7 %2$s terpakai</string>
+    <string name="bg_remover_processing_stats">%1$d dtk \u2192 %2$s RAM terpakai</string>
     <string name="bg_remover_save">Simpan ke galeri</string>
     <string name="bg_remover_saved_hint">Disimpan sebagai PNG baru; foto aslimu tetap aman.</string>
     <string name="bg_remover_model_in_use">Pakai %1$s</string>

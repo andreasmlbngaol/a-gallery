@@ -1,8 +1,8 @@
 package id.andreasmbngaol.agallery.presentation.settings
 
 import android.os.Build
+import androidx.annotation.StringRes
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
@@ -10,8 +10,6 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -19,7 +17,6 @@ import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.calculateEndPadding
 import androidx.compose.foundation.layout.calculateStartPadding
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -42,15 +39,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalLayoutDirection
-import androidx.compose.ui.semantics.Role
-import androidx.compose.ui.semantics.disabled
-import androidx.compose.ui.semantics.role
-import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.unit.dp
-import androidx.annotation.StringRes
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.dp
 import com.adamglin.PhosphorIcons
 import com.adamglin.phosphoricons.Bold
 import com.adamglin.phosphoricons.bold.CaretRight
@@ -58,6 +49,8 @@ import id.andreasmbngaol.agallery.R
 import id.andreasmbngaol.agallery.core.ui.EdgeEffectTopBarScaffold
 import id.andreasmbngaol.agallery.core.ui.FloatingTabBarHeight
 import id.andreasmbngaol.agallery.core.ui.ScreenTopBarHeight
+import id.andreasmbngaol.agallery.core.ui.SegmentedGlassItem
+import id.andreasmbngaol.agallery.core.ui.SegmentedGlassTrack
 import id.andreasmbngaol.agallery.core.ui.isBlurryEdgeSupported
 import id.andreasmbngaol.agallery.core.ui.isGlassSupported
 import id.andreasmbngaol.agallery.core.ui.resolveComponentStyle
@@ -65,16 +58,11 @@ import id.andreasmbngaol.agallery.core.ui.resolveEdgeEffectMode
 import id.andreasmbngaol.agallery.domain.model.settings.ComponentStyle
 import id.andreasmbngaol.agallery.domain.model.settings.EdgeEffectMode
 import id.andreasmbngaol.agallery.domain.model.settings.MAX_GRID_COLUMNS
-import id.andreasmbngaol.agallery.domain.model.settings.PerformanceMode
 import id.andreasmbngaol.agallery.domain.model.settings.MIN_GRID_COLUMNS
+import id.andreasmbngaol.agallery.domain.model.settings.PerformanceMode
 import kotlinx.coroutines.delay
 import org.koin.androidx.compose.koinViewModel
 import kotlin.time.Duration.Companion.milliseconds
-
-private const val TrackGlassAlpha = 0.4f
-private val SegmentedControlHeight = 48.dp
-private val SegmentedTrackRadius = 24.dp
-private val SegmentedChipRadius = 20.dp
 
 private val SettingsCardRadius = 20.dp
 private val SettingsCardPadding = 16.dp
@@ -521,74 +509,6 @@ private fun componentStyleDescription(
         stringResource(R.string.style_desc_glass)
     } else {
         stringResource(R.string.style_desc_glass_unsupported)
-    }
-}
-
-/** The glass track wrapping the segments (reused by several controls). */
-@Composable
-private fun SegmentedGlassTrack(
-    content: @Composable androidx.compose.foundation.layout.RowScope.() -> Unit,
-) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(SegmentedControlHeight)
-            .clip(RoundedCornerShape(SegmentedTrackRadius))
-            .background(
-                MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = TrackGlassAlpha),
-            )
-            .padding(4.dp),
-        horizontalArrangement = Arrangement.spacedBy(4.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        content = content,
-    )
-}
-
-@Composable
-private fun SegmentedGlassItem(
-    label: String,
-    selected: Boolean,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier,
-    enabled: Boolean = true,
-) {
-    val backgroundColor by animateColorAsState(
-        targetValue = if (selected) {
-            MaterialTheme.colorScheme.secondaryContainer
-        } else {
-            Color.Transparent
-        },
-        animationSpec = tween(220),
-        label = "segment-bg",
-    )
-    val contentColor by animateColorAsState(
-        targetValue = when {
-            !enabled -> MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.38f)
-            selected -> MaterialTheme.colorScheme.onSecondaryContainer
-            else -> MaterialTheme.colorScheme.onSurfaceVariant
-        },
-        animationSpec = tween(220),
-        label = "segment-fg",
-    )
-    Box(
-        modifier = modifier
-            .fillMaxHeight()
-            .clip(RoundedCornerShape(SegmentedChipRadius))
-            .background(backgroundColor)
-            .then(
-                if (enabled) Modifier.clickable(onClick = onClick) else Modifier,
-            )
-            .semantics {
-                role = Role.RadioButton
-                if (!enabled) disabled()
-            },
-        contentAlignment = Alignment.Center,
-    ) {
-        Text(
-            text = label,
-            color = contentColor,
-            style = MaterialTheme.typography.labelLarge,
-        )
     }
 }
 

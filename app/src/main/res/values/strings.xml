@@ -290,9 +290,9 @@
 
     <!-- On-device AI (2.0.0) -->
     <string name="settings_section_ai">AI</string>
-    <string name="settings_ai_models_title">AI models</string>
+    <string name="settings_ai_models_title">AI Models</string>
     <string name="settings_ai_models_subtitle">Manage on-device models for AI features</string>
-    <string name="ai_models_title">AI models</string>
+    <string name="ai_models_title">AI Models</string>
     <string name="ai_models_desc">Import models you downloaded yourself to enable on-device AI features. Nothing is uploaded, and no model is downloaded inside the app.</string>
     <string name="ai_models_feature_bg">Background removal</string>
     <string name="ai_model_status_ready">Installed</string>
@@ -305,6 +305,8 @@
     <string name="ai_model_action_import">Import</string>
     <string name="ai_model_action_reimport">Re-import</string>
     <string name="ai_model_action_delete">Delete</string>
+    <string name="ai_model_delete_confirm_title">Delete model?</string>
+    <string name="ai_model_delete_confirm_message">%1$s will be removed from this device. You can import it again later.</string>
     <string name="ai_model_download_page">Download model</string>
     <string name="ai_model_importing">Importing\u2026</string>
     <string name="ai_model_verifying">Verifying\u2026</string>
@@ -327,6 +329,7 @@
     <string name="msg_model_import_invalid">This file isn\'t a valid ONNX model</string>
     <string name="msg_model_import_inference">This model couldn\'t be loaded for inference</string>
     <string name="msg_model_deleted">%1$s deleted</string>
+    <string name="msg_bg_cancelled">Removal cancelled</string>
     <string name="action_remove_background">Remove background</string>
     <string name="ai_sheet_title">AI tools</string>
     <string name="bg_remover_title">Remove background</string>
@@ -334,11 +337,15 @@
     <string name="bg_remover_no_model_desc">Import a background removal model to use this feature.</string>
     <string name="bg_remover_choose_model">Choose a model</string>
     <string name="bg_remover_source">Original</string>
+    <string name="bg_remover_quality">Quality</string>
+    <string name="bg_remover_quality_eco">Eco</string>
+    <string name="bg_remover_quality_balanced">Balanced</string>
+    <string name="bg_remover_quality_high">High</string>
     <string name="bg_remover_result">Result</string>
     <string name="bg_remover_remove">Remove background</string>
     <string name="bg_remover_processing">Processing\u2026</string>
     <string name="bg_remover_processing_desc">Running on-device, this can take a few seconds.</string>
-    <string name="bg_remover_processing_stats">%1$d s \u00b7 %2$s used</string>
+    <string name="bg_remover_processing_stats">%1$d s \u2192 %2$s RAM used</string>
     <string name="bg_remover_save">Save to gallery</string>
     <string name="bg_remover_saved_hint">Saved as a new PNG; your original photo stays untouched.</string>
     <string name="bg_remover_model_in_use">Using %1$s</string>

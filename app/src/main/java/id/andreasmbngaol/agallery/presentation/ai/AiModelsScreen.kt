@@ -19,6 +19,15 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -77,6 +86,7 @@ fun AiModelsScreen(
 
     var pendingSpec by remember { mutableStateOf<AiModelSpec?>(null) }
     var bgExpanded by remember { mutableStateOf(true) }
+    var pendingDelete by remember { mutableStateOf<AiModelRow?>(null) }
     val importLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.OpenDocument(),
     ) { uri ->
@@ -167,7 +177,7 @@ fun AiModelsScreen(
                         pendingSpec = row.spec
                         importLauncher.launch(arrayOf("application/octet-stream", "*/*"))
                     },
-                    onDelete = { row -> viewModel.delete(row.spec) },
+                    onDelete = { row -> pendingDelete = row },
                     onOpenDownloadPage = { row -> openDownloadPage(context, row.spec.downloadUrl) },
                 )
             }
@@ -177,6 +187,17 @@ fun AiModelsScreen(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
+    }
+
+    pendingDelete?.let { row ->
+        DeleteModelDialog(
+            modelName = row.spec.displayName,
+            onConfirm = {
+                viewModel.delete(row.spec)
+                pendingDelete = null
+            },
+            onDismiss = { pendingDelete = null },
+        )
     }
 }
 
@@ -193,6 +214,11 @@ private fun FeatureSection(
     content: @Composable () -> Unit,
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+        val caretRotation by animateFloatAsState(
+            targetValue = if (expanded) 90f else 0f,
+            animationSpec = tween(200),
+            label = "feature-caret",
+        )
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -213,10 +239,14 @@ private fun FeatureSection(
                 tint = MaterialTheme.colorScheme.primary,
                 modifier = Modifier
                     .size(18.dp)
-                    .rotate(if (expanded) 90f else 0f),
+                    .rotate(caretRotation),
             )
         }
-        if (expanded) {
+        AnimatedVisibility(
+            visible = expanded,
+            enter = fadeIn(tween(200)) + expandVertically(tween(200)),
+            exit = fadeOut(tween(200)) + shrinkVertically(tween(200)),
+        ) {
             content()
         }
     }
@@ -251,4 +281,34 @@ private fun openDownloadPage(context: android.content.Context, url: String) {
     runCatching {
         context.startActivity(Intent(Intent.ACTION_VIEW, url.toUri()))
     }
+}
+
+/**
+ * Confirmation dialog shown before deleting an installed model, so a tap on the
+ * trash icon cannot remove a large file by accident.
+ */
+@Composable
+private fun DeleteModelDialog(
+    modelName: String,
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit,
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.ai_model_delete_confirm_title)) },
+        text = { Text(stringResource(R.string.ai_model_delete_confirm_message, modelName)) },
+        confirmButton = {
+            TextButton(onClick = onConfirm) {
+                Text(
+                    text = stringResource(R.string.action_delete),
+                    color = MaterialTheme.colorScheme.error,
+                )
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text(stringResource(R.string.action_cancel))
+            }
+        },
+    )
 }
