@@ -36,6 +36,9 @@ All versions are centralized in the Gradle **version catalog** at
 - **KSP** must match the Kotlin version (`2.4.0`).
 - **Coil 3** is used (`io.coil-kt.coil3`), not Coil 2.
 - **Telephoto** uses the Coil 3 artifact (`zoomable-image-coil3`).
+- **ONNX Runtime** (`com.microsoft.onnxruntime:onnxruntime-android`) powers
+  on-device AI inference. No model weights ship in the APK — the app runs only
+  user-imported `.onnx` files, so there's nothing extra to fetch to build.
 
 ## Icons
 

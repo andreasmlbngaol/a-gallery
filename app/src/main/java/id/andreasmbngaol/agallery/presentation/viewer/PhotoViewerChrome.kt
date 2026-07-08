@@ -7,18 +7,21 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -37,6 +40,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalHapticFeedback
@@ -62,6 +66,7 @@ import com.adamglin.phosphoricons.bold.Image
 import com.adamglin.phosphoricons.bold.Info
 import com.adamglin.phosphoricons.bold.PencilSimple
 import com.adamglin.phosphoricons.bold.ShareNetwork
+import com.adamglin.phosphoricons.bold.Sparkle
 import com.adamglin.phosphoricons.bold.Trash
 import com.kyant.backdrop.Backdrop
 import com.kyant.backdrop.drawBackdrop
@@ -176,22 +181,37 @@ fun GlassActionButton(
     style: ComponentStyle,
     backdrop: Backdrop,
     modifier: Modifier = Modifier,
+    enabled: Boolean = true,
+    leadingIcon: ImageVector? = null,
 ) {
-    val tint = MaterialTheme.colorScheme.onSurface
+    val contentColor = MaterialTheme.colorScheme.onSurface.copy(alpha = if (enabled) 1f else 0.38f)
     Box(
         modifier = modifier
             .height(52.dp)
             .clip(CircleShape)
             .liquidGlass(style, backdrop)
-            .clickable(onClick = onClick)
+            .clickable(enabled = enabled, onClick = onClick)
             .padding(horizontal = 20.dp),
         contentAlignment = Alignment.Center,
     ) {
-        Text(
-            text = text,
-            style = MaterialTheme.typography.labelLarge,
-            color = tint,
-        )
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            if (leadingIcon != null) {
+                Icon(
+                    imageVector = leadingIcon,
+                    contentDescription = null,
+                    tint = contentColor,
+                    modifier = Modifier.size(20.dp),
+                )
+            }
+            Text(
+                text = text,
+                style = MaterialTheme.typography.labelLarge,
+                color = contentColor,
+            )
+        }
     }
 }
 
@@ -284,6 +304,7 @@ fun ViewerActionBar(
     onConvertFormat: () -> Unit,
     onDelete: () -> Unit,
     modifier: Modifier = Modifier,
+    onAiClick: (() -> Unit)? = null,
 ) {
     val tint = MaterialTheme.colorScheme.onSurface
     Row(
@@ -294,6 +315,16 @@ fun ViewerActionBar(
         horizontalArrangement = Arrangement.spacedBy(12.dp, Alignment.CenterHorizontally),
         verticalAlignment = Alignment.CenterVertically,
     ) {
+        if (onAiClick != null) {
+            GlassIconButton(
+                onClick = onAiClick,
+                contentDescription = stringResource(R.string.ai_sheet_title),
+                style = style,
+                backdrop = backdrop,
+            ) {
+                Icon(PhosphorIcons.Bold.Sparkle, contentDescription = null, tint = tint)
+            }
+        }
         GlassIsland(style, backdrop) {
             IconButton(onClick = onShare) {
                 Icon(PhosphorIcons.Bold.ShareNetwork, contentDescription = stringResource(R.string.action_share), tint = tint)
@@ -387,19 +418,18 @@ private fun GlassMoreButton(
     onConvertFormat: () -> Unit,
     onDelete: () -> Unit,
 ) {
-    var expanded by remember { mutableStateOf(false) }
-    Box {
-        GlassIconButton(
-            onClick = { expanded = true },
-            contentDescription = stringResource(R.string.action_more),
-            style = style,
-            backdrop = backdrop,
-        ) {
-            Icon(PhosphorIcons.Bold.DotsThreeVertical, contentDescription = null, tint = tint)
-        }
-        ViewerMoreDropdown(
-            expanded = expanded,
-            onDismiss = { expanded = false },
+    var showSheet by remember { mutableStateOf(false) }
+    GlassIconButton(
+        onClick = { showSheet = true },
+        contentDescription = stringResource(R.string.action_more),
+        style = style,
+        backdrop = backdrop,
+    ) {
+        Icon(PhosphorIcons.Bold.DotsThreeVertical, contentDescription = null, tint = tint)
+    }
+    if (showSheet) {
+        MoreActionsSheet(
+            onDismiss = { showSheet = false },
             onRename = onRename,
             onSetAs = onSetAs,
             onSetAsCover = onSetAsCover,
@@ -423,107 +453,106 @@ private fun PlainMoreButton(
     onMove: () -> Unit,
     onDelete: () -> Unit,
 ) {
-    var expanded by remember { mutableStateOf(false) }
-    Box {
-        IconButton(onClick = { expanded = true }) {
-            Icon(PhosphorIcons.Bold.DotsThreeVertical, contentDescription = stringResource(R.string.action_more), tint = tint)
-        }
-        ViewerMoreDropdown(
-            expanded = expanded,
-            onDismiss = { expanded = false },
+    var showSheet by remember { mutableStateOf(false) }
+    IconButton(onClick = { showSheet = true }) {
+        Icon(PhosphorIcons.Bold.DotsThreeVertical, contentDescription = stringResource(R.string.action_more), tint = tint)
+    }
+    if (showSheet) {
+        MoreActionsSheet(
+            onDismiss = { showSheet = false },
             onRename = onRename,
             onSetAsCover = onSetAsCover,
             onOpenWith = onOpenWith,
             onCopy = onCopy,
             onMove = onMove,
             onDelete = onDelete,
-            showSetAs = false,
         )
     }
 }
 
+/**
+ * Bottom sheet of "More" actions for a photo/video, opened from the More button.
+ * Replaces the old dropdown menu so it matches the AI sheet and keeps a
+ * consistent, non-shifting UX. [onSetAs] and [onConvertFormat] are null for
+ * videos (those rows are hidden).
+ */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun ViewerMoreDropdown(
-    expanded: Boolean,
+private fun MoreActionsSheet(
     onDismiss: () -> Unit,
     onRename: () -> Unit,
     onOpenWith: () -> Unit,
     onCopy: () -> Unit,
     onMove: () -> Unit,
     onDelete: () -> Unit,
-    onSetAs: () -> Unit = {},
+    onSetAs: (() -> Unit)? = null,
     onSetAsCover: () -> Unit = {},
     onConvertFormat: (() -> Unit)? = null,
-    showSetAs: Boolean = true,
 ) {
-    DropdownMenu(expanded = expanded, onDismissRequest = onDismiss) {
-        DropdownMenuItem(
-            text = { Text(stringResource(R.string.action_rename)) },
-            leadingIcon = { Icon(PhosphorIcons.Bold.PencilSimple, contentDescription = null) },
-            onClick = {
-                onDismiss()
-                onRename()
-            },
-        )
-        DropdownMenuItem(
-            text = { Text(stringResource(R.string.action_set_as_cover)) },
-            leadingIcon = { Icon(PhosphorIcons.Bold.Image, contentDescription = null) },
-            onClick = {
-                onDismiss()
-                onSetAsCover()
-            },
-        )
-        if (showSetAs) {
-            DropdownMenuItem(
-                text = { Text(stringResource(R.string.action_set_as_wallpaper)) },
-                leadingIcon = { Icon(PhosphorIcons.Bold.Image, contentDescription = null) },
-                onClick = {
-                    onDismiss()
-                    onSetAs()
-                },
-            )
+    ModalBottomSheet(onDismissRequest = onDismiss) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .navigationBarsPadding()
+                .padding(bottom = 16.dp),
+        ) {
+            MoreActionRow(PhosphorIcons.Bold.PencilSimple, stringResource(R.string.action_rename)) {
+                onDismiss(); onRename()
+            }
+            MoreActionRow(PhosphorIcons.Bold.Image, stringResource(R.string.action_set_as_cover)) {
+                onDismiss(); onSetAsCover()
+            }
+            if (onSetAs != null) {
+                MoreActionRow(PhosphorIcons.Bold.Image, stringResource(R.string.action_set_as_wallpaper)) {
+                    onDismiss(); onSetAs()
+                }
+            }
+            MoreActionRow(PhosphorIcons.Bold.ArrowSquareOut, stringResource(R.string.action_open_with)) {
+                onDismiss(); onOpenWith()
+            }
+            MoreActionRow(PhosphorIcons.Bold.Copy, stringResource(R.string.action_copy_to_album)) {
+                onDismiss(); onCopy()
+            }
+            MoreActionRow(PhosphorIcons.Bold.FolderSimple, stringResource(R.string.action_move_to_album)) {
+                onDismiss(); onMove()
+            }
+            onConvertFormat?.let { onConvert ->
+                MoreActionRow(PhosphorIcons.Bold.Image, stringResource(R.string.action_convert_format)) {
+                    onDismiss(); onConvert()
+                }
+            }
+            MoreActionRow(
+                icon = PhosphorIcons.Fill.Trash,
+                text = stringResource(R.string.action_delete),
+                danger = true,
+            ) {
+                onDismiss(); onDelete()
+            }
         }
-        DropdownMenuItem(
-            text = { Text(stringResource(R.string.action_open_with)) },
-            leadingIcon = { Icon(PhosphorIcons.Bold.ArrowSquareOut, contentDescription = null) },
-            onClick = {
-                onDismiss()
-                onOpenWith()
-            },
-        )
-        DropdownMenuItem(
-            text = { Text(stringResource(R.string.action_copy_to_album)) },
-            leadingIcon = { Icon(PhosphorIcons.Bold.Copy, contentDescription = null) },
-            onClick = {
-                onDismiss()
-                onCopy()
-            },
-        )
-        DropdownMenuItem(
-            text = { Text(stringResource(R.string.action_move_to_album)) },
-            leadingIcon = { Icon(PhosphorIcons.Bold.FolderSimple, contentDescription = null) },
-            onClick = {
-                onDismiss()
-                onMove()
-            },
-        )
-        onConvertFormat?.let { onConvert ->
-            DropdownMenuItem(
-                text = { Text(stringResource(R.string.action_convert_format)) },
-                leadingIcon = { Icon(PhosphorIcons.Bold.Image, contentDescription = null) },
-                onClick = {
-                    onDismiss()
-                    onConvert()
-                },
-            )
-        }
-        DropdownMenuItem(
-            text = { Text(stringResource(R.string.action_delete), color = DangerRed) },
-            leadingIcon = { Icon(PhosphorIcons.Fill.Trash, contentDescription = null, tint = DangerRed) },
-            onClick = {
-                onDismiss()
-                onDelete()
-            },
+    }
+}
+
+@Composable
+private fun MoreActionRow(
+    icon: ImageVector,
+    text: String,
+    danger: Boolean = false,
+    onClick: () -> Unit,
+) {
+    val color = if (danger) DangerRed else MaterialTheme.colorScheme.onSurface
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .padding(horizontal = 24.dp, vertical = 14.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Icon(icon, contentDescription = null, tint = color, modifier = Modifier.size(22.dp))
+        Spacer(Modifier.width(16.dp))
+        Text(
+            text = text,
+            style = MaterialTheme.typography.bodyLarge,
+            color = color,
         )
     }
 }

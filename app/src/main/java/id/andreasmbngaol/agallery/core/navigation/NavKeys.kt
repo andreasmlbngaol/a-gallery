@@ -71,4 +71,23 @@ sealed interface Screen : NavKey {
     /** QR code generator screen, opened from the Tools tab. */
     @Serializable
     data object QrGenerator : Screen
+
+    /**
+     * On-device AI models management screen, opened from Settings. Lets the user
+     * import / re-import / delete `.onnx` model files used by AI features.
+     */
+    @Serializable
+    data object AiModels : Screen
+
+    /**
+     * Background Remover for a single image, opened from the photo viewer.
+     *
+     * @property mediaUri the source image uri to process.
+     * @property displayName the source file name, used to derive the saved name.
+     */
+    @Serializable
+    data class BackgroundRemover(
+        val mediaUri: String,
+        val displayName: String,
+    ) : Screen
 }

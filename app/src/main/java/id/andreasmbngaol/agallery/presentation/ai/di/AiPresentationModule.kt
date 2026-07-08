@@ -1,0 +1,29 @@
+package id.andreasmbngaol.agallery.presentation.ai.di
+
+import id.andreasmbngaol.agallery.presentation.ai.AiModelsViewModel
+import id.andreasmbngaol.agallery.presentation.ai.BackgroundRemoverViewModel
+import org.koin.core.module.dsl.viewModelOf
+import org.koin.core.module.dsl.viewModel
+import org.koin.dsl.module
+
+/**
+ * Koin module for the AI presentation layer.
+ *
+ * [BackgroundRemoverViewModel] takes the source image uri and display name as
+ * runtime parameters (from the navigation route), so it is declared with an
+ * explicit `viewModel { (uri, name) -> ... }` factory rather than [viewModelOf].
+ */
+val aiPresentationModule = module {
+    viewModelOf(::AiModelsViewModel)
+    viewModel { (sourceUri: String, sourceDisplayName: String) ->
+        BackgroundRemoverViewModel(
+            sourceUri = sourceUri,
+            sourceDisplayName = sourceDisplayName,
+            observeModelStatus = get(),
+            getSettings = get(),
+            removeBackground = get(),
+            saveResult = get(),
+            deviceBenchmark = get(),
+        )
+    }
+}

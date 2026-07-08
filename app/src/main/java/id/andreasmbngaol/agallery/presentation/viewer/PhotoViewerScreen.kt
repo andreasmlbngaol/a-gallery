@@ -54,13 +54,14 @@ import id.andreasmbngaol.agallery.core.ui.ConfirmDeleteDialog
 import id.andreasmbngaol.agallery.core.ui.drawsBackdrop
 import id.andreasmbngaol.agallery.core.ui.rememberEffectiveComponentStyle
 import id.andreasmbngaol.agallery.core.ui.usesLiveBackdrop
-import id.andreasmbngaol.agallery.domain.model.settings.ComponentStyle
-import id.andreasmbngaol.agallery.domain.model.settings.GallerySortOrder
+import id.andreasmbngaol.agallery.domain.model.album.bucketAlbumKey
+import id.andreasmbngaol.agallery.domain.model.album.mediaScopeFromKey
 import id.andreasmbngaol.agallery.domain.model.media.MediaItem
 import id.andreasmbngaol.agallery.domain.model.media.MediaScope
 import id.andreasmbngaol.agallery.domain.model.media.MediaType
-import id.andreasmbngaol.agallery.domain.model.album.bucketAlbumKey
-import id.andreasmbngaol.agallery.domain.model.album.mediaScopeFromKey
+import id.andreasmbngaol.agallery.domain.model.settings.ComponentStyle
+import id.andreasmbngaol.agallery.domain.model.settings.GallerySortOrder
+import id.andreasmbngaol.agallery.presentation.ai.AiSheet
 import id.andreasmbngaol.agallery.presentation.animation.sharedPhotoElement
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -91,6 +92,7 @@ fun PhotoViewerScreen(
     sortOrder: GallerySortOrder,
     onBack: () -> Unit,
     albumKey: String? = null,
+    onOpenBackgroundRemover: (mediaUri: String, displayName: String) -> Unit = { _, _ -> },
     viewModel: PhotoViewerViewModel = koinViewModel(),
 ) {
     BackHandler(onBack = onBack)
@@ -114,6 +116,7 @@ fun PhotoViewerScreen(
     var showRemoveMeta by remember { mutableStateOf(false) }
     var showConvert by remember { mutableStateOf(false) }
     var showQrSheet by remember { mutableStateOf(false) }
+    var showAiSheet by remember { mutableStateOf(false) }
     var showTrashConfirm by remember { mutableStateOf(false) }
     var pendingDeleteUri by remember { mutableStateOf<String?>(null) }
     var albumPickerMode by remember { mutableStateOf<AlbumPickerMode?>(null) }
@@ -283,6 +286,7 @@ fun PhotoViewerScreen(
                         isFavorite = item.id in favoriteIds,
                         style = componentStyle,
                         backdrop = backdrop,
+                        onAiClick = { showAiSheet = true },
                         onShare = { shareMedia(context, item) },
                         onFavorite = { viewModel.onToggleFavorite(item.id, item.id !in favoriteIds) },
                         onTrashTap = { showTrashConfirm = true },
@@ -330,6 +334,16 @@ fun PhotoViewerScreen(
                 QrResultSheet(
                     results = qrResults,
                     onDismiss = { showQrSheet = false },
+                )
+            }
+
+            if (showAiSheet && !isVideo) {
+                AiSheet(
+                    onRemoveBackground = {
+                        showAiSheet = false
+                        onOpenBackgroundRemover(item.uri, item.displayName)
+                    },
+                    onDismiss = { showAiSheet = false },
                 )
             }
 
@@ -449,7 +463,7 @@ private fun PhotoViewerPage(
     val density = LocalDensity.current
     val detailsThresholdPx = with(density) { 80.dp.toPx() }
 
-    val liftPx = with(density) { (LocalWindowInfo.current.containerSize.height.dp * 0.22f).toPx() }
+    val liftPx = LocalWindowInfo.current.containerSize.height * 0.22f
     val liftOffset by animateFloatAsState(
         targetValue = if (detailsOpen && isActive) -liftPx else 0f,
         animationSpec = tween(durationMillis = 280),

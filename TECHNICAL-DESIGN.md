@@ -46,7 +46,7 @@
 | `namespace` / `applicationId` | `id.andreasmbngaol.agallery` |
 | `minSdk` | **29 (Android 10)** |
 | `targetSdk` / `compileSdk` | 37 (compileSdk minor `37.1`) |
-| `versionCode` / `versionName` | `18` / `1.7.1` |
+| `versionCode` / `versionName` | `19` / `2.0.0` |
 | Language | Kotlin `2.4.0` (KSP `2.3.9`) |
 | UI | Jetpack Compose (BOM `2026.06.01`), Material 3 `1.5.0-alpha23` |
 | Build | AGP `9.2.1`, R8 (minify + shrink resources; **full mode disabled** so ML Kit consumer rules survive) |
@@ -63,7 +63,8 @@ Room (local cache), DataStore (settings), Koin (DI), Media3 (video),
 WorkManager (background jobs), Haze + Kyant backdrop/shapes (glass UI),
 Phosphor icons (Bold), AndroidX ExifInterface (metadata read/write),
 AndroidX HeifWriter (HEIC/HEIF encode), ZXing core (offline QR encode),
-ML Kit Barcode Scanning (bundled, on-device QR/barcode decode).
+ML Kit Barcode Scanning (bundled, on-device QR/barcode decode),
+ONNX Runtime (Android) (on-device AI inference for user-imported `.onnx` models).
 
 > Any new dependency must be offline-capable with a compatible license (prefer
 > Apache-2.0 / MIT), added to `gradle/libs.versions.toml` **and**
@@ -75,10 +76,10 @@ ML Kit Barcode Scanning (bundled, on-device QR/barcode decode).
 Package root: `id.andreasmbngaol.agallery`
 
 ```
-core/            # common, di, image, navigation, permission, ui
-data/            # di, local (mediastore, prefs, room{dao,entity}), mapper, paging, repository, work
-domain/          # di, model (pure Kotlin, NO android.*), repository (interfaces), usecase
-presentation/    # albums, gallery, home, settings, theme, trash, viewer, animation (+ per-feature di)
+core/            # common, di, image, navigation, permission, ui, ai (ONNX inference engine, device benchmark)
+data/            # di, local (mediastore, prefs, room{dao,entity}), mapper, paging, repository, work, ai (model repo + background-removal processor)
+domain/          # di, model (pure Kotlin, NO android.*), repository (interfaces), usecase — each with an ai/ subpackage
+presentation/    # albums, gallery, home, settings, theme, trash, viewer, tools, ai, animation (+ per-feature di)
 ```
 
 Conventions that MUST be followed:
@@ -95,9 +96,10 @@ Conventions that MUST be followed:
 ### 2.4 Navigation (Navigation 3)
 
 Routes are a `sealed interface Screen : NavKey` (all `@Serializable`). Current:
-`Home` (a horizontal pager of 3 tabs: **Settings · Gallery · Albums**),
-`PhotoViewer(...)`, `AlbumDetail(...)`, `Trash`, `CreateAlbum`. The nav host is
-`AGalleryNavDisplay` with shared-element transitions and predictive back.
+`Home` (a horizontal pager of 4 tabs: **Settings · Gallery · Albums · Tools**),
+`PhotoViewer(...)`, `AlbumDetail(...)`, `Trash`, `CreateAlbum`, `QrGenerator`,
+`AiModels`, `BackgroundRemover(...)`. The nav host is `AGalleryNavDisplay` with
+shared-element transitions and predictive back.
 
 ### 2.5 Core domain models (already implemented)
 
@@ -149,13 +151,14 @@ milestone, not strictly an API break — this is an app, not a library).
 **`2.0.0` — the on-device AI era.** Introduces the AI model framework
 (Section 7) and the first AI feature. AI stays offline (models are
 user-imported), so this is a *milestone* bump, not a permission/behavior break.
+**`2.0.0` has shipped**; the rest of the `2.x` line is planned.
 
-| Version | Scope |
-|---|---|
-| `2.0.0` | AI model framework + **Background Remover** (first AI feature) |
-| `2.1.0` | **Smart Scanner** module |
-| `2.2.0` | **OCR → PDF** |
-| `2.3.0` | **AI Semantic Search** — AGallery's only search (on-device) |
+| Version | Scope | Status |
+|---|---|---|
+| `2.0.0` | AI model framework (ONNX Runtime) + **Background Remover** (first AI feature) | ✅ Shipped |
+| `2.1.0` | **Smart Scanner** module | ⏳ Planned |
+| `2.2.0` | **OCR → PDF** | ⏳ Planned |
+| `2.3.0` | **AI Semantic Search** — AGallery's only search (on-device) | ⏳ Planned |
 
 > There is **no classic search**. Search arrives only as on-device semantic
 > search in `2.3.0`. Document the milestone reasoning in `docs/releasing.md`.
@@ -193,8 +196,8 @@ operate on a photo that already exists?*
 
 ### 4.2 Navigation changes
 
-- Add a **4th tab** to the Home pager: `Settings · Gallery · Albums · Tools`.
-- Each tool becomes its **own Nav3 route** pushed on the backstack, triggered
+- **Done (1.6.0):** the Home pager has a **4th tab** — `Settings · Gallery · Albums · Tools`.
+- **Done:** each tool is its **own Nav3 route** pushed on the backstack, triggered
   from the hub — mirroring the existing `onOpenAlbum` / `onOpenTrash` pattern.
 - A `Screen.Search` route is added only with AI Semantic Search (`2.3.0`).
 
@@ -205,8 +208,8 @@ operate on a photo that already exists?*
 - The **Tools tab** shows a short header + a **2-column grid of tool cards**
   (Phosphor Bold icon, title, one-line description, optional status badge).
 - **Group with section headers from day one** (e.g. **Utilities**, and **AI**
-  once 2.x lands). AI cards can show a `Model needed` / `Ready` badge from the
-  model registry (Section 7).
+  now that 2.x has landed). AI cards can show a `Model needed` / `Ready` badge
+  from the model registry (Section 7).
 - Each tool is a normal full screen with its own ViewModel + Koin module under
   `presentation/tools/<tool>/`.
 - A **single declarative list of tools** is the source of truth for the hub, so
@@ -295,8 +298,26 @@ already certain. Detailed design is done per-feature at build time.
 
 All depend on the AI model framework (Section 7).
 
-- **Background Remover** (2.0.0) — *Viewer.* Remove or replace a photo's
-  background (subject cutout); export a transparent PNG.
+- **Background Remover** (2.0.0, ✅ shipped) — *Viewer.* Removes a photo's
+  background (salient-object cutout) and exports a transparent PNG, launched from
+  the viewer's action sheet. Implemented in 2.0.0:
+  - **Runtime** — ONNX Runtime (Android), CPU execution provider, fully offline.
+  - **Model catalog** — three user-imported models grouped by quality tier:
+    **U²-Net (Lite)** (320², ~5 MB, LIGHT), **IS-Net (General Use)** (1024²,
+    BALANCED — the recommended default), and **BiRefNet (Lite)** (1024²,
+    HIGH_QUALITY, heaviest). Each declares an input spec, a tier badge, and an
+    estimated peak-memory figure.
+  - **Device suitability guard** — before running, a lightweight `DeviceBenchmark`
+    (total / available RAM + a CPU score) is weighed against the model's peak
+    memory demand (`ModelSuitabilityEvaluator`, safe budget ≈ 55% of RAM). Models
+    are rated **GOOD / SLOW / INSUFFICIENT_MEMORY**; an insufficient-memory model
+    is blocked with a friendly message instead of letting the OS kill the process
+    mid-inference.
+  - **Live progress** — the processing dialog shows elapsed seconds and current
+    process RAM (PSS) so a long run stays legible rather than a frozen spinner.
+  - **Import UX** — the models screen opens each model's download page in the
+    browser (view intent, no `INTERNET`), then imports and verifies the picked
+    `.onnx` file into app-private storage; models can be deleted to reclaim space.
 - **Smart Scanner** (2.1.0) — *Tools hub (+ viewer surfacing).* An extensible
   on-device detector module; starts by surfacing QR detection, more detectors
   later.
@@ -310,8 +331,9 @@ All depend on the AI model framework (Section 7).
 
 ## 7. AI model framework (principles)
 
-Build this first in `2.0.0`. Only the principles are fixed; the runtime and
-specific models are still open (Section 9).
+Shipped in `2.0.0`. The principles below held; the runtime is now **ONNX Runtime
+(Android)** and the initial catalog is the three background-removal models
+(Section 6). These principles remain the contract for future AI features:
 
 - **No `INTERNET` permission.** The app never downloads models itself.
 - **The user brings the model.** The app opens the model's download page in the
@@ -373,9 +395,11 @@ Established during the codebase-wide cleanup; all layers now follow these:
 
 ## 9. Open decisions (remaining)
 
-1. **AI runtime & specific models** — undecided. Criteria: best on-device
-   quality/performance, no Google Play Services dependency, and a wide choice of
-   good, freely-downloadable models.
+1. **AI runtime & specific models** — ✅ **decided for background removal.**
+   Runtime is **ONNX Runtime (Android)** (no Google Play Services dependency,
+   runs `.onnx` fully on-device); the initial models are U²-Net Lite, IS-Net
+   General Use, and BiRefNet Lite. Runtime / model choices for later AI features
+   (scanner, OCR, semantic search) are still open.
 2. **OCR → PDF output** — undecided (searchable image+text PDF vs. reflowed
    text). Decide when building the feature.
 

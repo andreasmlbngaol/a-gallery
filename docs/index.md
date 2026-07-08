@@ -64,7 +64,11 @@ backdrop.
 - **Haze** — background blur for frosted surfaces.
 - **Phosphor Icons** — the app's icon set (Material Icons are intentionally **not** used); all icons use the **Bold** weight.
 
-## Feature status (v1.7.0)
+### On-device AI
+
+- **ONNX Runtime (Android) 1.27** — runs user-imported `.onnx` models fully offline (CPU execution provider); powers the Background Remover. No model weights are bundled and the app never downloads anything (no `INTERNET` permission).
+
+## Feature status (v2.0.0)
 
 | Area | Status |
 |---|---|
@@ -87,8 +91,10 @@ backdrop.
 | Tools hub | ✅ |
 | QR code generator | ✅ |
 | QR detection (in-photo, offline) | ✅ |
+| AI model framework (user-imported .onnx, ONNX Runtime) | ✅ |
+| Background remover (on-device AI) | ✅ |
 | Bulk metadata / format operations | ⏳ planned |
-| On-device AI tools (background remover, scanner, OCR) | ⏳ planned (2.x) |
+| Other on-device AI tools (scanner, OCR) | ⏳ planned (2.x) |
 | On-device semantic search (AI) | ⏳ planned (2.3.0) |
 | In-app map view | ❌ out of scope (opens external maps) |
 | Photo editing | ❌ out of scope |

@@ -63,12 +63,12 @@ keyPassword=YOUR_KEY_PASSWORD
 Bump the version (see below), commit, then tag and push:
 
 ```shell
-git tag v1.7.0
-git push origin v1.7.0
+git tag v2.0.0
+git push origin v2.0.0
 ```
 
 The workflow runs, builds the signed APK, and creates a **GitHub Release**
-tagged `v1.7.0` with the APK attached and auto-generated release notes. You can
+tagged `v2.0.0` with the APK attached and auto-generated release notes. You can
 also trigger it manually from the **Actions** tab (`workflow_dispatch`).
 
 ---
@@ -77,8 +77,9 @@ also trigger it manually from the **Actions** tab (`workflow_dispatch`).
 
 AGallery follows **[Semantic Versioning](https://semver.org/)** (`MAJOR.MINOR.PATCH`).
 
-- **Current version: `1.7.0`** — the `1.x` offline-utilities era is complete
-  (see the roadmap in `TECHNICAL-DESIGN.md`); `2.0.0` opens the on-device AI era.
+- **Current version: `2.0.0`** — the `1.x` offline-utilities era is complete and
+  the on-device AI era has begun (see the roadmap in `TECHNICAL-DESIGN.md`);
+  `2.0.0` shipped the AI model framework + Background Remover.
 - **`PATCH`** (`1.0.1`, `1.0.2`, …) — bug fixes and pure visual polish
   (padding, colors, corner radius, animation tweaks) that add **no new
   capability**.
@@ -93,6 +94,6 @@ new you can use or choose"* → MINOR.
 The version lives in `app/build.gradle.kts`:
 
 ```kotlin
-versionCode = 17       // bump by 1 for every published build
-versionName = "1.7.0"  // human-readable, matches the git tag (without the leading "v")
+versionCode = 19       // bump by 1 for every published build
+versionName = "2.0.0"  // human-readable, matches the git tag (without the leading "v")
 ```

@@ -57,3 +57,28 @@
 # Cukup redam warning opsional bila muncul; jangan blanket-keep supaya
 # kelas yang tak terpakai tetap bisa di-shrink.
 -dontwarn com.google.zxing.**
+
+# ------------------------------------------------------------
+# ONNX Runtime (Android) — AI framework / Background Remover 2.0.0
+# ------------------------------------------------------------
+# ONNX Runtime itu JNI-heavy: layer native (libonnxruntime.so &
+# libonnxruntime4j_jni.so) mengakses kelas, field, & method Java di paket
+# `ai.onnxruntime.**` LEWAT NAMA saat runtime (JNI FindClass/GetMethodID).
+# Kalau R8 nge-rename atau nge-strip mereka, inference bakal gagal HANYA di
+# build release (mis. UnsatisfiedLinkError / NoSuchMethodError) padahal debug
+# aman. AAR-nya TIDAK membawa consumer-rules yang lengkap untuk ini, jadi keep
+# manual berikut WAJIB supaya fungsi AI & ONNX Runtime tetap hidup setelah
+# shrink/obfuscate. Ini beda kasus dg ML Kit (yg consumer-rules-nya lengkap),
+# makanya di sini blanket keep paket ONNX memang diperlukan & benar.
+-keep class ai.onnxruntime.** { *; }
+-keepclassmembers class ai.onnxruntime.** {
+    native <methods>;
+    <fields>;
+    <init>(...);
+}
+-dontwarn ai.onnxruntime.**
+
+# Kode AI milik app sendiri (core/ai, data/ai, domain/**/ai, presentation/ai)
+# dipanggil langsung (bukan via refleksi) sehingga reachable & aman dari shrink;
+# binding Koin & DTO @Serializable sudah ditangani aturan di atas. Tidak perlu
+# keep tambahan untuk logika AI internal — cukup surface JNI ONNX Runtime di atas.

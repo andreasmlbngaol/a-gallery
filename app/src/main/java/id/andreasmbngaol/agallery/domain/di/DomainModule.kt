@@ -6,6 +6,13 @@ import id.andreasmbngaol.agallery.domain.usecase.editing.DeleteMediaUseCase
 import id.andreasmbngaol.agallery.domain.usecase.editing.MoveMediaToAlbumUseCase
 import id.andreasmbngaol.agallery.domain.usecase.editing.RemoveMetadataUseCase
 import id.andreasmbngaol.agallery.domain.usecase.editing.RenameMediaUseCase
+import id.andreasmbngaol.agallery.domain.usecase.ai.DeleteModelUseCase
+import id.andreasmbngaol.agallery.domain.usecase.ai.GetModelCatalogUseCase
+import id.andreasmbngaol.agallery.domain.usecase.ai.ImportModelUseCase
+import id.andreasmbngaol.agallery.domain.usecase.ai.ObserveModelStatusUseCase
+import id.andreasmbngaol.agallery.domain.usecase.ai.RemoveBackgroundUseCase
+import id.andreasmbngaol.agallery.domain.usecase.ai.ResolveModelPathUseCase
+import id.andreasmbngaol.agallery.domain.usecase.ai.SaveBackgroundResultUseCase
 import id.andreasmbngaol.agallery.domain.usecase.editing.RequestWriteAccessUseCase
 import id.andreasmbngaol.agallery.domain.usecase.favorite.ObserveFavoriteIdsUseCase
 import id.andreasmbngaol.agallery.domain.usecase.favorite.ToggleFavoriteUseCase
@@ -62,6 +69,15 @@ val domainModule = module {
     factoryOf(::ObserveTrashItemsUseCase)
     factoryOf(::RestoreFromTrashUseCase)
     factoryOf(::FinalizePermanentDeleteUseCase)
+
+    // ai
+    factoryOf(::GetModelCatalogUseCase)
+    factoryOf(::ObserveModelStatusUseCase)
+    factoryOf(::ImportModelUseCase)
+    factoryOf(::DeleteModelUseCase)
+    factoryOf(::ResolveModelPathUseCase)
+    factoryOf(::RemoveBackgroundUseCase)
+    factoryOf(::SaveBackgroundResultUseCase)
 
     // settings
     factoryOf(::GetSettingsUseCase)

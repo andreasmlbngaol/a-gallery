@@ -11,6 +11,8 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.navigation3.runtime.NavEntry
 import androidx.navigation3.runtime.rememberNavBackStack
 import androidx.navigation3.ui.NavDisplay
+import id.andreasmbngaol.agallery.presentation.ai.AiModelsScreen
+import id.andreasmbngaol.agallery.presentation.ai.BackgroundRemoverScreen
 import id.andreasmbngaol.agallery.presentation.albums.AlbumDetailScreen
 import id.andreasmbngaol.agallery.presentation.albums.CreateAlbumScreen
 import id.andreasmbngaol.agallery.presentation.animation.LocalSharedTransitionScope
@@ -72,6 +74,7 @@ fun AGalleryNavDisplay() {
                                 onOpenTrash = { backStack.add(Screen.Trash) },
                                 onCreateAlbum = { backStack.add(Screen.CreateAlbum) },
                                 onOpenQrGenerator = { backStack.add(Screen.QrGenerator) },
+                                onOpenAiModels = { backStack.add(Screen.AiModels) },
                             )
                         }
 
@@ -81,6 +84,14 @@ fun AGalleryNavDisplay() {
                                 sortOrder = key.sortOrder,
                                 albumKey = key.albumKey,
                                 onBack = { backStack.removeLastOrNull() },
+                                onOpenBackgroundRemover = { mediaUri, displayName ->
+                                    backStack.add(
+                                        Screen.BackgroundRemover(
+                                            mediaUri = mediaUri,
+                                            displayName = displayName,
+                                        ),
+                                    )
+                                },
                             )
                         }
 
@@ -117,6 +128,21 @@ fun AGalleryNavDisplay() {
                         is Screen.QrGenerator -> NavEntry(key) {
                             QrGeneratorScreen(
                                 onBack = { backStack.removeLastOrNull() },
+                            )
+                        }
+
+                        is Screen.AiModels -> NavEntry(key) {
+                            AiModelsScreen(
+                                onBack = { backStack.removeLastOrNull() },
+                            )
+                        }
+
+                        is Screen.BackgroundRemover -> NavEntry(key) {
+                            BackgroundRemoverScreen(
+                                mediaUri = key.mediaUri,
+                                displayName = key.displayName,
+                                onBack = { backStack.removeLastOrNull() },
+                                onOpenAiModels = { backStack.add(Screen.AiModels) },
                             )
                         }
 

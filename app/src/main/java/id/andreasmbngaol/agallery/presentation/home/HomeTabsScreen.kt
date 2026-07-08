@@ -48,6 +48,7 @@ fun HomeTabsScreen(
     onOpenTrash: () -> Unit = {},
     onCreateAlbum: () -> Unit = {},
     onOpenQrGenerator: () -> Unit = {},
+    onOpenAiModels: () -> Unit = {},
 ) {
     val galleryViewModel: GalleryViewModel = koinViewModel()
 
@@ -122,7 +123,7 @@ fun HomeTabsScreen(
             beyondViewportPageCount = 1,
         ) { page ->
             when (page) {
-                PageSettings -> SettingsScreen()
+                PageSettings -> SettingsScreen(onOpenAiModels = onOpenAiModels)
                 PageTools -> ToolsScreen(
                     edgeEffectMode = edgeEffectMode,
                     onOpenQrGenerator = onOpenQrGenerator,

@@ -29,6 +29,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -50,6 +51,9 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.annotation.StringRes
 import androidx.compose.ui.res.stringResource
+import com.adamglin.PhosphorIcons
+import com.adamglin.phosphoricons.Bold
+import com.adamglin.phosphoricons.bold.CaretRight
 import id.andreasmbngaol.agallery.R
 import id.andreasmbngaol.agallery.core.ui.EdgeEffectTopBarScaffold
 import id.andreasmbngaol.agallery.core.ui.FloatingTabBarHeight
@@ -81,6 +85,7 @@ private val GridColumnChoices: List<Int> = (MIN_GRID_COLUMNS..MAX_GRID_COLUMNS).
 @Composable
 fun SettingsScreen(
     viewModel: SettingsViewModel = koinViewModel(),
+    onOpenAiModels: () -> Unit = {},
 ) {
     val settings by viewModel.settings.collectAsState()
     SettingsContent(
@@ -92,6 +97,7 @@ fun SettingsScreen(
         onSelectGridColumns = viewModel::onSelectGridColumns,
         performanceMode = settings.performanceMode,
         onSelectPerformanceMode = viewModel::onSelectPerformanceMode,
+        onOpenAiModels = onOpenAiModels,
     )
 }
 
@@ -120,6 +126,7 @@ private fun SettingsContent(
     onSelectGridColumns: (Int) -> Unit,
     performanceMode: PerformanceMode,
     onSelectPerformanceMode: (PerformanceMode) -> Unit,
+    onOpenAiModels: () -> Unit,
 ) {
     val shownSelection = resolveEdgeEffectMode(chosenMode, Build.VERSION.SDK_INT)
     val blurrySupported = isBlurryEdgeSupported()
@@ -216,7 +223,53 @@ private fun SettingsContent(
                 )
             }
         }
+
+        Spacer(Modifier.height(SettingsSectionGap))
+
+        SettingsSectionHeader(title = stringResource(R.string.settings_section_ai))
+        SettingsCard {
+            SettingsNavigationItem(
+                title = stringResource(R.string.settings_ai_models_title),
+                description = stringResource(R.string.settings_ai_models_subtitle),
+                onClick = onOpenAiModels,
+            )
+        }
     }
+    }
+}
+
+/**
+ * A tappable settings row that navigates to another screen (title + subtitle on
+ * the left, a chevron on the right). Used for the AI models entry point.
+ */
+@Composable
+private fun SettingsNavigationItem(
+    title: String,
+    description: String,
+    onClick: () -> Unit,
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(12.dp))
+            .clickable(onClick = onClick)
+            .padding(vertical = 4.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Column(modifier = Modifier.weight(1f)) {
+            Text(text = title, style = MaterialTheme.typography.titleMedium)
+            Spacer(Modifier.height(2.dp))
+            Text(
+                text = description,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+        Icon(
+            imageVector = PhosphorIcons.Bold.CaretRight,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
     }
 }
 

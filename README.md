@@ -21,6 +21,7 @@ while keeping you in full control of your media.
 - **Fully offline and private.** Nothing is uploaded — no cloud, no servers, no sync, no tracking.
 - **No account, no ads.** Open it and it just works: no sign-up, no login, no banners.
 - **You stay in control.** Move, rename, and delete your files directly, without the system interrupting you at every step.
+- **On-device AI.** AI tools like the background remover run entirely on your phone, using models you import yourself — still no network, ever.
 - **Smooth and modern.** A clean interface that stays out of your way, and adapts to your taste.
 
 ---
@@ -35,6 +36,7 @@ while keeping you in full control of your media.
 - **Share and set as wallpaper** — right from the viewer.
 - **Metadata tools** — inspect a photo's details (date, camera, dimensions, location) and strip metadata like GPS before you share.
 - **Format converter** — convert photos between JPG, PNG, WEBP, and HEIC.
+- **Background remover (on-device AI)** — cut out a photo's subject and export a transparent PNG, using an AI model you import yourself. Nothing leaves your device.
 - **QR tools** — generate a customizable QR code, and detect and read QR/barcodes right inside your photos.
 - **English & Bahasa Indonesia** — the app follows your system language.
 - **Make it yours** — tune the grid density and the overall look in Settings until it feels exactly right.

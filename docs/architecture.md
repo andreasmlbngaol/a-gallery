@@ -79,7 +79,8 @@ a-gallery/
 │        │  ├─ di/                     #   root Koin modules
 │        │  ├─ navigation/             #   nav keys / display (Navigation 3)
 │        │  ├─ permission/             #   media permission gate
-│        │  └─ ui/                     #   GalleryTabScaffold (liquid glass), style defaults
+│        │  ├─ ui/                     #   GalleryTabScaffold (liquid glass), style defaults
+│        │  └─ ai/                     #   ONNX inference engine, device benchmark, tensor utils
 │        ├─ data/                      # Data layer
 │        │  ├─ di/                     #   DataStore + repository bindings
 │        │  ├─ local/mediastore/       #   MediaStoreDataSource (query + delete/move requests)
@@ -87,12 +88,13 @@ a-gallery/
 │        │  ├─ local/room/             #   Room dao + entities
 │        │  ├─ mapper/                 #   DTO ↔ domain mappers
 │        │  ├─ paging/                 #   MediaPagingSource
-│        │  └─ repository/             #   Repository implementations
+│        │  ├─ repository/             #   Repository implementations
+│        │  └─ ai/                     #   AI model repo + background-removal processor
 │        ├─ domain/                    # Domain layer (pure Kotlin)
 │        │  ├─ di/                     #   use-case factories
-│        │  ├─ model/                  #   MediaItem, Album, MediaScope, AppSettings…
-│        │  ├─ repository/             #   repository interfaces
-│        │  └─ usecase/                #   GetMediaPaging, MoveMediaToAlbum, Copy…, Trash…
+│        │  ├─ model/                  #   MediaItem, Album, AppSettings… + ai/ (ModelCatalog, specs)
+│        │  ├─ repository/             #   repository interfaces (+ AiModelRepository)
+│        │  └─ usecase/                #   GetMediaPaging, MoveMediaToAlbum… + ai/ (RemoveBackground…)
 │        └─ presentation/              # Presentation layer
 │           ├─ animation/              #   shared-element helpers
 │           ├─ home/                   #   HomeTabsScreen (pager + tabs)
@@ -101,6 +103,8 @@ a-gallery/
 │           ├─ albums/                 #   AlbumsScreen, AlbumDetail, CreateAlbum
 │           ├─ trash/                  #   TrashScreen + ViewModel
 │           ├─ settings/               #   SettingsScreen + ViewModel
+│           ├─ tools/                  #   Tools hub + QR generator
+│           ├─ ai/                     #   AI models screen, import UX, Background Remover
 │           └─ theme/                  #   Material 3 theme
 ├─ .github/workflows/release.yml       # CI: build & publish a signed release APK on tag
 ├─ gradle/libs.versions.toml           # Version catalog
@@ -121,3 +125,8 @@ a-gallery/
   multi-select; every other album also exposes *Copy* and *Move*.
 - **Copy-based album creation** — creating an album copies the chosen items into
   `DCIM/<album name>/`; cancelling removes the new (empty) folder.
+- **On-device AI framework** — `core/ai` wraps ONNX Runtime behind an
+  `InferenceEngine` interface; `domain/model/ai` holds the pure-Kotlin model
+  catalog, tier / suitability types, and a `DeviceBenchmark`-driven guard, while
+  `data/ai` imports user-supplied `.onnx` files and runs the Background Remover.
+  No models are bundled and nothing is fetched over the network.
