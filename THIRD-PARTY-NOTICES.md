@@ -5,7 +5,7 @@ copyright of its respective authors and is used under the license listed below.
 This file is distributed with AGallery to satisfy the attribution requirements
 of the Apache License 2.0 and the MIT License.
 
-Last reviewed for AGallery **v2.0.0**. Dependency versions are defined in
+Last reviewed for AGallery **v2.1.0**. Dependency versions are defined in
 [`gradle/libs.versions.toml`](./gradle/libs.versions.toml).
 
 ---
@@ -54,8 +54,7 @@ The full text of the MIT License is included [below](#mit-license-full-text).
 | Phosphor Icons (icon set) | https://phosphoricons.com | © 2020–2023 Phosphor Icons (Helena Zhang & Tobias Fried) |
 | ONNX Runtime (Android) | `com.microsoft.onnxruntime:onnxruntime-android` | © Microsoft Corporation |
 
-ONNX Runtime powers the on-device AI inference framework (Background Remover in
-2.0.0). All models are **user-imported** `.onnx` files executed fully offline; no
+ONNX Runtime powers the on-device AI inference framework (Background Remover in 2.0.0, Subject Lift in 2.1.0). All models are **user-imported** `.onnx` files executed fully offline; no
 model weights are bundled in the APK and nothing is fetched over the network (no
 `INTERNET` permission).
 

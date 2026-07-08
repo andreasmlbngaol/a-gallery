@@ -47,6 +47,18 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
+import android.content.ClipData
+import android.content.ClipboardManager
+import android.net.Uri
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.core.content.FileProvider
+import java.io.File
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.input.pointer.PointerEventTimeoutCancellationException
+import androidx.compose.ui.input.pointer.positionChange
 import com.kyant.backdrop.backdrops.layerBackdrop
 import com.kyant.backdrop.backdrops.rememberLayerBackdrop
 import id.andreasmbngaol.agallery.R
@@ -105,6 +117,10 @@ fun PhotoViewerScreen(
     val favoriteIds by viewModel.favoriteIds.collectAsState()
     val albums by viewModel.albums.collectAsState()
     val qrDetections by viewModel.qrDetections.collectAsState()
+    val liftState by viewModel.liftState.collectAsState()
+    val haptics = LocalHapticFeedback.current
+    var liftOffset by remember { mutableStateOf(Offset.Zero) }
+    BackHandler(enabled = liftState !is SubjectLiftState.Idle) { viewModel.dismissLift() }
 
     val componentStyleChosen by viewModel.componentStyle.collectAsState()
     val componentStyle = rememberEffectiveComponentStyle(componentStyleChosen)
@@ -255,6 +271,18 @@ fun PhotoViewerScreen(
                 onOpenDetails = { showDetails = true },
                 style = componentStyle,
                 onZoomChange = { currentPageZoomed = it },
+                liftEnabled = item.type == MediaType.IMAGE,
+                onLiftStart = {
+                    haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                    liftOffset = Offset.Zero
+                    viewModel.liftSubject(item)
+                },
+                onLiftMove = { dx, dy -> liftOffset += Offset(dx, dy) },
+                onLiftRelease = {
+                    if (viewModel.liftState.value is SubjectLiftState.Processing) {
+                        viewModel.dismissLift()
+                    }
+                },
                 videoActions = videoActions,
             )
         }
@@ -428,6 +456,21 @@ fun PhotoViewerScreen(
                 )
             }
         }
+
+        SubjectLiftOverlay(
+            state = liftState,
+            offset = liftOffset,
+            style = componentStyle,
+            backdrop = backdrop,
+            onDrag = { liftOffset += it },
+            onCopy = {
+                (liftState as? SubjectLiftState.Lifted)?.let { copyCutout(context, it.resultPath) }
+            },
+            onShare = {
+                (liftState as? SubjectLiftState.Lifted)?.let { shareCutout(context, it.resultPath) }
+            },
+            onDismiss = { viewModel.dismissLift() },
+        )
     }
 }
 
@@ -446,6 +489,10 @@ private fun PhotoViewerPage(
     onOpenDetails: () -> Unit,
     style: ComponentStyle,
     onZoomChange: (Boolean) -> Unit,
+    liftEnabled: Boolean,
+    onLiftStart: () -> Unit,
+    onLiftMove: (Float, Float) -> Unit,
+    onLiftRelease: () -> Unit,
     videoActions: (@Composable () -> Unit)?,
 ) {
     val scope = rememberCoroutineScope()
@@ -512,7 +559,50 @@ private fun PhotoViewerPage(
                 )
             },
     ) {
-        Box(modifier = Modifier.fillMaxSize().then(sharedModifier)) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .then(sharedModifier)
+                .pointerInput(item.id, liftEnabled) {
+                    if (!liftEnabled) return@pointerInput
+                    awaitEachGesture {
+                        val down = awaitFirstDown(requireUnconsumed = false)
+                        val slop = viewConfiguration.touchSlop
+                        var isLift = false
+                        try {
+                            withTimeout(viewConfiguration.longPressTimeoutMillis) {
+                                while (true) {
+                                    val event = awaitPointerEvent()
+                                    if (event.changes.size > 1) return@withTimeout
+                                    val change = event.changes.firstOrNull { it.id == down.id }
+                                        ?: return@withTimeout
+                                    if (!change.pressed) return@withTimeout
+                                    if (change.isConsumed) return@withTimeout
+                                    if ((change.position - down.position).getDistance() > slop) return@withTimeout
+                                }
+                            }
+                        } catch (_: PointerEventTimeoutCancellationException) {
+                            isLift = true
+                        }
+                        if (!isLift) return@awaitEachGesture
+                        onLiftStart()
+                        while (true) {
+                            val event = awaitPointerEvent()
+                            val change = event.changes.firstOrNull { it.id == down.id }
+                            if (change == null || !change.pressed) {
+                                change?.consume()
+                                onLiftRelease()
+                                break
+                            }
+                            val dc = change.positionChange()
+                            if (dc != Offset.Zero) {
+                                onLiftMove(dc.x, dc.y)
+                            }
+                            change.consume()
+                        }
+                    }
+                },
+        ) {
             if (isVideo) {
                 VideoPlayerContent(
                     uri = item.uri,
@@ -565,4 +655,32 @@ private fun openWithMedia(context: Context, item: MediaItem) {
         addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
     }
     context.startActivity(Intent.createChooser(intent, context.getString(R.string.action_open_with)))
+}
+
+
+/** Wraps a cutout cache PNG as a shareable content:// uri via FileProvider. */
+private fun cutoutUri(context: Context, resultPath: String): Uri? = try {
+    FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", File(resultPath))
+} catch (_: Throwable) {
+    null
+}
+
+/** Share a lifted cutout PNG via ACTION_SEND. */
+private fun shareCutout(context: Context, resultPath: String) {
+    val uri = cutoutUri(context, resultPath) ?: return
+    val intent = Intent(Intent.ACTION_SEND).apply {
+        type = "image/png"
+        putExtra(Intent.EXTRA_STREAM, uri)
+        addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+    }
+    context.startActivity(Intent.createChooser(intent, context.getString(R.string.action_share)))
+}
+
+/** Copy a lifted cutout PNG to the clipboard as an image. */
+private fun copyCutout(context: Context, resultPath: String) {
+    val uri = cutoutUri(context, resultPath) ?: return
+    val clipboard = context.getSystemService(ClipboardManager::class.java) ?: return
+    val clip = ClipData.newUri(context.contentResolver, "cutout", uri)
+    clipboard.setPrimaryClip(clip)
+    Toast.makeText(context, context.getString(R.string.msg_lift_copied), Toast.LENGTH_SHORT).show()
 }

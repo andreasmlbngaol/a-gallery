@@ -8,6 +8,7 @@ import id.andreasmbngaol.agallery.domain.model.settings.EdgeEffectMode
 import id.andreasmbngaol.agallery.domain.model.settings.GallerySortOrder
 import id.andreasmbngaol.agallery.domain.model.settings.MAX_GRID_COLUMNS
 import id.andreasmbngaol.agallery.domain.model.settings.MIN_GRID_COLUMNS
+import id.andreasmbngaol.agallery.domain.model.ai.RemovalQuality
 import id.andreasmbngaol.agallery.domain.model.settings.PerformanceMode
 
 /**
@@ -37,4 +38,8 @@ fun AppSettingsDto.toDomain(): AppSettings =
             ?.let { raw -> PerformanceMode.entries.firstOrNull { it.name == raw } }
             ?: PerformanceMode.BALANCED,
         pinnedAlbumKeys = pinnedAlbumKeys,
+        liftModelId = liftModelId,
+        liftQuality = liftQuality
+            ?.let { raw -> RemovalQuality.entries.firstOrNull { it.name == raw } }
+            ?: RemovalQuality.ECO,
     )

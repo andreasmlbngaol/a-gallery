@@ -19,4 +19,6 @@ data class AppSettingsDto(
     val sortOrder: String? = null,
     val performanceMode: String? = null,
     val pinnedAlbumKeys: List<String>? = null,
+    val liftModelId: String? = null,
+    val liftQuality: String? = null,
 )

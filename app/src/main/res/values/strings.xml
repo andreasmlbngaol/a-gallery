@@ -355,4 +355,19 @@
     <string name="msg_bg_failed">Couldn\'t remove the background</string>
     <string name="msg_bg_insufficient_memory">%1$s is too heavy for this device\'s RAM. Try a lighter model.</string>
     <string name="msg_bg_save_failed">Couldn\'t save the image</string>
+    <!-- Lift subject (long-press in the viewer, iOS-style) -->
+    <string name="action_copy">Copy</string>
+    <string name="lift_processing">Lifting subject\u2026</string>
+    <string name="lift_hint">Drag it out, or use Copy / Share</string>
+    <string name="lift_subject_cd">Lifted subject</string>
+    <string name="msg_lift_no_model">Install a background removal model first to lift subjects.</string>
+    <string name="msg_lift_failed">Couldn\'t lift the subject from this photo.</string>
+    <string name="msg_lift_copied">Cutout copied</string>
+    <!-- Object lifting model selector (AI Models > Background removal) -->
+    <string name="ai_lift_model_title">Object lifting model</string>
+    <string name="ai_lift_model_desc">Choose the model used when you press and hold a photo to lift its subject. Heavier models give cleaner cutouts but are only recommended on high-end phones — on modest devices keep the fastest one.</string>
+    <string name="ai_lift_model_auto">Auto (fastest installed)</string>
+    <string name="ai_lift_model_none">Install a background removal model above first.</string>
+    <string name="ai_lift_quality_title">Lift quality</string>
+    <string name="ai_lift_quality_desc">Only affects IS-Net. Higher is sharper but slower — Eco is fastest and best for most phones.</string>
 </resources>

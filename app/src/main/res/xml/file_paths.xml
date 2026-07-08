@@ -4,4 +4,8 @@
     <cache-path
         name="shared_qr"
         path="shared_qr/" />
+    <!-- Folder cache untuk PNG hasil background removal / "angkat objek" (share & copy). -->
+    <cache-path
+        name="ai_bg"
+        path="ai_bg/" />
 </paths>

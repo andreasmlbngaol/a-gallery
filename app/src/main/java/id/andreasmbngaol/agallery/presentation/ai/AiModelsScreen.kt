@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -30,6 +31,8 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.RadioButton
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -59,7 +62,13 @@ import id.andreasmbngaol.agallery.core.ui.SystemBarScrim
 import id.andreasmbngaol.agallery.core.ui.drawsBackdrop
 import id.andreasmbngaol.agallery.core.ui.rememberEffectiveComponentStyle
 import id.andreasmbngaol.agallery.core.ui.rememberEffectiveEdgeEffectMode
+import androidx.compose.ui.graphics.Color
+import id.andreasmbngaol.agallery.core.ui.SegmentedGlassItem
+import id.andreasmbngaol.agallery.core.ui.SegmentedGlassTrack
 import id.andreasmbngaol.agallery.domain.model.ai.AiModelSpec
+import id.andreasmbngaol.agallery.domain.model.ai.ModelSuitability
+import id.andreasmbngaol.agallery.domain.model.ai.RemovalQuality
+import id.andreasmbngaol.agallery.domain.model.settings.ComponentStyle
 import id.andreasmbngaol.agallery.presentation.viewer.GlassIconButton
 import org.koin.androidx.compose.koinViewModel
 
@@ -170,6 +179,7 @@ fun AiModelsScreen(
                 onToggle = { bgExpanded = !bgExpanded },
             ) {
                 val importing = state.rows.any { it.isImporting }
+                Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
                 AiModelsCard(
                     rows = state.rows,
                     importDisabled = importing,
@@ -180,6 +190,15 @@ fun AiModelsScreen(
                     onDelete = { row -> pendingDelete = row },
                     onOpenDownloadPage = { row -> openDownloadPage(context, row.spec.downloadUrl) },
                 )
+                LiftModelSelector(
+                    installed = state.rows.filter { it.isInstalled },
+                    selectedId = state.liftModelId,
+                    onSelect = { id -> viewModel.selectLiftModel(id) },
+                    quality = state.liftQuality,
+                    onSelectQuality = { q -> viewModel.selectLiftQuality(q) },
+                    componentStyle = componentStyle,
+                )
+                }
             }
             Text(
                 text = stringResource(R.string.ai_model_import_hint),
@@ -311,4 +330,160 @@ private fun DeleteModelDialog(
             }
         },
     )
+}
+
+/**
+ * Lets the user pick which background-removal model powers the viewer's
+ * long-press "lift subject" gesture, plus the Eco/Balanced/High quality for
+ * models that support it. The choices mirror the models above; "Auto" uses the
+ * smallest installed one (fastest). Each model shows this device's suitability
+ * verdict (from the startup benchmark) so heavier models that would be slow or
+ * run out of memory on this phone are clearly flagged.
+ */
+@Composable
+private fun LiftModelSelector(
+    installed: List<AiModelRow>,
+    selectedId: String?,
+    onSelect: (String?) -> Unit,
+    quality: RemovalQuality,
+    onSelectQuality: (RemovalQuality) -> Unit,
+    componentStyle: ComponentStyle,
+) {
+    Surface(
+        shape = RoundedCornerShape(20.dp),
+        color = MaterialTheme.colorScheme.surfaceContainerHigh,
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Column(modifier = Modifier.padding(18.dp)) {
+            Text(
+                text = stringResource(R.string.ai_lift_model_title),
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.onSurface,
+            )
+            Spacer(Modifier.height(6.dp))
+            Text(
+                text = stringResource(R.string.ai_lift_model_desc),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Spacer(Modifier.height(8.dp))
+            if (installed.isEmpty()) {
+                Text(
+                    text = stringResource(R.string.ai_lift_model_none),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            } else {
+                LiftOption(
+                    label = stringResource(R.string.ai_lift_model_auto),
+                    selected = selectedId == null,
+                    onClick = { onSelect(null) },
+                )
+                installed.forEach { row ->
+                    val rating = row.suitability?.rating
+                    val caption = if (row.suitability == null) {
+                        stringResource(R.string.ai_model_suitability_checking)
+                    } else {
+                        stringResource(AiModelStrings.suitabilityLabel(rating!!))
+                    }
+                    val captionColor = when (rating) {
+                        ModelSuitability.Rating.SLOW -> MaterialTheme.colorScheme.tertiary
+                        ModelSuitability.Rating.INSUFFICIENT_MEMORY -> MaterialTheme.colorScheme.error
+                        else -> MaterialTheme.colorScheme.onSurfaceVariant
+                    }
+                    LiftOption(
+                        label = row.spec.displayName,
+                        selected = selectedId == row.spec.id.value,
+                        onClick = { onSelect(row.spec.id.value) },
+                        trailing = stringResource(AiModelStrings.tierLabel(row.spec.tier)),
+                        caption = caption,
+                        captionColor = captionColor,
+                    )
+                }
+
+                val selectedSpec =
+                    installed.firstOrNull { it.spec.id.value == selectedId }?.spec
+                if (selectedSpec?.offersQualityChoice == true) {
+                    Spacer(Modifier.height(16.dp))
+                    Text(
+                        text = stringResource(R.string.ai_lift_quality_title),
+                        style = MaterialTheme.typography.labelLarge,
+                        color = MaterialTheme.colorScheme.primary,
+                    )
+                    Spacer(Modifier.height(8.dp))
+                    val qualityOptions = listOf(
+                        RemovalQuality.ECO to R.string.bg_remover_quality_eco,
+                        RemovalQuality.BALANCED to R.string.bg_remover_quality_balanced,
+                        RemovalQuality.HIGH to R.string.bg_remover_quality_high,
+                    )
+                    SegmentedGlassTrack(componentStyle = componentStyle) {
+                        qualityOptions.forEach { (q, labelRes) ->
+                            SegmentedGlassItem(
+                                label = stringResource(labelRes),
+                                selected = quality == q,
+                                onClick = { onSelectQuality(q) },
+                                modifier = Modifier.weight(1f),
+                            )
+                        }
+                    }
+                    Spacer(Modifier.height(6.dp))
+                    Text(
+                        text = stringResource(R.string.ai_lift_quality_desc),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun LiftOption(
+    label: String,
+    selected: Boolean,
+    onClick: () -> Unit,
+    trailing: String? = null,
+    caption: String? = null,
+    captionColor: Color = Color.Unspecified,
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(12.dp))
+            .clickable(onClick = onClick)
+            .padding(vertical = 6.dp, horizontal = 4.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        RadioButton(selected = selected, onClick = onClick)
+        Spacer(Modifier.width(8.dp))
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = label,
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.onSurface,
+            )
+            if (caption != null) {
+                Text(
+                    text = caption,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = if (captionColor == Color.Unspecified) {
+                        MaterialTheme.colorScheme.onSurfaceVariant
+                    } else {
+                        captionColor
+                    },
+                )
+            }
+        }
+        if (trailing != null) {
+            Spacer(Modifier.width(12.dp))
+            Text(
+                text = trailing,
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(end = 4.dp),
+            )
+        }
+    }
 }

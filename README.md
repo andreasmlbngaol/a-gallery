@@ -37,6 +37,7 @@ while keeping you in full control of your media.
 - **Metadata tools** — inspect a photo's details (date, camera, dimensions, location) and strip metadata like GPS before you share.
 - **Format converter** — convert photos between JPG, PNG, WEBP, and HEIC.
 - **Background remover (on-device AI)** — cut out a photo's subject and export a transparent PNG, using an AI model you import yourself. Nothing leaves your device.
+- **Subject lift** — press and hold a photo to lift its subject out as a sticker you can drag, then copy or share it as a transparent cutout — all on-device.
 - **QR tools** — generate a customizable QR code, and detect and read QR/barcodes right inside your photos.
 - **English & Bahasa Indonesia** — the app follows your system language.
 - **Make it yours** — tune the grid density and the overall look in Settings until it feels exactly right.

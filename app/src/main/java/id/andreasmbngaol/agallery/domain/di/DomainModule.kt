@@ -27,6 +27,8 @@ import id.andreasmbngaol.agallery.domain.usecase.settings.GetSettingsUseCase
 import id.andreasmbngaol.agallery.domain.usecase.settings.SetComponentStyleUseCase
 import id.andreasmbngaol.agallery.domain.usecase.settings.SetEdgeEffectModeUseCase
 import id.andreasmbngaol.agallery.domain.usecase.settings.SetGridColumnsUseCase
+import id.andreasmbngaol.agallery.domain.usecase.settings.SetLiftModelUseCase
+import id.andreasmbngaol.agallery.domain.usecase.settings.SetLiftQualityUseCase
 import id.andreasmbngaol.agallery.domain.usecase.settings.SetPerformanceModeUseCase
 import id.andreasmbngaol.agallery.domain.usecase.settings.SetPinnedAlbumsUseCase
 import id.andreasmbngaol.agallery.domain.usecase.settings.SetSortOrderUseCase
@@ -87,4 +89,6 @@ val domainModule = module {
     factoryOf(::SetPerformanceModeUseCase)
     factoryOf(::SetSortOrderUseCase)
     factoryOf(::SetPinnedAlbumsUseCase)
+    factoryOf(::SetLiftModelUseCase)
+    factoryOf(::SetLiftQualityUseCase)
 }

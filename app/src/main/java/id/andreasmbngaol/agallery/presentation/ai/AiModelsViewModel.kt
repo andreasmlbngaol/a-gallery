@@ -5,16 +5,20 @@ import androidx.lifecycle.viewModelScope
 import id.andreasmbngaol.agallery.R
 import id.andreasmbngaol.agallery.core.ai.DeviceBenchmark
 import id.andreasmbngaol.agallery.domain.model.ai.AiFeature
+import id.andreasmbngaol.agallery.domain.model.ai.AiModelId
 import id.andreasmbngaol.agallery.domain.model.ai.AiModelSpec
 import id.andreasmbngaol.agallery.domain.model.ai.DeviceCapability
 import id.andreasmbngaol.agallery.domain.model.ai.ImportOutcome
 import id.andreasmbngaol.agallery.domain.model.ai.ImportPhase
 import id.andreasmbngaol.agallery.domain.model.ai.ModelSuitabilityEvaluator
+import id.andreasmbngaol.agallery.domain.model.ai.RemovalQuality
 import id.andreasmbngaol.agallery.domain.model.settings.AppSettings
 import id.andreasmbngaol.agallery.domain.usecase.ai.DeleteModelUseCase
 import id.andreasmbngaol.agallery.domain.usecase.ai.ImportModelUseCase
 import id.andreasmbngaol.agallery.domain.usecase.ai.ObserveModelStatusUseCase
 import id.andreasmbngaol.agallery.domain.usecase.settings.GetSettingsUseCase
+import id.andreasmbngaol.agallery.domain.usecase.settings.SetLiftModelUseCase
+import id.andreasmbngaol.agallery.domain.usecase.settings.SetLiftQualityUseCase
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -38,6 +42,8 @@ class AiModelsViewModel(
     getSettings: GetSettingsUseCase,
     private val importModel: ImportModelUseCase,
     private val deleteModel: DeleteModelUseCase,
+    private val setLiftModel: SetLiftModelUseCase,
+    private val setLiftQuality: SetLiftQualityUseCase,
     private val deviceBenchmark: DeviceBenchmark,
 ) : ViewModel() {
 
@@ -87,6 +93,8 @@ class AiModelsViewModel(
             componentStyleChosen = s.componentStyle,
             edgeEffectMode = s.edgeEffectMode,
             deviceCapability = cap,
+            liftModelId = s.liftModelId,
+            liftQuality = s.liftQuality,
         )
     }.stateIn(
         viewModelScope,
@@ -108,6 +116,21 @@ class AiModelsViewModel(
             importState.value = AiImportUiState()
             messageChannel.send(importMessage(outcome, spec))
         }
+    }
+
+    /**
+     * Persist the model used by the viewer's long-press "lift subject".
+     * Pass null for Auto (smallest installed model).
+     */
+    fun selectLiftModel(id: String?) {
+        viewModelScope.launch {
+            setLiftModel(id?.let { AiModelId(it) })
+        }
+    }
+
+    /** Persist the Eco/Balanced/High quality used by the lift gesture. */
+    fun selectLiftQuality(quality: RemovalQuality) {
+        viewModelScope.launch { setLiftQuality(quality) }
     }
 
     /** Delete the installed file for [spec]. */

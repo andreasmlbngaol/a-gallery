@@ -365,4 +365,19 @@
     <string name="msg_bg_failed">Gagal hapus latar</string>
     <string name="msg_bg_insufficient_memory">%1$s terlalu berat buat RAM perangkat ini. Coba model yang lebih ringan.</string>
     <string name="msg_bg_save_failed">Gagal simpan gambar</string>
+    <!-- Angkat objek (tekan lama di viewer, ala iOS) -->
+    <string name="action_copy">Salin</string>
+    <string name="lift_processing">Mengangkat objek\u2026</string>
+    <string name="lift_hint">Seret keluar, atau pakai Salin / Bagikan</string>
+    <string name="lift_subject_cd">Objek terangkat</string>
+    <string name="msg_lift_no_model">Pasang dulu model penghapus latar untuk mengangkat objek.</string>
+    <string name="msg_lift_failed">Gagal mengangkat objek dari foto ini.</string>
+    <string name="msg_lift_copied">Objek disalin</string>
+    <!-- Object lifting model selector (AI Models > Background removal) -->
+    <string name="ai_lift_model_title">Model pengangkat objek</string>
+    <string name="ai_lift_model_desc">Pilih model yang dipakai saat kamu tekan-tahan foto untuk mengangkat objeknya. Model lebih berat hasilnya lebih rapi, tapi hanya disarankan untuk HP high-end — di perangkat biasa pakai yang tercepat saja.</string>
+    <string name="ai_lift_model_auto">Otomatis (terinstal tercepat)</string>
+    <string name="ai_lift_model_none">Pasang dulu model penghapus latar di atas.</string>
+    <string name="ai_lift_quality_title">Kualitas angkat</string>
+    <string name="ai_lift_quality_desc">Hanya berpengaruh pada IS-Net. Makin tinggi makin tajam tapi lebih lambat — Eco paling cepat dan pas untuk kebanyakan HP.</string>
 </resources>

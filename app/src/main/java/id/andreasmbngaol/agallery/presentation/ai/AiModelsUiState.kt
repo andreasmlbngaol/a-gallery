@@ -1,6 +1,7 @@
 package id.andreasmbngaol.agallery.presentation.ai
 
 import id.andreasmbngaol.agallery.domain.model.ai.DeviceCapability
+import id.andreasmbngaol.agallery.domain.model.ai.RemovalQuality
 import id.andreasmbngaol.agallery.domain.model.settings.ComponentStyle
 import id.andreasmbngaol.agallery.domain.model.settings.EdgeEffectMode
 
@@ -22,4 +23,6 @@ data class AiModelsUiState(
     val componentStyleChosen: ComponentStyle? = null,
     val edgeEffectMode: EdgeEffectMode? = null,
     val deviceCapability: DeviceCapability? = null,
+    val liftModelId: String? = null,
+    val liftQuality: RemovalQuality = RemovalQuality.ECO,
 )

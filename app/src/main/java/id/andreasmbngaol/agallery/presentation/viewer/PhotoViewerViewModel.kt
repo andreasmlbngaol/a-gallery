@@ -4,6 +4,18 @@ import android.content.Context
 import android.content.IntentSender
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import android.graphics.BitmapFactory
+import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.asImageBitmap
+import id.andreasmbngaol.agallery.domain.model.ai.AiFeature
+import id.andreasmbngaol.agallery.domain.model.ai.BackgroundRemovalOutcome
+import id.andreasmbngaol.agallery.domain.model.ai.RemovalQuality
+import id.andreasmbngaol.agallery.domain.usecase.ai.ObserveModelStatusUseCase
+import id.andreasmbngaol.agallery.domain.usecase.ai.RemoveBackgroundUseCase
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.withContext
 import id.andreasmbngaol.agallery.R
 import id.andreasmbngaol.agallery.core.qr.QrDetector
 import id.andreasmbngaol.agallery.domain.model.album.Album
@@ -72,6 +84,8 @@ class PhotoViewerViewModel(
     private val convertImageFormatUseCase: ConvertImageFormatUseCase,
     private val setAlbumCoverUseCase: SetAlbumCoverUseCase,
     private val qrDetector: QrDetector,
+    private val removeBackgroundUseCase: RemoveBackgroundUseCase,
+    private val observeModelStatus: ObserveModelStatusUseCase,
 ) : ViewModel() {
     private data class ViewerParams(
         val sortOrder: GallerySortOrder,
@@ -117,6 +131,24 @@ class PhotoViewerViewModel(
             initialValue = null,
         )
 
+    /** User's chosen lift model id, or null for Auto (smallest installed). */
+    private val liftModelId: StateFlow<String?> = getSettings()
+        .map { it.liftModelId }
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5_000L),
+            initialValue = null,
+        )
+
+    /** Eco/Balanced/High for the lift gesture; only affects dynamic models. */
+    private val liftQuality: StateFlow<RemovalQuality> = getSettings()
+        .map { it.liftQuality }
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5_000L),
+            initialValue = RemovalQuality.ECO,
+        )
+
     private val _albums = MutableStateFlow<List<Album>>(emptyList())
     val albums: StateFlow<List<Album>> = _albums.asStateFlow()
 
@@ -148,6 +180,113 @@ class PhotoViewerViewModel(
             val result = qrDetector.detect(item.uri)
             _qrDetections.update { it + (item.id to result) }
             qrInFlight -= item.id
+        }
+    }
+
+    private val _liftState = MutableStateFlow<SubjectLiftState>(SubjectLiftState.Idle)
+
+    /** State of the iOS-style "lift subject" overlay (long-press in the viewer). */
+    val liftState: StateFlow<SubjectLiftState> = _liftState.asStateFlow()
+
+    private var liftJob: Job? = null
+
+    /**
+     * Long-press "lift subject": run background removal with the smallest
+     * installed model at Eco quality, then expose the transparent cutout so the
+     * viewer can show it draggable with Copy / Share. No-op for videos or while a
+     * lift is already in flight.
+     */
+    fun liftSubject(item: MediaItem) {
+        if (item.type != MediaType.IMAGE) return
+        if (_liftState.value !is SubjectLiftState.Idle) return
+        liftJob?.cancel()
+        liftJob = viewModelScope.launch {
+            _liftState.value = SubjectLiftState.Processing
+            val installed = observeModelStatus(AiFeature.BACKGROUND_REMOVAL).first()
+                .filter { it.isInstalled }
+            val preferred = liftModelId.value?.let { pref ->
+                installed.firstOrNull { it.spec.id.value == pref }
+            }
+            val chosen = preferred ?: installed.minByOrNull { it.spec.approxSizeBytes }
+            if (chosen == null) {
+                _liftState.value = SubjectLiftState.Idle
+                _messages.emit(appContext.getString(R.string.msg_lift_no_model))
+                return@launch
+            }
+            val quality = if (chosen.spec.offersQualityChoice) liftQuality.value else RemovalQuality.ECO
+            val outcome = removeBackgroundUseCase(item.uri, chosen.spec.id, quality)
+            if (_liftState.value !is SubjectLiftState.Processing) return@launch
+            when (outcome) {
+                is BackgroundRemovalOutcome.Success -> {
+                    val cutout = decodeCutout(outcome.resultPath)
+                    if (cutout != null && _liftState.value is SubjectLiftState.Processing) {
+                        _liftState.value = SubjectLiftState.Lifted(
+                            cutout = cutout.bitmap,
+                            resultPath = outcome.resultPath,
+                            sourceDisplayName = item.displayName,
+                            subjectTopFraction = cutout.topFraction,
+                            subjectCenterXFraction = cutout.centerXFraction,
+                        )
+                    } else {
+                        _liftState.value = SubjectLiftState.Idle
+                        if (cutout == null) {
+                            _messages.emit(appContext.getString(R.string.msg_lift_failed))
+                        }
+                    }
+                }
+                is BackgroundRemovalOutcome.Failure -> {
+                    _liftState.value = SubjectLiftState.Idle
+                    _messages.emit(appContext.getString(R.string.msg_lift_failed))
+                }
+            }
+        }
+    }
+
+    /** Dismiss the lift overlay and cancel any in-flight inference. */
+    fun dismissLift() {
+        liftJob?.cancel()
+        liftJob = null
+        _liftState.value = SubjectLiftState.Idle
+    }
+
+    private data class Cutout(
+        val bitmap: ImageBitmap,
+        val topFraction: Float,
+        val centerXFraction: Float,
+    )
+
+    private suspend fun decodeCutout(path: String): Cutout? = withContext(Dispatchers.IO) {
+        try {
+            val bmp = BitmapFactory.decodeFile(path) ?: return@withContext null
+            val w = bmp.width
+            val h = bmp.height
+            if (w <= 0 || h <= 0) return@withContext null
+            val pixels = IntArray(w * h)
+            bmp.getPixels(pixels, 0, w, 0, 0, w, h)
+            val step = maxOf(1, minOf(w, h) / 256)
+            var minY = h
+            var sumX = 0.0
+            var count = 0L
+            var y = 0
+            while (y < h) {
+                val row = y * w
+                var x = 0
+                while (x < w) {
+                    val alpha = pixels[row + x] ushr 24
+                    if (alpha > 24) {
+                        if (y < minY) minY = y
+                        sumX += x
+                        count++
+                    }
+                    x += step
+                }
+                y += step
+            }
+            val topFraction = if (count == 0L) 0f else minY.toFloat() / h
+            val centerXFraction = if (count == 0L) 0.5f else (sumX / count).toFloat() / w
+            Cutout(bmp.asImageBitmap(), topFraction, centerXFraction)
+        } catch (_: Throwable) {
+            null
         }
     }
 
@@ -344,4 +483,25 @@ class PhotoViewerViewModel(
         val clean = name.trim().trim('/')
         return "DCIM/$clean/"
     }
+}
+
+
+/**
+ * State of the viewer's "lift subject" overlay.
+ */
+sealed interface SubjectLiftState {
+    /** No lift in progress. */
+    data object Idle : SubjectLiftState
+
+    /** Background removal is running. */
+    data object Processing : SubjectLiftState
+
+    /** The cutout is ready and shown draggable with Copy / Share. */
+    data class Lifted(
+        val cutout: ImageBitmap,
+        val resultPath: String,
+        val sourceDisplayName: String,
+        val subjectTopFraction: Float,
+        val subjectCenterXFraction: Float,
+    ) : SubjectLiftState
 }

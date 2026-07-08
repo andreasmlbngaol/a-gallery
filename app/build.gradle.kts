@@ -34,8 +34,8 @@ android {
         applicationId = "id.andreasmbngaol.agallery"
         minSdk = 29
         targetSdk = 37
-        versionCode = 20
-        versionName = "2.0.1"
+        versionCode = 21
+        versionName = "2.1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -93,15 +93,8 @@ android {
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
     }
-
     buildFeatures {
         compose = true
-    }
-
-    packaging {
-        jniLibs {
-            useLegacyPackaging = true
-        }
     }
 }
 

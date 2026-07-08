@@ -1,5 +1,7 @@
 package id.andreasmbngaol.agallery.domain.model.settings
 
+import id.andreasmbngaol.agallery.domain.model.ai.RemovalQuality
+
 /**
  * Application preferences (domain) -- the single source of truth, persisted
  * via DataStore.
@@ -24,4 +26,6 @@ data class AppSettings(
     val sortOrder: GallerySortOrder = GallerySortOrder.DateDesc,
     val performanceMode: PerformanceMode = PerformanceMode.BALANCED,
     val pinnedAlbumKeys: List<String>? = null,
+    val liftModelId: String? = null,
+    val liftQuality: RemovalQuality = RemovalQuality.ECO,
 )

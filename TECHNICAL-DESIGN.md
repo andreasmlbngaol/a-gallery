@@ -46,7 +46,7 @@
 | `namespace` / `applicationId` | `id.andreasmbngaol.agallery` |
 | `minSdk` | **29 (Android 10)** |
 | `targetSdk` / `compileSdk` | 37 (compileSdk minor `37.1`) |
-| `versionCode` / `versionName` | `19` / `2.0.0` |
+| `versionCode` / `versionName` | `20` / `2.1.0` |
 | Language | Kotlin `2.4.0` (KSP `2.3.9`) |
 | UI | Jetpack Compose (BOM `2026.06.01`), Material 3 `1.5.0-alpha23` |
 | Build | AGP `9.2.1`, R8 (minify + shrink resources; **full mode disabled** so ML Kit consumer rules survive) |
@@ -151,17 +151,18 @@ milestone, not strictly an API break — this is an app, not a library).
 **`2.0.0` — the on-device AI era.** Introduces the AI model framework
 (Section 7) and the first AI feature. AI stays offline (models are
 user-imported), so this is a *milestone* bump, not a permission/behavior break.
-**`2.0.0` has shipped**; the rest of the `2.x` line is planned.
+**`2.0.0` and `2.1.0` have shipped**; the rest of the `2.x` line is planned.
 
 | Version | Scope | Status |
 |---|---|---|
 | `2.0.0` | AI model framework (ONNX Runtime) + **Background Remover** (first AI feature) | ✅ Shipped |
-| `2.1.0` | **Smart Scanner** module | ⏳ Planned |
-| `2.2.0` | **OCR → PDF** | ⏳ Planned |
-| `2.3.0` | **AI Semantic Search** — AGallery's only search (on-device) | ⏳ Planned |
+| `2.1.0` | **Subject Lift** — iOS-style long-press "lift" of a photo's subject in the viewer (drag, copy, share); reuses the Background Remover models & framework | ✅ Shipped |
+| `2.2.0` | **Smart Scanner** module | ⏳ Planned |
+| `2.3.0` | **OCR → PDF** | ⏳ Planned |
+| `2.4.0` | **AI Semantic Search** — AGallery's only search (on-device) | ⏳ Planned |
 
 > There is **no classic search**. Search arrives only as on-device semantic
-> search in `2.3.0`. Document the milestone reasoning in `docs/releasing.md`.
+> search in `2.4.0`. Document the milestone reasoning in `docs/releasing.md`.
 
 ---
 
@@ -190,16 +191,17 @@ operate on a photo that already exists?*
 | QR Code Generator | No (creates) | Tools hub | 1.6.0 |
 | QR Detection | Yes | Viewer | 1.7.0 |
 | Background Remover | Yes | Viewer | 2.0.0 |
-| Smart Scanner | Mixed (photo or capture) | Tools hub (+ viewer surfacing) | 2.1.0 |
-| OCR → PDF | Mixed (capture / scan) | Tools hub | 2.2.0 |
-| AI Semantic Search | No (searches library) | Search feature | 2.3.0 |
+| Subject Lift | Yes | Viewer | 2.1.0 |
+| Smart Scanner | Mixed (photo or capture) | Tools hub (+ viewer surfacing) | 2.2.0 |
+| OCR → PDF | Mixed (capture / scan) | Tools hub | 2.3.0 |
+| AI Semantic Search | No (searches library) | Search feature | 2.4.0 |
 
 ### 4.2 Navigation changes
 
 - **Done (1.6.0):** the Home pager has a **4th tab** — `Settings · Gallery · Albums · Tools`.
 - **Done:** each tool is its **own Nav3 route** pushed on the backstack, triggered
   from the hub — mirroring the existing `onOpenAlbum` / `onOpenTrash` pattern.
-- A `Screen.Search` route is added only with AI Semantic Search (`2.3.0`).
+- A `Screen.Search` route is added only with AI Semantic Search (`2.4.0`).
 
 ---
 
@@ -318,12 +320,22 @@ All depend on the AI model framework (Section 7).
   - **Import UX** — the models screen opens each model's download page in the
     browser (view intent, no `INTERNET`), then imports and verifies the picked
     `.onnx` file into app-private storage; models can be deleted to reclaim space.
-- **Smart Scanner** (2.1.0) — *Tools hub (+ viewer surfacing).* An extensible
+- **Subject Lift** (2.1.0, ✅ shipped) — *Viewer.* iOS-style **long-press to
+  lift the subject**: press and hold a photo, its salient subject is cut out
+  on-device and becomes a draggable sticker the user can move, then **Copy** or
+  **Share** as a transparent PNG. Built entirely on the 2.0.0 Background Remover
+  framework — same ONNX runtime and the same user-imported model catalog. In
+  **AI Models**, an **Object Lifting** section picks which installed model powers
+  the gesture (or **Auto** = smallest / fastest) and, for models that support it,
+  the **Eco / Balanced / High** quality. Each model shows this device's
+  suitability verdict (from `DeviceBenchmark`) as advice, so heavier models that
+  would be slow or memory-tight here are flagged before selection.
+- **Smart Scanner** (2.2.0) — *Tools hub (+ viewer surfacing).* An extensible
   on-device detector module; starts by surfacing QR detection, more detectors
   later.
-- **OCR → PDF** (2.2.0) — *Tools hub.* Photograph notes / a whiteboard, OCR the
+- **OCR → PDF** (2.3.0) — *Tools hub.* Photograph notes / a whiteboard, OCR the
   text, and produce a PDF. Output format TBD (Section 9).
-- **AI Semantic Search** (2.3.0) — *Search feature.* Search the library by
+- **AI Semantic Search** (2.4.0) — *Search feature.* Search the library by
   meaning using on-device embeddings; all data stays local. This is AGallery's
   only search.
 
@@ -414,7 +426,7 @@ Established during the codebase-wide cleanup; all layers now follow these:
 | Use cases | `domain/usecase` |
 | MediaStore / EXIF / model IO implementations | `data/...` + `data/repository` |
 | Tool screens + ViewModels | `presentation/tools/<tool>/` (+ `di`) |
-| Search screen | `presentation/search/` (2.3.0) |
+| Search screen | `presentation/search/` (2.4.0) |
 | Nav routes | `core/navigation/NavKeys.kt` (`Screen.*`) + wire in `AGalleryNavDisplay` |
 | New Home tab (Tools) | `presentation/home` (extend the pager to 4 pages) |
 | DI wiring | one Koin module per feature |

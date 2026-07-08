@@ -8,6 +8,7 @@ import id.andreasmbngaol.agallery.domain.model.settings.ComponentStyle
 import id.andreasmbngaol.agallery.domain.model.settings.EdgeEffectMode
 import id.andreasmbngaol.agallery.domain.model.settings.GallerySortOrder
 import id.andreasmbngaol.agallery.domain.model.settings.MAX_GRID_COLUMNS
+import id.andreasmbngaol.agallery.domain.model.ai.RemovalQuality
 import id.andreasmbngaol.agallery.domain.model.settings.PerformanceMode
 import id.andreasmbngaol.agallery.domain.model.settings.MIN_GRID_COLUMNS
 import id.andreasmbngaol.agallery.domain.repository.SettingsRepository
@@ -60,6 +61,18 @@ class SettingsRepositoryImpl(
     override suspend fun setPinnedAlbumKeys(keys: List<String>) {
         dataStore.updateData { current ->
             current.copy(pinnedAlbumKeys = keys)
+        }
+    }
+
+    override suspend fun setLiftModelId(id: String?) {
+        dataStore.updateData { current ->
+            current.copy(liftModelId = id)
+        }
+    }
+
+    override suspend fun setLiftQuality(quality: RemovalQuality) {
+        dataStore.updateData { current ->
+            current.copy(liftQuality = quality.name)
         }
     }
 }
