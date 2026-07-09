@@ -46,7 +46,7 @@
 | `namespace` / `applicationId` | `id.andreasmbngaol.agallery` |
 | `minSdk` | **29 (Android 10)** |
 | `targetSdk` / `compileSdk` | 37 (compileSdk minor `37.1`) |
-| `versionCode` / `versionName` | `20` / `2.1.0` |
+| `versionCode` / `versionName` | `22` / `2.1.1` |
 | Language | Kotlin `2.4.0` (KSP `2.3.9`) |
 | UI | Jetpack Compose (BOM `2026.06.01`), Material 3 `1.5.0-alpha23` |
 | Build | AGP `9.2.1`, R8 (minify + shrink resources; **full mode disabled** so ML Kit consumer rules survive) |
@@ -151,18 +151,29 @@ milestone, not strictly an API break — this is an app, not a library).
 **`2.0.0` — the on-device AI era.** Introduces the AI model framework
 (Section 7) and the first AI feature. AI stays offline (models are
 user-imported), so this is a *milestone* bump, not a permission/behavior break.
-**`2.0.0` and `2.1.0` have shipped**; the rest of the `2.x` line is planned.
+**`2.0.0` and `2.1.0` have shipped** (plus the `2.1.1` maintenance patch — see
+below); the rest of the `2.x` line is planned.
 
 | Version | Scope | Status |
 |---|---|---|
 | `2.0.0` | AI model framework (ONNX Runtime) + **Background Remover** (first AI feature) | ✅ Shipped |
 | `2.1.0` | **Subject Lift** — iOS-style long-press "lift" of a photo's subject in the viewer (drag, copy, share); reuses the Background Remover models & framework | ✅ Shipped |
-| `2.2.0` | **Smart Scanner** module | ⏳ Planned |
-| `2.3.0` | **OCR → PDF** | ⏳ Planned |
-| `2.4.0` | **AI Semantic Search** — AGallery's only search (on-device) | ⏳ Planned |
+| `2.2.0` | **Image Enhancer** — AI upscale / restore (Remini-style) | ⏳ Planned |
+| `2.3.0` | **Image Compress** — reduce a photo's file size (non-AI utility) | ⏳ Planned |
+| `2.4.0` | **Smart Scanner** module | ⏳ Planned |
+| `2.5.0` | **OCR → PDF** | ⏳ Planned |
+| `2.6.0` | **AI Semantic Search** — AGallery's only search (on-device) | ⏳ Planned |
+
+> **Patch `2.1.1` (current).** Maintenance polish on the `2.1.0` framework: the
+> model catalog is trimmed to **two** background-removal models (the heavy
+> BiRefNet option was dropped as impractical on mobile CPUs), the ONNX session is
+> cached and warmed to remove per-run setup overhead, an
+> `OrtSession.SessionOptions` resource leak is fixed, and the **AI Models** and
+> **Background Remover** screens no longer let their top content slip under the
+> top bar.
 
 > There is **no classic search**. Search arrives only as on-device semantic
-> search in `2.4.0`. Document the milestone reasoning in `docs/releasing.md`.
+> search in `2.6.0`. Document the milestone reasoning in `docs/releasing.md`.
 
 ---
 
@@ -192,16 +203,18 @@ operate on a photo that already exists?*
 | QR Detection | Yes | Viewer | 1.7.0 |
 | Background Remover | Yes | Viewer | 2.0.0 |
 | Subject Lift | Yes | Viewer | 2.1.0 |
-| Smart Scanner | Mixed (photo or capture) | Tools hub (+ viewer surfacing) | 2.2.0 |
-| OCR → PDF | Mixed (capture / scan) | Tools hub | 2.3.0 |
-| AI Semantic Search | No (searches library) | Search feature | 2.4.0 |
+| Image Enhancer | Yes | Viewer | 2.2.0 |
+| Image Compress | Yes | Viewer (detail panel) | 2.3.0 |
+| Smart Scanner | Mixed (photo or capture) | Tools hub (+ viewer surfacing) | 2.4.0 |
+| OCR → PDF | Mixed (capture / scan) | Tools hub | 2.5.0 |
+| AI Semantic Search | No (searches library) | Search feature | 2.6.0 |
 
 ### 4.2 Navigation changes
 
 - **Done (1.6.0):** the Home pager has a **4th tab** — `Settings · Gallery · Albums · Tools`.
 - **Done:** each tool is its **own Nav3 route** pushed on the backstack, triggered
   from the hub — mirroring the existing `onOpenAlbum` / `onOpenTrash` pattern.
-- A `Screen.Search` route is added only with AI Semantic Search (`2.4.0`).
+- A `Screen.Search` route is added only with AI Semantic Search (`2.6.0`).
 
 ---
 
@@ -292,6 +305,12 @@ already certain. Detailed design is done per-feature at build time.
 - **QR Detection** (1.7.0) — *Viewer.* Detect and read a QR/barcode in a photo.
   **Not AI** — done with a classic computer-vision library, fully offline, no
   model download.
+- **Image Compress** (2.3.0) — *Viewer (detail panel).* A small, **non-AI**
+  utility to shrink a photo's file size for easier sharing/storage: choose a
+  quality level and/or a maximum dimension, see the estimated output size, and
+  write a new file in the same folder (never silently overwriting the original).
+  Reuses the Format Converter's decode/encode and "keep original vs. replace"
+  plumbing; needs **no model and no network**.
 
 > **Watermark** — previously planned as the final `1.x` non-AI feature
 > (`1.8.0`); **dropped from the roadmap** and no longer planned.
@@ -304,10 +323,9 @@ All depend on the AI model framework (Section 7).
   background (salient-object cutout) and exports a transparent PNG, launched from
   the viewer's action sheet. Implemented in 2.0.0:
   - **Runtime** — ONNX Runtime (Android), CPU execution provider, fully offline.
-  - **Model catalog** — three user-imported models grouped by quality tier:
+  - **Model catalog** — two user-imported models grouped by quality tier:
     **U²-Net (Lite)** (320², ~5 MB, LIGHT), **IS-Net (General Use)** (1024²,
-    BALANCED — the recommended default), and **BiRefNet (Lite)** (1024²,
-    HIGH_QUALITY, heaviest). Each declares an input spec, a tier badge, and an
+    BALANCED — the recommended default). Each declares an input spec, a tier badge, and an
     estimated peak-memory figure.
   - **Device suitability guard** — before running, a lightweight `DeviceBenchmark`
     (total / available RAM + a CPU score) is weighed against the model's peak
@@ -330,12 +348,19 @@ All depend on the AI model framework (Section 7).
   the **Eco / Balanced / High** quality. Each model shows this device's
   suitability verdict (from `DeviceBenchmark`) as advice, so heavier models that
   would be slow or memory-tight here are flagged before selection.
-- **Smart Scanner** (2.2.0) — *Tools hub (+ viewer surfacing).* An extensible
+- **Image Enhancer** (2.2.0) — *Viewer.* Remini-style on-device enhancement:
+  upscale and restore a photo (super-resolution, denoise / sharpen, optional face
+  restoration) into a new higher-quality file. Built on the **same ONNX Runtime
+  framework and user-imported model flow** as the Background Remover — no bundled
+  weights, no network, and the same device-suitability guard. The specific
+  enhancement model(s) and the tiling / resolution strategy for large images are
+  decided at build time (Section 9).
+- **Smart Scanner** (2.4.0) — *Tools hub (+ viewer surfacing).* An extensible
   on-device detector module; starts by surfacing QR detection, more detectors
   later.
-- **OCR → PDF** (2.3.0) — *Tools hub.* Photograph notes / a whiteboard, OCR the
+- **OCR → PDF** (2.5.0) — *Tools hub.* Photograph notes / a whiteboard, OCR the
   text, and produce a PDF. Output format TBD (Section 9).
-- **AI Semantic Search** (2.4.0) — *Search feature.* Search the library by
+- **AI Semantic Search** (2.6.0) — *Search feature.* Search the library by
   meaning using on-device embeddings; all data stays local. This is AGallery's
   only search.
 
@@ -344,7 +369,7 @@ All depend on the AI model framework (Section 7).
 ## 7. AI model framework (principles)
 
 Shipped in `2.0.0`. The principles below held; the runtime is now **ONNX Runtime
-(Android)** and the initial catalog is the three background-removal models
+(Android)** and the initial catalog is the two background-removal models
 (Section 6). These principles remain the contract for future AI features:
 
 - **No `INTERNET` permission.** The app never downloads models itself.
@@ -409,9 +434,8 @@ Established during the codebase-wide cleanup; all layers now follow these:
 
 1. **AI runtime & specific models** — ✅ **decided for background removal.**
    Runtime is **ONNX Runtime (Android)** (no Google Play Services dependency,
-   runs `.onnx` fully on-device); the initial models are U²-Net Lite, IS-Net
-   General Use, and BiRefNet Lite. Runtime / model choices for later AI features
-   (scanner, OCR, semantic search) are still open.
+   runs `.onnx` fully on-device); the initial models are U²-Net Lite and IS-Net General Use. Runtime / model choices for later AI features
+   (image enhancer, scanner, OCR, semantic search) are still open.
 2. **OCR → PDF output** — undecided (searchable image+text PDF vs. reflowed
    text). Decide when building the feature.
 

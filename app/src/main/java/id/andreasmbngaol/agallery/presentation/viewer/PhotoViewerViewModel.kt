@@ -71,7 +71,7 @@ class PhotoViewerViewModel(
     private val appContext: Context,
     getAllMedia: GetAllMediaUseCase,
     observeFavoriteIds: ObserveFavoriteIdsUseCase,
-    getSettings: GetSettingsUseCase,
+    private val getSettings: GetSettingsUseCase,
     private val getAlbums: GetAlbumsUseCase,
     private val getMediaDetails: GetMediaDetailsUseCase,
     private val toggleFavorite: ToggleFavoriteUseCase,
@@ -131,24 +131,6 @@ class PhotoViewerViewModel(
             initialValue = null,
         )
 
-    /** User's chosen lift model id, or null for Auto (smallest installed). */
-    private val liftModelId: StateFlow<String?> = getSettings()
-        .map { it.liftModelId }
-        .stateIn(
-            scope = viewModelScope,
-            started = SharingStarted.WhileSubscribed(5_000L),
-            initialValue = null,
-        )
-
-    /** Eco/Balanced/High for the lift gesture; only affects dynamic models. */
-    private val liftQuality: StateFlow<RemovalQuality> = getSettings()
-        .map { it.liftQuality }
-        .stateIn(
-            scope = viewModelScope,
-            started = SharingStarted.WhileSubscribed(5_000L),
-            initialValue = RemovalQuality.ECO,
-        )
-
     private val _albums = MutableStateFlow<List<Album>>(emptyList())
     val albums: StateFlow<List<Album>> = _albums.asStateFlow()
 
@@ -191,10 +173,11 @@ class PhotoViewerViewModel(
     private var liftJob: Job? = null
 
     /**
-     * Long-press "lift subject": run background removal with the smallest
-     * installed model at Eco quality, then expose the transparent cutout so the
-     * viewer can show it draggable with Copy / Share. No-op for videos or while a
-     * lift is already in flight.
+     * Long-press "lift subject": run background removal using the user's chosen
+     * lift model + quality (read fresh from settings on each gesture), falling
+     * back to the smallest installed model at Eco quality when set to Auto. Then
+     * expose the transparent cutout so the viewer can show it draggable with
+     * Copy / Share. No-op for videos or while a lift is already in flight.
      */
     fun liftSubject(item: MediaItem) {
         if (item.type != MediaType.IMAGE) return
@@ -202,9 +185,10 @@ class PhotoViewerViewModel(
         liftJob?.cancel()
         liftJob = viewModelScope.launch {
             _liftState.value = SubjectLiftState.Processing
+            val settings = getSettings().first()
             val installed = observeModelStatus(AiFeature.BACKGROUND_REMOVAL).first()
                 .filter { it.isInstalled }
-            val preferred = liftModelId.value?.let { pref ->
+            val preferred = settings.liftModelId?.let { pref ->
                 installed.firstOrNull { it.spec.id.value == pref }
             }
             val chosen = preferred ?: installed.minByOrNull { it.spec.approxSizeBytes }
@@ -213,7 +197,7 @@ class PhotoViewerViewModel(
                 _messages.emit(appContext.getString(R.string.msg_lift_no_model))
                 return@launch
             }
-            val quality = if (chosen.spec.offersQualityChoice) liftQuality.value else RemovalQuality.ECO
+            val quality = if (chosen.spec.offersQualityChoice) settings.liftQuality else RemovalQuality.ECO
             val outcome = removeBackgroundUseCase(item.uri, chosen.spec.id, quality)
             if (_liftState.value !is SubjectLiftState.Processing) return@launch
             when (outcome) {

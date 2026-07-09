@@ -6,7 +6,7 @@ package id.andreasmbngaol.agallery.domain.model.ai
  * download the `.onnx` file and tells the inference engine exactly how to feed
  * images in and read masks out.
  *
- * All three background-removal models are permissively licensed for commercial
+ * All background-removal models are permissively licensed for commercial
  * use (Apache-2.0 / MIT). Models with non-commercial licenses (e.g. BRIA RMBG)
  * are intentionally excluded.
  *
@@ -26,15 +26,8 @@ package id.andreasmbngaol.agallery.domain.model.ai
 object ModelCatalog {
 
     /**
-     * IS-Net (General Use) — the balanced, recommended default.
-     *
-     * This slot expects the DYNAMIC-input re-export produced by
-     * `tools/optimize_isnet.py` (`isnet-general-use-dynamic.onnx`). It is
-     * byte-identical in quality to the original at full resolution, but its input
-     * size is dynamic, which is what lets the Background Remover run at Eco (512)
-     * / Balanced (768) / High (1024) via the on-screen quality selector — hence
-     * [offersQualityChoice] = true. The [sha256] is pinned to that dynamic
-     * artifact.
+     * IS-Net (General Use) — the balanced, recommended default. This is the
+     * DYNAMIC re-export, so it exposes the Eco/Balanced/High quality selector.
      */
     val ISNET_GENERAL_USE: AiModelSpec = AiModelSpec(
         id = AiModelId("isnet-general-use"),
@@ -43,7 +36,6 @@ object ModelCatalog {
         displayName = "IS-Net (General Use)",
         approxSizeBytes = 179L * 1024 * 1024,
         expectedSizeBytes = 0L,
-        // sha256 of isnet-general-use-dynamic.onnx (dynamic re-export).
         sha256 = "3445af39ebc8cd513db5c3724837329ba122c361cbcb0fa5b4cc803115eca899",
         io = ModelIoSpec(
             inputName = "",
@@ -60,10 +52,7 @@ object ModelCatalog {
         estimatedPeakMemoryBytes = 1_100L * 1024 * 1024,
     )
 
-    /**
-     * U²-Net (Lite) — tiny & fast, lowest fidelity. Native input is only 320px and
-     * it is already the fastest option, so it runs at native quality (no selector).
-     */
+    /** U²-Net (Lite) — tiny & fast, lowest fidelity. Fixed 320² input. */
     val U2NETP: AiModelSpec = AiModelSpec(
         id = AiModelId("u2netp"),
         feature = AiFeature.BACKGROUND_REMOVAL,
@@ -83,42 +72,13 @@ object ModelCatalog {
         ),
         downloadUrl = "https://huggingface.co/andreasmlbngaol/a-gallery/resolve/main/u2netp.onnx?download=true",
         recommended = false,
-        offersQualityChoice = false,
         estimatedPeakMemoryBytes = 300L * 1024 * 1024,
-    )
-
-    /**
-     * BiRefNet (Lite) — highest quality, largest & slowest. Fixed 1024 input, so
-     * it runs at native quality (no selector).
-     */
-    val BIREFNET_LITE: AiModelSpec = AiModelSpec(
-        id = AiModelId("birefnet-lite"),
-        feature = AiFeature.BACKGROUND_REMOVAL,
-        tier = ModelTier.HIGH_QUALITY,
-        displayName = "BiRefNet (Lite)",
-        approxSizeBytes = 224L * 1024 * 1024,
-        expectedSizeBytes = 0L,
-        sha256 = "5600024376f572a557870a5eb0afb1e5961636bef4e1e22132025467d0f03333",
-        io = ModelIoSpec(
-            inputName = "",
-            outputName = "",
-            inputWidth = 1024,
-            inputHeight = 1024,
-            layout = TensorLayout.NCHW,
-            mean = listOf(0.485f, 0.456f, 0.406f),
-            std = listOf(0.229f, 0.224f, 0.225f),
-        ),
-        downloadUrl = "https://huggingface.co/andreasmlbngaol/a-gallery/resolve/main/birefnet.onnx?download=true",
-        recommended = false,
-        offersQualityChoice = false,
-        estimatedPeakMemoryBytes = 2_400L * 1024 * 1024,
     )
 
     /** Every known model, in display order (recommended first within a feature). */
     val ALL: List<AiModelSpec> = listOf(
         ISNET_GENERAL_USE,
         U2NETP,
-        BIREFNET_LITE,
     )
 
     /** Models that power the given [feature], recommended entry first. */

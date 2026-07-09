@@ -16,6 +16,9 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.asPaddingValues
+import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -108,6 +111,7 @@ fun BackgroundRemoverScreen(
     val backdrop = rememberLayerBackdrop()
     val context = LocalContext.current
     val resources = LocalResources.current
+    val safeDrawing = WindowInsets.safeDrawing.asPaddingValues()
 
     LaunchedEffect(viewModel) {
         viewModel.messages.collect { message ->
@@ -167,7 +171,10 @@ fun BackgroundRemoverScreen(
                 .then(sourceModifier)
                 .verticalScroll(rememberScrollState())
                 .padding(horizontal = 16.dp)
-                .padding(top = 88.dp, bottom = if (state.hasModel) 172.dp else 32.dp)
+                .padding(
+                    top = safeDrawing.calculateTopPadding() + ScreenTopBarHeight + 8.dp,
+                    bottom = if (state.hasModel) 172.dp else 32.dp,
+                )
                 .navigationBarsPadding(),
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {

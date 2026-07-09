@@ -30,7 +30,6 @@ object AiModelStrings {
     fun rationale(id: AiModelId): Int = when (id.value) {
         "isnet-general-use" -> R.string.ai_model_rationale_isnet
         "u2netp" -> R.string.ai_model_rationale_u2netp
-        "birefnet-lite" -> R.string.ai_model_rationale_birefnet
         else -> 0
     }
 

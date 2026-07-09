@@ -17,6 +17,9 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.asPaddingValues
+import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -92,6 +95,7 @@ fun AiModelsScreen(
     val effectiveMode = rememberEffectiveEdgeEffectMode(state.edgeEffectMode)
     val backdrop = rememberLayerBackdrop()
     val context = LocalContext.current
+    val safeDrawing = WindowInsets.safeDrawing.asPaddingValues()
 
     var pendingSpec by remember { mutableStateOf<AiModelSpec?>(null) }
     var bgExpanded by remember { mutableStateOf(true) }
@@ -153,7 +157,10 @@ fun AiModelsScreen(
                 .then(sourceModifier)
                 .verticalScroll(rememberScrollState())
                 .padding(horizontal = 16.dp)
-                .padding(top = 88.dp, bottom = 32.dp)
+                .padding(
+                    top = safeDrawing.calculateTopPadding() + ScreenTopBarHeight + 8.dp,
+                    bottom = 32.dp,
+                )
                 .navigationBarsPadding(),
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {

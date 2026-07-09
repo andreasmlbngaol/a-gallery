@@ -9,9 +9,10 @@ import coil3.request.CachePolicy
 import coil3.request.crossfade
 import coil3.video.VideoFrameDecoder
 import id.andreasmbngaol.agallery.core.ai.AccelerationConfig
+import id.andreasmbngaol.agallery.core.ai.InferenceEngine
+import id.andreasmbngaol.agallery.core.di.appModules
 import id.andreasmbngaol.agallery.core.image.MediaStoreThumbnailFetcher
 import id.andreasmbngaol.agallery.core.image.MediaStoreThumbnailKeyer
-import id.andreasmbngaol.agallery.core.di.appModules
 import id.andreasmbngaol.agallery.data.work.TrashPurgeWorker
 import id.andreasmbngaol.agallery.domain.model.settings.PerformanceMode
 import id.andreasmbngaol.agallery.domain.repository.SettingsRepository
@@ -41,6 +42,27 @@ class AGalleryApp : Application(), SingletonImageLoader.Factory {
         // action, so onCreate is safe).
         GlobalContext.get().get<AccelerationConfig>().recoverFromCrashIfNeeded()
         TrashPurgeWorker.schedule(this)
+    }
+
+    /**
+     * Releases the AI inference engine's warm session cache when the system asks
+     * us to trim memory. The cache keeps a model's weights resident between runs
+     * so back-to-back Background Removal / Subject Lift gestures skip the ~300ms
+     * session rebuild — but a big model (IS-Net ~200MB) should
+     * not linger once the app is backgrounded (TRIM_MEMORY_UI_HIDDEN) or the
+     * device is under pressure. releaseCache() is a no-op while a run is still in
+     * flight. Wrapped in runCatching so trimming can never crash the app.
+     */
+    override fun onTrimMemory(level: Int) {
+        super.onTrimMemory(level)
+        if (level >= TRIM_MEMORY_RUNNING_LOW) {
+            runCatching { GlobalContext.get().get<InferenceEngine>().releaseCache() }
+        }
+    }
+
+    override fun onLowMemory() {
+        super.onLowMemory()
+        runCatching { GlobalContext.get().get<InferenceEngine>().releaseCache() }
     }
 
     /**

@@ -68,7 +68,7 @@ backdrop.
 
 - **ONNX Runtime (Android) 1.27** — runs user-imported `.onnx` models fully offline (CPU execution provider); powers the Background Remover and Subject Lift. No model weights are bundled and the app never downloads anything (no `INTERNET` permission).
 
-## Feature status (v2.1.0)
+## Feature status (v2.1.1)
 
 | Area | Status |
 |---|---|
@@ -94,8 +94,10 @@ backdrop.
 | AI model framework (user-imported .onnx, ONNX Runtime) | ✅ |
 | Background remover (on-device AI) | ✅ |
 | Subject lift (long-press cutout, on-device AI) | ✅ |
+| Image enhancer (AI upscale / restore) | ⏳ planned (2.2.0) |
+| Image compress (non-AI size reduction) | ⏳ planned (2.3.0) |
 | Bulk metadata / format operations | ⏳ planned |
-| Other on-device AI tools (scanner, OCR) | ⏳ planned (2.x) |
-| On-device semantic search (AI) | ⏳ planned (2.4.0) |
+| Other on-device AI tools (scanner, OCR) | ⏳ planned (2.4.0 / 2.5.0) |
+| On-device semantic search (AI) | ⏳ planned (2.6.0) |
 | In-app map view | ❌ out of scope (opens external maps) |
 | Photo editing | ❌ out of scope |

@@ -12,6 +12,6 @@ enum class ModelTier {
     /** Balanced size vs. quality; the recommended default (e.g. IS-Net). */
     BALANCED,
 
-    /** Highest quality, largest & slowest (e.g. BiRefNet Lite). */
+    /** Highest quality, largest & slowest (heavy transformer-based models). */
     HIGH_QUALITY,
 }

@@ -27,6 +27,15 @@
         android:name="android.permission.WRITE_EXTERNAL_STORAGE"
         android:maxSdkVersion="29" />
 
+    <!-- OFFLINE GUARANTEE: some bundled Google libraries (ML Kit Barcode
+         Scanning -> datatransport / play-services) declare INTERNET and
+         ACCESS_NETWORK_STATE in their own manifests, which the manifest merger
+         would otherwise fold into the app (and they phone telemetry home). We
+         force-remove them so the released app can NEVER reach the network: no
+         telemetry, no model fetch. QR detection still runs fully on-device. -->
+    <uses-permission android:name="android.permission.INTERNET" tools:node="remove" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" tools:node="remove" />
+
     <application
         android:name=".AGalleryApp"
         android:allowBackup="true"

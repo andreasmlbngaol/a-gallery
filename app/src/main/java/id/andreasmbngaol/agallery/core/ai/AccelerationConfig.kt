@@ -23,8 +23,13 @@ class AccelerationConfig(context: Context) {
 
     private val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
 
-    /** Whether the XNNPACK EP may be used. Turns itself off after a native crash. */
-    fun isXnnpackEnabled(): Boolean = prefs.getBoolean(KEY_XNNPACK, true)
+    /**
+     * Whether the XNNPACK EP may be used. **OFF by default**: our segmentation
+     * models contain a bilinear `Resize` node that XNNPACK cannot build, so it
+     * always fails over to CPU after wasting the build time. Can be toggled on
+     * per device, and self-disables after a native crash.
+     */
+    fun isXnnpackEnabled(): Boolean = prefs.getBoolean(KEY_XNNPACK, false)
 
     /** Permanently disable XNNPACK on this device (crash guard / user setting). */
     fun disableXnnpack() {

@@ -313,7 +313,6 @@
     <string name="ai_model_import_hint">Tip: download the .onnx file from the model\'s page, then import it here with the file picker.</string>
     <string name="ai_model_rationale_isnet">Balanced quality and size. A solid all-round default for most photos.</string>
     <string name="ai_model_rationale_u2netp">Smallest and fastest. Good for quick cutouts on lower-end devices.</string>
-    <string name="ai_model_rationale_birefnet">The sharpest edges, but the largest and slowest to run.</string>
     <string name="ai_model_suitability_checking">Checking this device\u2026</string>
     <string name="ai_model_suitability_good">Runs well on this device</string>
     <string name="ai_model_suitability_slow">May be slow on this device</string>

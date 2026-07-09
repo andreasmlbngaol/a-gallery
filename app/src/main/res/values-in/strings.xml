@@ -323,7 +323,6 @@
     <string name="ai_model_import_hint">Tips: download file .onnx dari halaman modelnya, terus impor di sini lewat file picker.</string>
     <string name="ai_model_rationale_isnet">Kualitas dan ukuran seimbang. Pilihan default yang oke buat kebanyakan foto.</string>
     <string name="ai_model_rationale_u2netp">Paling kecil dan cepat. Cocok buat cutout cepat di HP kentang.</string>
-    <string name="ai_model_rationale_birefnet">Tepian paling rapi, tapi paling besar dan paling lambat.</string>
     <string name="ai_model_suitability_checking">Ngecek perangkat ini\u2026</string>
     <string name="ai_model_suitability_good">Lancar di perangkat ini</string>
     <string name="ai_model_suitability_slow">Mungkin lambat di perangkat ini</string>

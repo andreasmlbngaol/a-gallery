@@ -78,7 +78,7 @@ class BackgroundRemovalProcessor(
         modelPath: String,
         quality: RemovalQuality,
     ): String {
-        val cutout = inferenceEngine.createSession(modelPath).use { session ->
+        val cutout = inferenceEngine.acquireSession(modelPath).use { session ->
             val output = runSegmentation(session, source, spec, quality)
             TensorImageUtils.applyMaskAsAlpha(source, output)
         }
