@@ -30,6 +30,9 @@ object AiModelStrings {
     fun rationale(id: AiModelId): Int = when (id.value) {
         "isnet-general-use" -> R.string.ai_model_rationale_isnet
         "u2netp" -> R.string.ai_model_rationale_u2netp
+        "real-esrgan-general-x4v3" -> R.string.ai_model_rationale_esrgan_general
+        "real-esrgan-x4plus" -> R.string.ai_model_rationale_esrgan_x4plus
+        "swinir-m-x4-gan" -> R.string.ai_model_rationale_swinir
         else -> 0
     }
 

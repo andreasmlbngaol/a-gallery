@@ -35,7 +35,7 @@ import id.andreasmbngaol.agallery.domain.usecase.editing.ConvertImageFormatUseCa
 import id.andreasmbngaol.agallery.domain.usecase.editing.CopyMediaToAlbumUseCase
 import id.andreasmbngaol.agallery.domain.usecase.editing.DeleteMediaUseCase
 import id.andreasmbngaol.agallery.domain.usecase.media.GetAlbumsUseCase
-import id.andreasmbngaol.agallery.domain.usecase.media.GetAllMediaUseCase
+import id.andreasmbngaol.agallery.domain.usecase.media.ObserveAllMediaUseCase
 import id.andreasmbngaol.agallery.domain.usecase.media.GetMediaDetailsUseCase
 import id.andreasmbngaol.agallery.domain.usecase.settings.GetSettingsUseCase
 import id.andreasmbngaol.agallery.domain.usecase.editing.MoveMediaToAlbumUseCase
@@ -56,7 +56,6 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.flatMapLatest
-import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
@@ -69,7 +68,7 @@ import kotlinx.coroutines.launch
  */
 class PhotoViewerViewModel(
     private val appContext: Context,
-    getAllMedia: GetAllMediaUseCase,
+    observeAllMedia: ObserveAllMediaUseCase,
     observeFavoriteIds: ObserveFavoriteIdsUseCase,
     private val getSettings: GetSettingsUseCase,
     private val getAlbums: GetAlbumsUseCase,
@@ -99,7 +98,7 @@ class PhotoViewerViewModel(
     val media: StateFlow<List<MediaItem>?> =
         combine(_params.filterNotNull(), _refresh) { params, _ -> params }
             .flatMapLatest { params ->
-                flow { emit(getAllMedia(params.sortOrder, params.scope)) }
+                observeAllMedia(params.sortOrder, params.scope)
             }
             .stateIn(
                 scope = viewModelScope,

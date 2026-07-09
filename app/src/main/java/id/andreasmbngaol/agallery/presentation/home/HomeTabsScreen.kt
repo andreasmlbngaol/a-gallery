@@ -55,7 +55,7 @@ fun HomeTabsScreen(
     val mediaPermissions = rememberMultiplePermissionsState(MediaPermissions.required())
     val hasMediaAccess = mediaPermissions.permissions.any { it.status.isGranted }
     LaunchedEffect(hasMediaAccess) {
-        if (hasMediaAccess) galleryViewModel.refreshMedia()
+        galleryViewModel.onMediaAccessChanged(hasMediaAccess)
     }
     val sortOrder by galleryViewModel.sortOrder.collectAsState()
     val toggleSort: () -> Unit = { galleryViewModel.toggleSortOrder() }

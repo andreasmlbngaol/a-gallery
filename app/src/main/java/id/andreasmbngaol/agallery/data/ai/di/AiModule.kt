@@ -8,8 +8,11 @@ import id.andreasmbngaol.agallery.core.ai.OnnxInferenceEngine
 import id.andreasmbngaol.agallery.data.ai.AiModelRepositoryImpl
 import id.andreasmbngaol.agallery.data.ai.BackgroundRemovalProcessor
 import id.andreasmbngaol.agallery.data.ai.BackgroundRemovalRepositoryImpl
+import id.andreasmbngaol.agallery.data.ai.ImageUpscaleProcessor
+import id.andreasmbngaol.agallery.data.ai.ImageUpscaleRepositoryImpl
 import id.andreasmbngaol.agallery.domain.repository.AiModelRepository
 import id.andreasmbngaol.agallery.domain.repository.BackgroundRemovalRepository
+import id.andreasmbngaol.agallery.domain.repository.ImageUpscaleRepository
 import org.koin.android.ext.koin.androidContext
 import org.koin.dsl.module
 
@@ -23,11 +26,15 @@ val aiModule = module {
     single { AccelerationConfig(androidContext()) }
     single<InferenceEngine> { OnnxInferenceEngine(get()) }
     single { BackgroundRemovalProcessor(androidContext(), get(), get()) }
+    single { ImageUpscaleProcessor(androidContext(), get(), get()) }
 
     single<AiModelRepository> {
         AiModelRepositoryImpl(androidContext(), get(), get())
     }
     single<BackgroundRemovalRepository> {
         BackgroundRemovalRepositoryImpl(androidContext(), get(), get())
+    }
+    single<ImageUpscaleRepository> {
+        ImageUpscaleRepositoryImpl(androidContext(), get(), get())
     }
 }

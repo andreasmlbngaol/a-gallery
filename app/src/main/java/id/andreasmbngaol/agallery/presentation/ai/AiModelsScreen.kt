@@ -99,6 +99,7 @@ fun AiModelsScreen(
 
     var pendingSpec by remember { mutableStateOf<AiModelSpec?>(null) }
     var bgExpanded by remember { mutableStateOf(true) }
+    var upscaleExpanded by remember { mutableStateOf(true) }
     var pendingDelete by remember { mutableStateOf<AiModelRow?>(null) }
     val importLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.OpenDocument(),
@@ -180,20 +181,23 @@ fun AiModelsScreen(
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
+            // A single import runs at a time across every feature, so disable
+            // all import buttons whenever any row (in either section) is busy.
+            val importing = (state.rows + state.upscaleRows).any { it.isImporting }
+            val launchImport: (AiModelRow) -> Unit = { row ->
+                pendingSpec = row.spec
+                importLauncher.launch(arrayOf("application/octet-stream", "*/*"))
+            }
             FeatureSection(
                 title = stringResource(R.string.ai_models_feature_bg),
                 expanded = bgExpanded,
                 onToggle = { bgExpanded = !bgExpanded },
             ) {
-                val importing = state.rows.any { it.isImporting }
                 Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
                 AiModelsCard(
                     rows = state.rows,
                     importDisabled = importing,
-                    onImport = { row ->
-                        pendingSpec = row.spec
-                        importLauncher.launch(arrayOf("application/octet-stream", "*/*"))
-                    },
+                    onImport = launchImport,
                     onDelete = { row -> pendingDelete = row },
                     onOpenDownloadPage = { row -> openDownloadPage(context, row.spec.downloadUrl) },
                 )
@@ -206,6 +210,19 @@ fun AiModelsScreen(
                     componentStyle = componentStyle,
                 )
                 }
+            }
+            FeatureSection(
+                title = stringResource(R.string.ai_models_feature_upscale),
+                expanded = upscaleExpanded,
+                onToggle = { upscaleExpanded = !upscaleExpanded },
+            ) {
+                AiModelsCard(
+                    rows = state.upscaleRows,
+                    importDisabled = importing,
+                    onImport = launchImport,
+                    onDelete = { row -> pendingDelete = row },
+                    onOpenDownloadPage = { row -> openDownloadPage(context, row.spec.downloadUrl) },
+                )
             }
             Text(
                 text = stringResource(R.string.ai_model_import_hint),

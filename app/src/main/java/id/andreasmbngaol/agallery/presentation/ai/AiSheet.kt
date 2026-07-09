@@ -23,21 +23,24 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.graphics.vector.ImageVector
 import com.adamglin.PhosphorIcons
 import com.adamglin.phosphoricons.Bold
 import com.adamglin.phosphoricons.bold.CaretRight
-import com.adamglin.phosphoricons.bold.Sparkle
+import com.adamglin.phosphoricons.bold.CornersOut
+import com.adamglin.phosphoricons.bold.Scissors
 import id.andreasmbngaol.agallery.R
 
 /**
  * Bottom sheet of on-device AI actions for a photo, opened from the viewer's AI
- * button. For 2.0.0 it lists a single action — Remove background — but is
+ * button. It lists the available on-device AI actions (Remove background, Upscale image) and is
  * structured as a list so future AI tools can be added without reshaping the UI.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AiSheet(
     onRemoveBackground: () -> Unit,
+    onUpscaleImage: () -> Unit,
     onDismiss: () -> Unit,
 ) {
     val sheetState = rememberBottomSheetState(
@@ -59,8 +62,14 @@ fun AiSheet(
             )
             Spacer(Modifier.height(16.dp))
             AiActionRow(
+                icon = PhosphorIcons.Bold.Scissors,
                 title = stringResource(R.string.action_remove_background),
                 onClick = onRemoveBackground,
+            )
+            AiActionRow(
+                icon = PhosphorIcons.Bold.CornersOut,
+                title = stringResource(R.string.action_upscale_image),
+                onClick = onUpscaleImage,
             )
         }
     }
@@ -68,6 +77,7 @@ fun AiSheet(
 
 @Composable
 private fun AiActionRow(
+    icon: ImageVector,
     title: String,
     onClick: () -> Unit,
 ) {
@@ -79,7 +89,7 @@ private fun AiActionRow(
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Icon(
-            imageVector = PhosphorIcons.Bold.Sparkle,
+            imageVector = icon,
             contentDescription = null,
             tint = MaterialTheme.colorScheme.primary,
             modifier = Modifier.size(24.dp),

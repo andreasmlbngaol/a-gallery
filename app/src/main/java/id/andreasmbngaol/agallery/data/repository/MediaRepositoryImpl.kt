@@ -33,6 +33,7 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.mapLatest
 import kotlinx.coroutines.flow.map
 
 /**
@@ -118,6 +119,32 @@ class MediaRepositoryImpl(
             mediaStore.queryAllMedia(sortOrder, excluded, scope, null)
         }
     }
+
+    @OptIn(ExperimentalCoroutinesApi::class)
+    override fun observeAllMedia(
+        sortOrder: GallerySortOrder,
+        scope: MediaScope,
+    ): Flow<List<MediaItem>> =
+        if (scope == MediaScope.Favorites) {
+            combine(
+                mediaStore.contentChanges(),
+                mediaDao.observeTrashedIds().map { it.toHashSet() }.distinctUntilChanged(),
+                mediaDao.observeFavoriteIds().map { it.toHashSet() }.distinctUntilChanged(),
+                refreshTrigger,
+            ) { _, excluded, favs, _ -> excluded to favs }
+                .mapLatest { (excluded, favs) ->
+                    mediaStore.queryAllMedia(sortOrder, excluded, MediaScope.AllMedia, favs)
+                }
+        } else {
+            combine(
+                mediaStore.contentChanges(),
+                mediaDao.observeTrashedIds().map { it.toHashSet() }.distinctUntilChanged(),
+                refreshTrigger,
+            ) { _, excluded, _ -> excluded }
+                .mapLatest { excluded ->
+                    mediaStore.queryAllMedia(sortOrder, excluded, scope, null)
+                }
+        }
 
     override suspend fun getAlbums(): List<Album> {
         val favs = mediaDao.observeFavoriteIds().first().toHashSet()

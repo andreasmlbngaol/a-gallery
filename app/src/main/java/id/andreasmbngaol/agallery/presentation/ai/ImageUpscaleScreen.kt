@@ -32,6 +32,7 @@ import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Icon
+import androidx.compose.material3.LinearWavyProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -46,10 +47,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.drawBehind
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Size
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalResources
@@ -60,6 +57,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import coil3.compose.AsyncImage
+import coil3.compose.SubcomposeAsyncImage
 import com.adamglin.PhosphorIcons
 import com.adamglin.phosphoricons.Bold
 import com.adamglin.phosphoricons.bold.ArrowLeft
@@ -72,13 +70,10 @@ import id.andreasmbngaol.agallery.R
 import id.andreasmbngaol.agallery.domain.model.ai.AiModelId
 import id.andreasmbngaol.agallery.domain.model.ai.AiModelSpec
 import id.andreasmbngaol.agallery.domain.model.ai.ModelTier
-import id.andreasmbngaol.agallery.domain.model.ai.RemovalQuality
-import id.andreasmbngaol.agallery.domain.model.settings.ComponentStyle
+import id.andreasmbngaol.agallery.domain.model.ai.UpscaleMode
 import id.andreasmbngaol.agallery.core.ui.ScreenTopBarHeight
 import id.andreasmbngaol.agallery.core.ui.SystemBarScrim
 import id.andreasmbngaol.agallery.core.ui.drawsBackdrop
-import id.andreasmbngaol.agallery.core.ui.SegmentedGlassItem
-import id.andreasmbngaol.agallery.core.ui.SegmentedGlassTrack
 import id.andreasmbngaol.agallery.core.ui.rememberEffectiveComponentStyle
 import id.andreasmbngaol.agallery.core.ui.rememberEffectiveEdgeEffectMode
 import id.andreasmbngaol.agallery.presentation.viewer.GlassActionButton
@@ -89,22 +84,23 @@ import org.koin.androidx.compose.koinViewModel
 import org.koin.core.parameter.parametersOf
 
 /**
- * Background Remover screen for a single image. If no model is installed it
+ * Image Upscaler screen for a single image. If no upscale model is installed it
  * shows an empty state that sends the user to the AI models screen; otherwise it
- * offers a model chooser, runs on-device removal into a transparent preview, and
+ * offers a model chooser, runs on-device 4x super-resolution into a preview, and
  * saves that preview into the gallery as a NEW PNG (the original is untouched).
  *
- * [mediaUri] and [displayName] come from the navigation route and are passed to
- * the view model as Koin parameters.
+ * Mirrors the Background Remover screen but has no quality selector and no
+ * transparency checkerboard (the result is an opaque, enlarged photo).
  */
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
-fun BackgroundRemoverScreen(
+fun ImageUpscaleScreen(
     mediaUri: String,
     displayName: String,
     onBack: () -> Unit,
     onOpenAiModels: () -> Unit,
 ) {
-    val viewModel: BackgroundRemoverViewModel =
+    val viewModel: ImageUpscaleViewModel =
         koinViewModel(key = mediaUri) { parametersOf(mediaUri, displayName) }
     val state by viewModel.uiState.collectAsState()
     val componentStyle = rememberEffectiveComponentStyle(state.componentStyleChosen)
@@ -113,6 +109,7 @@ fun BackgroundRemoverScreen(
     val context = LocalContext.current
     val resources = LocalResources.current
     val safeDrawing = WindowInsets.safeDrawing.asPaddingValues()
+    val scrollState = rememberScrollState()
 
     LaunchedEffect(viewModel) {
         viewModel.messages.collect { message ->
@@ -123,6 +120,15 @@ fun BackgroundRemoverScreen(
                 resources.getString(message.textRes)
             }
             Toast.makeText(context, text, Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    // When the result becomes available, scroll it into view so the user isn't
+    // left staring at the source image thinking nothing happened while the
+    // large result PNG is still being decoded for display.
+    LaunchedEffect(state.resultPath, scrollState.maxValue) {
+        if (state.resultPath != null && scrollState.maxValue > 0) {
+            scrollState.animateScrollTo(scrollState.maxValue)
         }
     }
 
@@ -153,7 +159,7 @@ fun BackgroundRemoverScreen(
                 }
                 Spacer(Modifier.width(16.dp))
                 Text(
-                    text = stringResource(R.string.bg_remover_title),
+                    text = stringResource(R.string.upscale_title),
                     style = MaterialTheme.typography.headlineSmall,
                     fontWeight = FontWeight.SemiBold,
                     color = MaterialTheme.colorScheme.onSurface,
@@ -170,7 +176,7 @@ fun BackgroundRemoverScreen(
         Column(
             modifier = backdropModifier
                 .then(sourceModifier)
-                .verticalScroll(rememberScrollState())
+                .verticalScroll(scrollState)
                 .padding(horizontal = 16.dp)
                 .padding(
                     top = safeDrawing.calculateTopPadding() + ScreenTopBarHeight + 8.dp,
@@ -189,7 +195,7 @@ fun BackgroundRemoverScreen(
             }
 
             Text(
-                text = stringResource(R.string.bg_remover_choose_model),
+                text = stringResource(R.string.upscale_choose_model),
                 style = MaterialTheme.typography.labelLarge,
                 color = MaterialTheme.colorScheme.primary,
             )
@@ -200,22 +206,14 @@ fun BackgroundRemoverScreen(
                 onSelect = { viewModel.selectModel(it) },
             )
 
-            if (state.qualitySelectable) {
-                Text(
-                    text = stringResource(R.string.bg_remover_quality),
-                    style = MaterialTheme.typography.labelLarge,
-                    color = MaterialTheme.colorScheme.primary,
-                )
-                QualitySelector(
-                    selected = state.selectedQuality,
-                    enabled = !state.processing,
-                    onSelect = { viewModel.selectQuality(it) },
-                    componentStyle = componentStyle,
-                )
-            }
+            ModeDropdown(
+                selectedMode = state.selectedMode,
+                enabled = !state.processing,
+                onSelect = { viewModel.selectMode(it) },
+            )
 
             Text(
-                text = stringResource(R.string.bg_remover_source),
+                text = stringResource(R.string.upscale_source),
                 style = MaterialTheme.typography.labelLarge,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -232,26 +230,30 @@ fun BackgroundRemoverScreen(
 
             if (state.resultPath != null) {
                 Text(
-                    text = stringResource(R.string.bg_remover_result),
+                    text = stringResource(R.string.upscale_result),
                     style = MaterialTheme.typography.labelLarge,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
-                Box(
+                SubcomposeAsyncImage(
+                    model = File(state.resultPath!!),
+                    contentDescription = stringResource(R.string.upscale_result),
+                    contentScale = ContentScale.Fit,
+                    loading = {
+                        Box(
+                            modifier = Modifier.fillMaxSize(),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            CircularWavyProgressIndicator(modifier = Modifier.size(32.dp))
+                        }
+                    },
                     modifier = Modifier
                         .fillMaxWidth()
                         .aspectRatio(1f)
                         .clip(RoundedCornerShape(16.dp))
-                        .checkerboard(),
-                ) {
-                    AsyncImage(
-                        model = File(state.resultPath!!),
-                        contentDescription = stringResource(R.string.bg_remover_result),
-                        contentScale = ContentScale.Fit,
-                        modifier = Modifier.fillMaxSize(),
-                    )
-                }
+                        .background(MaterialTheme.colorScheme.surfaceContainerHigh),
+                )
                 Text(
-                    text = stringResource(R.string.bg_remover_saved_hint),
+                    text = stringResource(R.string.upscale_saved_hint),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -261,7 +263,10 @@ fun BackgroundRemoverScreen(
                 ProcessingDialog(
                     elapsedSeconds = state.processingElapsedSeconds,
                     usedMemoryBytes = state.processingUsedMemoryBytes,
-                    onCancel = viewModel::cancelRemoval,
+                    completedTiles = state.processingCompletedTiles,
+                    totalTiles = state.processingTotalTiles,
+                    etaSeconds = state.processingEtaSeconds,
+                    onCancel = viewModel::cancelUpscale,
                 )
             }
         }
@@ -269,11 +274,11 @@ fun BackgroundRemoverScreen(
         if (state.hasModel) {
             BottomActionBar(
                 showSave = state.resultPath != null,
-                removeEnabled = !state.processing && !state.saving,
+                upscaleEnabled = !state.processing && !state.saving,
                 saveEnabled = !state.saving && !state.processing,
                 style = componentStyle,
                 backdrop = backdrop,
-                onRemove = viewModel::removeBackground,
+                onUpscale = viewModel::upscale,
                 onSave = viewModel::save,
                 modifier = Modifier.align(Alignment.BottomCenter),
             )
@@ -301,7 +306,7 @@ private fun ModelDropdown(
             onValueChange = {},
             readOnly = true,
             enabled = enabled,
-            label = { Text(stringResource(R.string.bg_remover_choose_model)) },
+            label = { Text(stringResource(R.string.upscale_choose_model)) },
             supportingText = if (selected != null) {
                 { Text(text = modelTierAndSpeed(selected.tier)) }
             } else null,
@@ -340,51 +345,94 @@ private fun ModelDropdown(
     }
 }
 
-/** Localized "Tier \u00b7 speed" hint for a model (e.g. "Light \u00b7 fast"). */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun ModeDropdown(
+    selectedMode: UpscaleMode,
+    enabled: Boolean,
+    onSelect: (UpscaleMode) -> Unit,
+) {
+    var expanded by remember { mutableStateOf(false) }
+    ExposedDropdownMenuBox(
+        expanded = expanded,
+        onExpandedChange = { if (enabled) expanded = it },
+    ) {
+        OutlinedTextField(
+            value = stringResource(upscaleModeLabel(selectedMode)),
+            onValueChange = {},
+            readOnly = true,
+            enabled = enabled,
+            label = { Text(stringResource(R.string.upscale_mode)) },
+            supportingText = { Text(stringResource(upscaleModeDesc(selectedMode))) },
+            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+            shape = RoundedCornerShape(16.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable),
+        )
+        ExposedDropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { expanded = false },
+        ) {
+            UpscaleMode.entries.forEach { mode ->
+                DropdownMenuItem(
+                    text = {
+                        Column {
+                            Text(
+                                text = stringResource(upscaleModeLabel(mode)),
+                                fontWeight = FontWeight.SemiBold,
+                            )
+                            Text(
+                                text = stringResource(upscaleModeDesc(mode)),
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                    },
+                    onClick = {
+                        onSelect(mode)
+                        expanded = false
+                    },
+                )
+            }
+        }
+    }
+}
+
+/** Localized "Tier \u00b7 speed" hint for an upscale model (e.g. "Light \u00b7 fast"). */
 @Composable
 private fun modelTierAndSpeed(tier: ModelTier): String =
     stringResource(AiModelStrings.tierLabel(tier)) +
-        " \u00b7 " + stringResource(modelSpeedLabel(tier))
+        " \u00b7 " + stringResource(upscaleModelSpeed(tier))
 
-private fun modelSpeedLabel(tier: ModelTier): Int = when (tier) {
+private fun upscaleModelSpeed(tier: ModelTier): Int = when (tier) {
     ModelTier.LIGHT -> R.string.upscale_model_speed_light
     ModelTier.BALANCED -> R.string.upscale_model_speed_balanced
     ModelTier.HIGH_QUALITY -> R.string.upscale_model_speed_high
 }
 
-@Composable
-private fun QualitySelector(
-    selected: RemovalQuality,
-    enabled: Boolean,
-    onSelect: (RemovalQuality) -> Unit,
-    componentStyle: ComponentStyle,
-) {
-    val options = listOf(
-        RemovalQuality.ECO to R.string.bg_remover_quality_eco,
-        RemovalQuality.BALANCED to R.string.bg_remover_quality_balanced,
-        RemovalQuality.HIGH to R.string.bg_remover_quality_high,
-    )
-    SegmentedGlassTrack(componentStyle = componentStyle) {
-        options.forEach { (quality, labelRes) ->
-            SegmentedGlassItem(
-                label = stringResource(labelRes),
-                selected = selected == quality,
-                onClick = { onSelect(quality) },
-                enabled = enabled,
-                modifier = Modifier.weight(1f),
-            )
-        }
-    }
+private fun upscaleModeLabel(mode: UpscaleMode): Int = when (mode) {
+    UpscaleMode.AUTO -> R.string.upscale_mode_auto
+    UpscaleMode.ENLARGE -> R.string.upscale_mode_enlarge
+    UpscaleMode.ORIGINAL_SIZE -> R.string.upscale_mode_original
+    UpscaleMode.FULL -> R.string.upscale_mode_full
+}
+
+private fun upscaleModeDesc(mode: UpscaleMode): Int = when (mode) {
+    UpscaleMode.AUTO -> R.string.upscale_mode_auto_desc
+    UpscaleMode.ENLARGE -> R.string.upscale_mode_enlarge_desc
+    UpscaleMode.ORIGINAL_SIZE -> R.string.upscale_mode_original_desc
+    UpscaleMode.FULL -> R.string.upscale_mode_full_desc
 }
 
 @Composable
 private fun BottomActionBar(
     showSave: Boolean,
-    removeEnabled: Boolean,
+    upscaleEnabled: Boolean,
     saveEnabled: Boolean,
-    style: ComponentStyle,
+    style: id.andreasmbngaol.agallery.domain.model.settings.ComponentStyle,
     backdrop: Backdrop,
-    onRemove: () -> Unit,
+    onUpscale: () -> Unit,
     onSave: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -398,7 +446,7 @@ private fun BottomActionBar(
     ) {
         if (showSave) {
             GlassActionButton(
-                text = stringResource(R.string.bg_remover_save),
+                text = stringResource(R.string.upscale_save),
                 onClick = onSave,
                 style = style,
                 backdrop = backdrop,
@@ -408,24 +456,27 @@ private fun BottomActionBar(
             )
         }
         GlassActionButton(
-            text = stringResource(R.string.bg_remover_remove),
-            onClick = onRemove,
+            text = stringResource(R.string.upscale_run),
+            onClick = onUpscale,
             style = style,
             backdrop = backdrop,
-            enabled = removeEnabled,
+            enabled = upscaleEnabled,
             leadingIcon = PhosphorIcons.Bold.Sparkle,
             modifier = Modifier.fillMaxWidth(),
         )
     }
 }
 
-/**
- * Blocking loading dialog shown while on-device inference runs, so the action
- * button no longer needs an inline spinner.
- */
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
-private fun ProcessingDialog(elapsedSeconds: Int, usedMemoryBytes: Long, onCancel: () -> Unit) {
+private fun ProcessingDialog(
+    elapsedSeconds: Int,
+    usedMemoryBytes: Long,
+    completedTiles: Int,
+    totalTiles: Int,
+    etaSeconds: Int,
+    onCancel: () -> Unit,
+) {
     Dialog(
         onDismissRequest = onCancel,
         properties = DialogProperties(
@@ -438,36 +489,92 @@ private fun ProcessingDialog(elapsedSeconds: Int, usedMemoryBytes: Long, onCance
             color = MaterialTheme.colorScheme.surfaceContainerHigh,
         ) {
             Column(modifier = Modifier.padding(24.dp)) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(16.dp),
-                ) {
-                    CircularWavyProgressIndicator(
-                        modifier = Modifier.size(32.dp),
+                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Text(
+                        text = stringResource(R.string.upscale_processing),
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.onSurface,
                     )
-                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                        Text(
-                            text = stringResource(R.string.bg_remover_processing),
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.SemiBold,
-                            color = MaterialTheme.colorScheme.onSurface,
-                        )
-                        Text(
-                            text = stringResource(R.string.bg_remover_processing_desc),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                        Text(
-                            text = stringResource(
-                                R.string.bg_remover_processing_stats,
-                                elapsedSeconds,
-                                formatUsedMemory(usedMemoryBytes),
-                            ),
-                            style = MaterialTheme.typography.labelMedium,
-                            color = MaterialTheme.colorScheme.primary,
-                        )
-                    }
+                    Text(
+                        text = stringResource(R.string.upscale_processing_desc),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
                 }
+
+                Spacer(Modifier.height(20.dp))
+
+                // Encoding the full-res PNG after the last tile isn't part of the
+                // tile count, so treat "all tiles done" as a final finishing phase
+                // (indeterminate bar) instead of showing a stale 0s estimate. A
+                // gentle indeterminate bar is also used during the brief
+                // decode/model-load warm-up before the tile count is known.
+                val finishing = totalTiles > 0 && completedTiles >= totalTiles
+                if (totalTiles > 0 && !finishing) {
+                    // Determinate progress tracking the completed-tile count. The
+                    // earlier "jumps ahead then settles back" wasn't this bar's
+                    // spring animation; it was two upscale runs writing the same
+                    // meter (fixed in the ViewModel via a per-run token). With a
+                    // single monotonic source the expressive wavy bar reads clean.
+                    val fraction = (completedTiles.toFloat() / totalTiles).coerceIn(0f, 1f)
+                    LinearWavyProgressIndicator(
+                        progress = { fraction },
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                } else {
+                    LinearWavyProgressIndicator(
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                }
+
+                Spacer(Modifier.height(12.dp))
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(
+                        text = when {
+                            finishing -> stringResource(R.string.upscale_progress_finishing)
+                            totalTiles > 0 -> stringResource(
+                                R.string.upscale_progress_tiles,
+                                completedTiles,
+                                totalTiles,
+                            )
+                            else -> stringResource(R.string.upscale_progress_preparing)
+                        },
+                        style = MaterialTheme.typography.labelLarge,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.onSurface,
+                    )
+                    Text(
+                        text = when {
+                            finishing -> ""
+                            etaSeconds >= 0 -> stringResource(
+                                R.string.upscale_progress_eta,
+                                formatDurationShort(etaSeconds),
+                            )
+                            else -> stringResource(R.string.upscale_progress_estimating)
+                        },
+                        style = MaterialTheme.typography.labelLarge,
+                        color = MaterialTheme.colorScheme.primary,
+                    )
+                }
+
+                Spacer(Modifier.height(6.dp))
+
+                Text(
+                    text = stringResource(
+                        R.string.upscale_processing_stats,
+                        elapsedSeconds,
+                        formatUsedMemory(usedMemoryBytes),
+                    ),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+
                 Spacer(Modifier.height(8.dp))
                 TextButton(
                     onClick = onCancel,
@@ -480,7 +587,16 @@ private fun ProcessingDialog(elapsedSeconds: Int, usedMemoryBytes: Long, onCance
     }
 }
 
-/** Formats process memory usage for the live inference meter (MB, or a dash). */
+/** Formats a duration in seconds as "1m 05s" (>= 1 min) or "45s". */
+private fun formatDurationShort(totalSeconds: Int): String {
+    val s = totalSeconds.coerceAtLeast(0)
+    return if (s >= 60) {
+        "%dm %02ds".format(Locale.US, s / 60, s % 60)
+    } else {
+        "${s}s"
+    }
+}
+
 private fun formatUsedMemory(bytes: Long): String {
     if (bytes <= 0L) return "\u2014"
     val mb = bytes / (1024L * 1024L)
@@ -491,10 +607,6 @@ private fun formatUsedMemory(bytes: Long): String {
     }
 }
 
-/**
- * Brief loading state shown while the installed-model check runs, so opening the
- * screen for an already-installed model no longer flashes the empty state.
- */
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 private fun CheckingModelsState() {
@@ -524,50 +636,21 @@ private fun NoModelState(onOpenAiModels: () -> Unit) {
             modifier = Modifier.size(48.dp),
         )
         Text(
-            text = stringResource(R.string.bg_remover_no_model_title),
+            text = stringResource(R.string.upscale_no_model_title),
             style = MaterialTheme.typography.titleMedium,
             fontWeight = FontWeight.SemiBold,
             color = MaterialTheme.colorScheme.onSurface,
             textAlign = TextAlign.Center,
         )
         Text(
-            text = stringResource(R.string.bg_remover_no_model_desc),
+            text = stringResource(R.string.upscale_no_model_desc),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center,
         )
         Spacer(Modifier.height(4.dp))
         Button(onClick = onOpenAiModels) {
-            Text(stringResource(R.string.bg_remover_choose_model))
+            Text(stringResource(R.string.upscale_choose_model))
         }
-    }
-}
-
-/**
- * Draws a light/grey checkerboard behind transparent content so the removed
- * background reads as "transparent" rather than white.
- */
-private fun Modifier.checkerboard(cell: Float = 24f): Modifier = drawBehind {
-    val light = Color(0xFFFFFFFF)
-    val dark = Color(0xFFE0E0E0)
-    drawRect(light)
-    var y = 0f
-    var row = 0
-    while (y < size.height) {
-        var x = 0f
-        var col = 0
-        while (x < size.width) {
-            if ((row + col) % 2 == 0) {
-                drawRect(
-                    color = dark,
-                    topLeft = Offset(x, y),
-                    size = Size(cell, cell),
-                )
-            }
-            x += cell
-            col++
-        }
-        y += cell
-        row++
     }
 }

@@ -100,11 +100,13 @@ import kotlin.time.Duration.Companion.milliseconds
  */
 @Composable
 fun PhotoViewerScreen(
+    mediaId: Long,
     initialIndex: Int,
     sortOrder: GallerySortOrder,
     onBack: () -> Unit,
     albumKey: String? = null,
     onOpenBackgroundRemover: (mediaUri: String, displayName: String) -> Unit = { _, _ -> },
+    onOpenImageUpscale: (mediaUri: String, displayName: String) -> Unit = { _, _ -> },
     viewModel: PhotoViewerViewModel = koinViewModel(),
 ) {
     BackHandler(onBack = onBack)
@@ -191,11 +193,34 @@ fun PhotoViewerScreen(
             return@Box
         }
 
+        // Resolve the starting page by the tapped item's STABLE id, not by the
+        // grid position. The grid (paging) and the viewer build their lists
+        // independently, so a raw index can land on a different photo. Fall back
+        // to the positional index only when the id isn't present.
+        val initialPage = remember(items, mediaId) {
+            items.indexOfFirst { it.id == mediaId }
+                .takeIf { it >= 0 }
+                ?: initialIndex.coerceIn(0, items.size - 1)
+        }
         val pagerState = rememberPagerState(
-            initialPage = initialIndex.coerceIn(0, items.size - 1),
+            initialPage = initialPage,
             pageCount = { items.size },
         )
         val currentItem = items.getOrNull(pagerState.currentPage)
+
+        // Defense-in-depth for the "tapped A but opened B" case: if the first
+        // media emission did not yet contain the tapped item (so the pager fell
+        // back to a positional index), realign to the item's STABLE id the first
+        // time it appears. Runs once, so it never fights manual swipes.
+        var didAlignToTapped by remember(mediaId) { mutableStateOf(false) }
+        LaunchedEffect(items, mediaId) {
+            if (didAlignToTapped) return@LaunchedEffect
+            val target = items.indexOfFirst { it.id == mediaId }
+            if (target >= 0) {
+                didAlignToTapped = true
+                if (target != pagerState.currentPage) pagerState.scrollToPage(target)
+            }
+        }
 
         LaunchedEffect(currentItem?.id) {
             val item = currentItem ?: return@LaunchedEffect
@@ -370,6 +395,10 @@ fun PhotoViewerScreen(
                     onRemoveBackground = {
                         showAiSheet = false
                         onOpenBackgroundRemover(item.uri, item.displayName)
+                    },
+                    onUpscaleImage = {
+                        showAiSheet = false
+                        onOpenImageUpscale(item.uri, item.displayName)
                     },
                     onDismiss = { showAiSheet = false },
                 )

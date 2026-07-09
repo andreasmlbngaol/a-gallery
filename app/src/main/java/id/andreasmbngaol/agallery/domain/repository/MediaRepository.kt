@@ -45,6 +45,17 @@ interface MediaRepository {
         scope: MediaScope = MediaScope.Camera,
     ): List<MediaItem>
 
+    /**
+     * Reactive version of [getAllMedia] for the viewer: re-queries whenever
+     * MediaStore changes, the Trash set changes, or [refreshMedia] fires, so
+     * trashed/deleted items never linger as blank pages and the viewer stays in
+     * sync with the grid.
+     */
+    fun observeAllMedia(
+        sortOrder: GallerySortOrder,
+        scope: MediaScope = MediaScope.Camera,
+    ): Flow<List<MediaItem>>
+
     /** Folder albums plus smart albums (Recent/Camera/Videos/Screenshots/etc.). */
     suspend fun getAlbums(): List<Album>
 

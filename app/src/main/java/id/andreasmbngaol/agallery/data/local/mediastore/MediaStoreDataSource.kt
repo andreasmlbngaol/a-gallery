@@ -185,7 +185,14 @@ class MediaStoreDataSource(
         val dir = if (sortOrder == GallerySortOrder.DateAsc) "ASC" else "DESC"
 
         val queryArgs = Bundle().apply {
-            putString(ContentResolver.QUERY_ARG_SQL_SORT_ORDER, "$orderByCol $dir")
+            putString(
+                ContentResolver.QUERY_ARG_SQL_SORT_ORDER,
+                // Stable secondary key: DATE_ADDED is not unique (bulk-copied or
+                // same-second photos tie), and tie order is otherwise undefined,
+                // so paged (grid) and full (viewer) queries could disagree. _ID
+                // makes the ordering deterministic and identical everywhere.
+                "$orderByCol $dir, ${MediaStore.Files.FileColumns._ID} $dir",
+            )
             putInt(ContentResolver.QUERY_ARG_LIMIT, limit)
             putInt(ContentResolver.QUERY_ARG_OFFSET, offset)
             putString(ContentResolver.QUERY_ARG_SQL_SELECTION, finalSel)
@@ -236,7 +243,7 @@ class MediaStoreDataSource(
 
         val orderByCol = MediaStore.Files.FileColumns.DATE_ADDED
         val dir = if (sortOrder == GallerySortOrder.DateAsc) "ASC" else "DESC"
-        val orderSql = "$orderByCol $dir"
+        val orderSql = "$orderByCol $dir, ${MediaStore.Files.FileColumns._ID} $dir"
 
         val items = mutableListOf<MediaItem>()
         resolver.query(collectionUri, projection, finalSel, finalArgs, orderSql)?.use { c ->

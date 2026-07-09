@@ -10,6 +10,7 @@ import id.andreasmbngaol.agallery.domain.model.ai.AiModelSpec
 import id.andreasmbngaol.agallery.domain.model.ai.DeviceCapability
 import id.andreasmbngaol.agallery.domain.model.ai.ImportOutcome
 import id.andreasmbngaol.agallery.domain.model.ai.ImportPhase
+import id.andreasmbngaol.agallery.domain.model.ai.ModelStatus
 import id.andreasmbngaol.agallery.domain.model.ai.ModelSuitabilityEvaluator
 import id.andreasmbngaol.agallery.domain.model.ai.RemovalQuality
 import id.andreasmbngaol.agallery.domain.model.settings.AppSettings
@@ -72,24 +73,14 @@ class AiModelsViewModel(
 
     val uiState: StateFlow<AiModelsUiState> = combine(
         observeModelStatus(feature),
+        observeModelStatus(AiFeature.IMAGE_UPSCALE),
         importState,
         settings,
         capability,
-    ) { statuses, import, s, cap ->
+    ) { statuses, upscaleStatuses, import, s, cap ->
         AiModelsUiState(
-            rows = statuses.map { status ->
-                val importingThis = import.modelId == status.spec.id
-                AiModelRow(
-                    spec = status.spec,
-                    isInstalled = status.isInstalled,
-                    installedSizeBytes = status.installed?.sizeBytes,
-                    isImporting = importingThis,
-                    importPhase = if (importingThis) import.phase else null,
-                    suitability = cap?.let {
-                        ModelSuitabilityEvaluator.evaluate(status.spec, it)
-                    },
-                )
-            },
+            rows = statuses.toRows(import, cap),
+            upscaleRows = upscaleStatuses.toRows(import, cap),
             componentStyleChosen = s.componentStyle,
             edgeEffectMode = s.edgeEffectMode,
             deviceCapability = cap,
@@ -101,6 +92,24 @@ class AiModelsViewModel(
         SharingStarted.WhileSubscribed(5_000L),
         AiModelsUiState(),
     )
+
+    /** Joins each catalog [ModelStatus] with its live import/suitability state. */
+    private fun List<ModelStatus>.toRows(
+        import: AiImportUiState,
+        cap: DeviceCapability?,
+    ): List<AiModelRow> = map { status ->
+        val importingThis = import.modelId == status.spec.id
+        AiModelRow(
+            spec = status.spec,
+            isInstalled = status.isInstalled,
+            installedSizeBytes = status.installed?.sizeBytes,
+            isImporting = importingThis,
+            importPhase = if (importingThis) import.phase else null,
+            suitability = cap?.let {
+                ModelSuitabilityEvaluator.evaluate(status.spec, it)
+            },
+        )
+    }
 
     /**
      * Import the user-picked file at [sourceUri] as [spec]. Ignored if another

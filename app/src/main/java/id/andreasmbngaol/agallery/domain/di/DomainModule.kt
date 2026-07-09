@@ -13,6 +13,8 @@ import id.andreasmbngaol.agallery.domain.usecase.ai.ObserveModelStatusUseCase
 import id.andreasmbngaol.agallery.domain.usecase.ai.RemoveBackgroundUseCase
 import id.andreasmbngaol.agallery.domain.usecase.ai.ResolveModelPathUseCase
 import id.andreasmbngaol.agallery.domain.usecase.ai.SaveBackgroundResultUseCase
+import id.andreasmbngaol.agallery.domain.usecase.ai.SaveUpscaleResultUseCase
+import id.andreasmbngaol.agallery.domain.usecase.ai.UpscaleImageUseCase
 import id.andreasmbngaol.agallery.domain.usecase.editing.RequestWriteAccessUseCase
 import id.andreasmbngaol.agallery.domain.usecase.favorite.ObserveFavoriteIdsUseCase
 import id.andreasmbngaol.agallery.domain.usecase.favorite.ToggleFavoriteUseCase
@@ -21,6 +23,7 @@ import id.andreasmbngaol.agallery.domain.usecase.media.GetAllMediaUseCase
 import id.andreasmbngaol.agallery.domain.usecase.media.GetMediaDetailsUseCase
 import id.andreasmbngaol.agallery.domain.usecase.media.GetMediaPagingUseCase
 import id.andreasmbngaol.agallery.domain.usecase.media.ObserveAlbumsUseCase
+import id.andreasmbngaol.agallery.domain.usecase.media.ObserveAllMediaUseCase
 import id.andreasmbngaol.agallery.domain.usecase.media.RefreshMediaUseCase
 import id.andreasmbngaol.agallery.domain.usecase.media.SetAlbumCoverUseCase
 import id.andreasmbngaol.agallery.domain.usecase.settings.GetSettingsUseCase
@@ -47,6 +50,7 @@ val domainModule = module {
     // media
     factoryOf(::GetMediaPagingUseCase)
     factoryOf(::GetAllMediaUseCase)
+    factoryOf(::ObserveAllMediaUseCase)
     factoryOf(::GetMediaDetailsUseCase)
     factoryOf(::GetAlbumsUseCase)
     factoryOf(::ObserveAlbumsUseCase)
@@ -80,6 +84,8 @@ val domainModule = module {
     factoryOf(::ResolveModelPathUseCase)
     factoryOf(::RemoveBackgroundUseCase)
     factoryOf(::SaveBackgroundResultUseCase)
+    factoryOf(::UpscaleImageUseCase)
+    factoryOf(::SaveUpscaleResultUseCase)
 
     // settings
     factoryOf(::GetSettingsUseCase)

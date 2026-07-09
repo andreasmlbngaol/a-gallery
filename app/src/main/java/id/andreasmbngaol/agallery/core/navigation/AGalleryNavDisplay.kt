@@ -13,6 +13,7 @@ import androidx.navigation3.runtime.rememberNavBackStack
 import androidx.navigation3.ui.NavDisplay
 import id.andreasmbngaol.agallery.presentation.ai.AiModelsScreen
 import id.andreasmbngaol.agallery.presentation.ai.BackgroundRemoverScreen
+import id.andreasmbngaol.agallery.presentation.ai.ImageUpscaleScreen
 import id.andreasmbngaol.agallery.presentation.albums.AlbumDetailScreen
 import id.andreasmbngaol.agallery.presentation.albums.CreateAlbumScreen
 import id.andreasmbngaol.agallery.presentation.animation.LocalSharedTransitionScope
@@ -80,6 +81,7 @@ fun AGalleryNavDisplay() {
 
                         is Screen.PhotoViewer -> NavEntry(key) {
                             PhotoViewerScreen(
+                                mediaId = key.mediaId,
                                 initialIndex = key.initialIndex,
                                 sortOrder = key.sortOrder,
                                 albumKey = key.albumKey,
@@ -87,6 +89,14 @@ fun AGalleryNavDisplay() {
                                 onOpenBackgroundRemover = { mediaUri, displayName ->
                                     backStack.add(
                                         Screen.BackgroundRemover(
+                                            mediaUri = mediaUri,
+                                            displayName = displayName,
+                                        ),
+                                    )
+                                },
+                                onOpenImageUpscale = { mediaUri, displayName ->
+                                    backStack.add(
+                                        Screen.ImageUpscale(
                                             mediaUri = mediaUri,
                                             displayName = displayName,
                                         ),
@@ -139,6 +149,15 @@ fun AGalleryNavDisplay() {
 
                         is Screen.BackgroundRemover -> NavEntry(key) {
                             BackgroundRemoverScreen(
+                                mediaUri = key.mediaUri,
+                                displayName = key.displayName,
+                                onBack = { backStack.removeLastOrNull() },
+                                onOpenAiModels = { backStack.add(Screen.AiModels) },
+                            )
+                        }
+
+                        is Screen.ImageUpscale -> NavEntry(key) {
+                            ImageUpscaleScreen(
                                 mediaUri = key.mediaUri,
                                 displayName = key.displayName,
                                 onBack = { backStack.removeLastOrNull() },

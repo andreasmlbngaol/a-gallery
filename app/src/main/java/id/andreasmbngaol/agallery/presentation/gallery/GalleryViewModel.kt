@@ -136,13 +136,21 @@ class GalleryViewModel(
     }
 
     /**
-     * Force a re-index of the media source. Called when new media-access permission
-     * is granted (a grant does not always trigger the MediaStore ContentObserver). A
-     * single call refreshes the gallery grid AND the album list because both
-     * share a trigger in the repository.
+     * Tracks the last media-permission state so a re-index only happens on a
+     * genuine no-access -> access transition (see [onMediaAccessChanged]).
      */
-    fun refreshMedia() {
-        refreshMediaUseCase()
+    private var lastMediaAccess = false
+
+    /**
+     * Called by the main Gallery tab whenever the media-permission state is
+     * (re)evaluated. Only forces a refresh on a real false -> true transition, so
+     * simply returning to the tab (e.g. pressing back from the photo viewer) does
+     * NOT trigger a full grid refresh -- which previously flashed a reload spinner
+     * and re-rendered every thumbnail.
+     */
+    fun onMediaAccessChanged(hasAccess: Boolean) {
+        if (hasAccess && !lastMediaAccess) refreshMediaUseCase()
+        lastMediaAccess = hasAccess
     }
 
     fun toggleSortOrder() {

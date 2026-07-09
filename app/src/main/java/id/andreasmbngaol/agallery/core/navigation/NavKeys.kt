@@ -90,4 +90,17 @@ sealed interface Screen : NavKey {
         val mediaUri: String,
         val displayName: String,
     ) : Screen
+
+
+    /**
+     * Image Upscaler for a single image, opened from the photo viewer.
+     *
+     * @property mediaUri the source image uri to process.
+     * @property displayName the source file name, used to derive the saved name.
+     */
+    @Serializable
+    data class ImageUpscale(
+        val mediaUri: String,
+        val displayName: String,
+    ) : Screen
 }
