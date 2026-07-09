@@ -46,7 +46,7 @@
 | `namespace` / `applicationId` | `id.andreasmbngaol.agallery` |
 | `minSdk` | **29 (Android 10)** |
 | `targetSdk` / `compileSdk` | 37 (compileSdk minor `37.1`) |
-| `versionCode` / `versionName` | `22` / `2.1.1` |
+| `versionCode` / `versionName` | `23` / `2.2.0` |
 | Language | Kotlin `2.4.0` (KSP `2.3.9`) |
 | UI | Jetpack Compose (BOM `2026.06.01`), Material 3 `1.5.0-alpha23` |
 | Build | AGP `9.2.1`, R8 (minify + shrink resources; **full mode disabled** so ML Kit consumer rules survive) |
@@ -98,7 +98,7 @@ Conventions that MUST be followed:
 Routes are a `sealed interface Screen : NavKey` (all `@Serializable`). Current:
 `Home` (a horizontal pager of 4 tabs: **Settings · Gallery · Albums · Tools**),
 `PhotoViewer(...)`, `AlbumDetail(...)`, `Trash`, `CreateAlbum`, `QrGenerator`,
-`AiModels`, `BackgroundRemover(...)`. The nav host is `AGalleryNavDisplay` with
+`AiModels`, `BackgroundRemover(...)`, `ImageUpscale(...)`. The nav host is `AGalleryNavDisplay` with
 shared-element transitions and predictive back.
 
 ### 2.5 Core domain models (already implemented)
@@ -158,7 +158,7 @@ below); the rest of the `2.x` line is planned.
 |---|---|---|
 | `2.0.0` | AI model framework (ONNX Runtime) + **Background Remover** (first AI feature) | ✅ Shipped |
 | `2.1.0` | **Subject Lift** — iOS-style long-press "lift" of a photo's subject in the viewer (drag, copy, share); reuses the Background Remover models & framework | ✅ Shipped |
-| `2.2.0` | **Image Enhancer** — AI upscale / restore (Remini-style) | ⏳ Planned |
+| `2.2.0` | **Image Upscaler** — on-device AI super-resolution (single photo + **Auto Upscale** batch); the old "Image Enhancer" is split so `2.2.0` ships upscaling only | ⏳ Planned |
 | `2.3.0` | **Image Compress** — reduce a photo's file size (non-AI utility) | ⏳ Planned |
 | `2.4.0` | **Smart Scanner** module | ⏳ Planned |
 | `2.5.0` | **OCR → PDF** | ⏳ Planned |
@@ -174,6 +174,12 @@ below); the rest of the `2.x` line is planned.
 
 > There is **no classic search**. Search arrives only as on-device semantic
 > search in `2.6.0`. Document the milestone reasoning in `docs/releasing.md`.
+
+> **Enhancer split.** `2.2.0` ships **upscaling only** — the *Image Upscaler*
+> plus *Auto Upscale* (batch). The broader AI **restore / enhance** work
+> (denoise, sharpen, face restoration) that was once lumped into a single
+> "Image Enhancer" is separated into its own later `2.x` release (number TBD),
+> so each AI capability ships and is validated on its own.
 
 ---
 
@@ -203,7 +209,9 @@ operate on a photo that already exists?*
 | QR Detection | Yes | Viewer | 1.7.0 |
 | Background Remover | Yes | Viewer | 2.0.0 |
 | Subject Lift | Yes | Viewer | 2.1.0 |
-| Image Enhancer | Yes | Viewer | 2.2.0 |
+| Image Upscaler | Yes (single) | Viewer | 2.2.0 |
+| Auto Upscale (batch) | Yes (multi-select) | Viewer + album multi-select | 2.2.0 |
+| Photo Restore / Enhance | Yes | Viewer | later (TBD) |
 | Image Compress | Yes | Viewer (detail panel) | 2.3.0 |
 | Smart Scanner | Mixed (photo or capture) | Tools hub (+ viewer surfacing) | 2.4.0 |
 | OCR → PDF | Mixed (capture / scan) | Tools hub | 2.5.0 |
@@ -348,13 +356,32 @@ All depend on the AI model framework (Section 7).
   the **Eco / Balanced / High** quality. Each model shows this device's
   suitability verdict (from `DeviceBenchmark`) as advice, so heavier models that
   would be slow or memory-tight here are flagged before selection.
-- **Image Enhancer** (2.2.0) — *Viewer.* Remini-style on-device enhancement:
-  upscale and restore a photo (super-resolution, denoise / sharpen, optional face
-  restoration) into a new higher-quality file. Built on the **same ONNX Runtime
-  framework and user-imported model flow** as the Background Remover — no bundled
-  weights, no network, and the same device-suitability guard. The specific
-  enhancement model(s) and the tiling / resolution strategy for large images are
-  decided at build time (Section 9).
+- **Image Upscaler** (2.2.0) — *Viewer.* On-device AI **super-resolution**:
+  enlarge and sharpen a photo into a new higher-quality file. This is the old
+  "Image Enhancer" **narrowed to upscaling only** — broader restore/denoise/face
+  restoration is split into a later feature (below). Built on the **same ONNX
+  Runtime framework and user-imported model flow** as the Background Remover — no
+  bundled weights, no network, and the same device-suitability guard. Certain now:
+  - **Models (user-imported, license-safe).** Real-ESRGAN `.onnx` models, opened
+    from their download page in the browser and imported like every other model:
+    **General x4 v3** (~5 MB, the light default) and **x4plus** (~67 MB, highest
+    quality). Each declares its input size, scale, and a quality tier.
+  - **Quality tiers — Eco (Hemat) / Balanced / Quality.** The user picks a tier
+    that trades speed and RAM against sharpness; the tier maps to the installed
+    model and processing settings, with this device's suitability verdict shown
+    as advice.
+  - **Tiled processing.** Large photos are upscaled in overlapping tiles and
+    stitched back together so memory stays bounded on mobile; progress is
+    reported per tile.
+  - **Auto Upscale (batch).** Upscale a **multi-selection / whole folder** in one
+    go as a background (WorkManager) job with progress — "upscale all" without
+    babysitting each photo.
+  - **Output.** Results are written as PNG into a dedicated `Pictures/AGallery
+    Upscaled` folder and registered with MediaStore; originals are never touched.
+- **Photo Restore / Enhance** (later, TBD) — *Viewer.* The remainder split out of
+  the original enhancer: AI **denoise / sharpen and optional face restoration**.
+  Same offline framework; specific models and the version slot are decided when
+  the feature is built.
 - **Smart Scanner** (2.4.0) — *Tools hub (+ viewer surfacing).* An extensible
   on-device detector module; starts by surfacing QR detection, more detectors
   later.
@@ -432,10 +459,12 @@ Established during the codebase-wide cleanup; all layers now follow these:
 
 ## 9. Open decisions (remaining)
 
-1. **AI runtime & specific models** — ✅ **decided for background removal.**
-   Runtime is **ONNX Runtime (Android)** (no Google Play Services dependency,
-   runs `.onnx` fully on-device); the initial models are U²-Net Lite and IS-Net General Use. Runtime / model choices for later AI features
-   (image enhancer, scanner, OCR, semantic search) are still open.
+1. **AI runtime & specific models** — ✅ **decided for background removal and
+   upscaling.** Runtime is **ONNX Runtime (Android)** (no Google Play Services
+   dependency, runs `.onnx` fully on-device); background removal uses U²-Net Lite
+   and IS-Net General Use, and the **Image Upscaler** uses user-imported
+   **Real-ESRGAN** models (General x4 v3 + x4plus). Model choices for the later
+   restore/denoise, scanner, OCR, and semantic-search features are still open.
 2. **OCR → PDF output** — undecided (searchable image+text PDF vs. reflowed
    text). Decide when building the feature.
 

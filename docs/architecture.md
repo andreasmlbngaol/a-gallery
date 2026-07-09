@@ -104,7 +104,7 @@ a-gallery/
 │           ├─ trash/                  #   TrashScreen + ViewModel
 │           ├─ settings/               #   SettingsScreen + ViewModel
 │           ├─ tools/                  #   Tools hub + QR generator
-│           ├─ ai/                     #   AI models screen, import UX, Background Remover
+│           ├─ ai/                     #   AI models screen, import UX, Background Remover, Image Upscaler
 │           └─ theme/                  #   Material 3 theme
 ├─ .github/workflows/release.yml       # CI: build & publish a signed release APK on tag
 ├─ gradle/libs.versions.toml           # Version catalog
@@ -128,5 +128,6 @@ a-gallery/
 - **On-device AI framework** — `core/ai` wraps ONNX Runtime behind an
   `InferenceEngine` interface; `domain/model/ai` holds the pure-Kotlin model
   catalog, tier / suitability types, and a `DeviceBenchmark`-driven guard, while
-  `data/ai` imports user-supplied `.onnx` files and runs the Background Remover.
-  No models are bundled and nothing is fetched over the network.
+  `data/ai` imports user-supplied `.onnx` files and runs the Background Remover
+  and the Image Upscaler (tiled super-resolution). No models are bundled and
+  nothing is fetched over the network.

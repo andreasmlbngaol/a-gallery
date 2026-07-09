@@ -63,12 +63,12 @@ keyPassword=YOUR_KEY_PASSWORD
 Bump the version (see below), commit, then tag and push:
 
 ```shell
-git tag v2.1.1
-git push origin v2.1.1
+git tag v2.2.0
+git push origin v2.2.0
 ```
 
 The workflow runs, builds the signed APK, and creates a **GitHub Release**
-tagged `v2.1.1` with the APK attached and auto-generated release notes. You can
+tagged `v2.2.0` with the APK attached and auto-generated release notes. You can
 also trigger it manually from the **Actions** tab (`workflow_dispatch`).
 
 ---
@@ -77,12 +77,18 @@ also trigger it manually from the **Actions** tab (`workflow_dispatch`).
 
 AGallery follows **[Semantic Versioning](https://semver.org/)** (`MAJOR.MINOR.PATCH`).
 
-- **Current version: `2.1.1`** — the `1.x` offline-utilities era is complete and
-  the on-device AI era is underway (see the roadmap in `TECHNICAL-DESIGN.md`);
-  `2.0.0` shipped the AI model framework + Background Remover, `2.1.0` added
-  **Subject Lift** (long-press to lift a photo's subject) on the same framework,
-  and `2.1.1` is a maintenance patch (trimmed model catalog, cached/warmed ONNX
-  session, a session-options leak fix, and top-bar padding fixes).
+- **Current version: `2.1.1` shipped; `2.2.0` in development.** The `1.x`
+  offline-utilities era is complete and the on-device AI era is underway (see the
+  roadmap in `TECHNICAL-DESIGN.md`); `2.0.0` shipped the AI model framework +
+  Background Remover, `2.1.0` added **Subject Lift** (long-press to lift a photo's
+  subject) on the same framework, and `2.1.1` is a maintenance patch (trimmed
+  model catalog, cached/warmed ONNX session, a session-options leak fix, and
+  top-bar padding fixes). **`2.2.0` (in development)** brings the **Image
+  Upscaler** — on-device AI super-resolution with user-imported Real-ESRGAN
+  models and Eco/Balanced/Quality tiers — plus **Auto Upscale** for batch
+  processing. It is the old "Image Enhancer" split down to **upscaling only**; the
+  broader AI restore/denoise/face-restoration work is separated into a later
+  `2.x` release.
 - **`PATCH`** (`1.0.1`, `1.0.2`, …) — bug fixes and pure visual polish
   (padding, colors, corner radius, animation tweaks) that add **no new
   capability**.
@@ -97,6 +103,6 @@ new you can use or choose"* → MINOR.
 The version lives in `app/build.gradle.kts`:
 
 ```kotlin
-versionCode = 22       // bump by 1 for every published build
-versionName = "2.1.1"  // human-readable, matches the git tag (without the leading "v")
+versionCode = 23       // bump by 1 for every published build
+versionName = "2.2.0"  // human-readable, matches the git tag (without the leading "v")
 ```
