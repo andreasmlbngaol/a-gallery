@@ -15,6 +15,12 @@ at the repository root:
 | **MIT** | Phosphor Icons (Compose port + icon set), ONNX Runtime (Android) |
 | **Google ML Kit Terms** | ML Kit Barcode Scanning + Face Detection (bundled, on-device) |
 
+> **User-imported AI models** (Background Remover / Subject Lift, Image Upscaler,
+> Face Restore, and Photo Enhance) are **not bundled** — the user downloads and
+> imports the `.onnx` files themselves. For reference, the upstream projects are
+> U²-Net / IS-Net, Real-ESRGAN (BSD-3-Clause), GPEN (Apache-2.0), and SCUNet
+> (Apache-2.0, cszn). See `THIRD-PARTY-NOTICES.md` for details.
+
 Test-only and build-only tools (JUnit, Espresso, AndroidX Test, AGP, KSP) are
 **not** shipped inside the released APK and therefore carry no distribution
 obligation; they are listed in the notices file for completeness.

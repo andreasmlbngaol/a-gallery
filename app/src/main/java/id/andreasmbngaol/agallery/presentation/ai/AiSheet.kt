@@ -29,18 +29,20 @@ import com.adamglin.phosphoricons.Bold
 import com.adamglin.phosphoricons.bold.CaretRight
 import com.adamglin.phosphoricons.bold.MagnifyingGlassPlus
 import com.adamglin.phosphoricons.bold.Smiley
+import com.adamglin.phosphoricons.bold.Sparkle
 import com.adamglin.phosphoricons.bold.UserRectangle
 import id.andreasmbngaol.agallery.R
 
 /**
  * Bottom sheet of on-device AI actions for a photo, opened from the viewer's AI
- * button. It lists the available on-device AI actions (Remove background, Upscale
- * image, Restore faces) and is structured as a list so future AI tools can be
- * added without reshaping the UI.
+ * button. It lists the available on-device AI actions (Remove background,
+ * Upscale image, Restore faces, Enhance photo) and is structured as a list so
+ * future AI tools can be added without reshaping the UI.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AiSheet(
+    onEnhancePhoto: () -> Unit,
     onRemoveBackground: () -> Unit,
     onUpscaleImage: () -> Unit,
     onRestoreFaces: () -> Unit,
@@ -82,6 +84,13 @@ fun AiSheet(
                 icon = PhosphorIcons.Bold.Smiley,
                 title = stringResource(R.string.action_restore_faces),
                 onClick = onRestoreFaces,
+            )
+            AiActionRow(
+                // A sparkle — the general "clean up / make this look better"
+                // action; enhances the whole photo (denoise + restore detail).
+                icon = PhosphorIcons.Bold.Sparkle,
+                title = stringResource(R.string.action_enhance_photo),
+                onClick = onEnhancePhoto,
             )
         }
     }

@@ -307,6 +307,7 @@
     <string name="ai_models_feature_bg">Hapus latar</string>
     <string name="ai_models_feature_upscale">Perbesar gambar</string>
     <string name="ai_models_feature_face">Pulihkan wajah</string>
+    <string name="ai_models_feature_enhance">Percantik foto</string>
     <string name="ai_model_status_ready">Terpasang</string>
     <string name="ai_model_status_not_installed">Belum terpasang</string>
     <string name="ai_model_recommended">Rekomendasi</string>
@@ -330,6 +331,8 @@
     <string name="ai_model_rationale_swinir">Kualitas 4× tertinggi, berbasis transformer. Paling berat; terbaik di HP high-end.</string>
     <string name="ai_model_rationale_gpen256">Pemulih wajah paling ringan. Perbaikan cepat di HP kentang.</string>
     <string name="ai_model_rationale_gpen512">Detail wajah seimbang. Hasil lebih tajam dan natural dengan ukuran dan kecepatan menengah.</string>
+    <string name="ai_model_rationale_scunet_gan">Tampilan lebih tajam. Bikin tekstur kelihatan detail dan tajam tapi tetap natural — pilihan default yang disaranin.</string>
+    <string name="ai_model_rationale_scunet_psnr">Tampilan lebih bersih. Meredam noise dan artefak buat hasil yang lebih halus dan lembut.</string>
     <string name="ai_model_suitability_checking">Ngecek perangkat ini\u2026</string>
     <string name="ai_model_suitability_good">Lancar di perangkat ini</string>
     <string name="ai_model_suitability_slow">Mungkin lambat di perangkat ini</string>
@@ -364,6 +367,7 @@
     <string name="bg_remover_processing_stats">%1$d dtk \u2192 %2$s RAM terpakai</string>
     <string name="bg_remover_save">Simpan ke galeri</string>
     <string name="bg_remover_saved_hint">Disimpan sebagai PNG baru; foto aslimu tetap aman.</string>
+    <string name="bg_remover_hold_hint">Tekan dan tahan hasilnya buat ngintip aslinya.</string>
     <string name="bg_remover_model_in_use">Pakai %1$s</string>
     <string name="msg_bg_saved">Tersimpan sebagai %1$s</string>
     <string name="msg_bg_no_model">Belum ada model</string>
@@ -402,6 +406,9 @@
     <string name="upscale_model_speed_high">paling lambat</string>
     <string name="upscale_save">Simpan ke galeri</string>
     <string name="upscale_saved_hint">Disimpan sebagai PNG baru; foto aslimu tetap aman.</string>
+    <string name="upscale_before">Sebelum</string>
+    <string name="upscale_after">Sesudah</string>
+    <string name="upscale_compare_hint">Geser slider buat bandingin sebelum dan sesudah.</string>
     <string name="msg_upscale_saved">Tersimpan sebagai %1$s</string>
     <string name="msg_upscale_no_model">Belum ada model</string>
     <string name="msg_upscale_source_unreadable">Gambar ini nggak bisa dibaca</string>
@@ -420,6 +427,9 @@
     <string name="face_restore_run">Pulihkan</string>
     <string name="face_restore_save">Simpan ke galeri</string>
     <string name="face_restore_saved_hint">Disimpan sebagai PNG baru; foto aslimu tetap aman.</string>
+    <string name="face_restore_before">Sebelum</string>
+    <string name="face_restore_after">Sesudah</string>
+    <string name="face_restore_compare_hint">Geser slider buat bandingin sebelum dan sesudah.</string>
     <string name="face_restore_processing">Lagi memulihkan wajah…</string>
     <string name="face_restore_processing_desc">Diproses di perangkat per wajah, bisa butuh waktu sebentar.</string>
     <string name="face_restore_progress_detecting">Mendeteksi wajah\u2026</string>
@@ -442,6 +452,41 @@
     <string name="msg_face_restore_insufficient_memory">%1$s terlalu berat buat RAM perangkat ini. Coba model yang lebih ringan.</string>
     <string name="msg_face_restore_save_failed">Gagal simpan gambar</string>
     <string name="msg_face_restore_cancelled">Pemulihan wajah dibatalkan</string>
+
+    <!-- Photo Enhance (2.4.0) -->
+    <string name="action_enhance_photo">Percantik foto</string>
+    <string name="enhance_title">Percantik foto</string>
+    <string name="enhance_no_model_title">Belum ada model</string>
+    <string name="enhance_no_model_desc">Impor dulu model percantik foto buat pakai fitur ini.</string>
+    <string name="enhance_choose_model">Pilih gaya</string>
+    <string name="enhance_style_sharp">Lebih tajam dan detail</string>
+    <string name="enhance_style_clean">Lebih bersih dan halus</string>
+    <string name="enhance_source">Asli</string>
+    <string name="enhance_result">Hasil</string>
+    <string name="enhance_before">Sebelum</string>
+    <string name="enhance_after">Sesudah</string>
+    <string name="enhance_compare_hint">Geser slider buat bandingin sebelum dan sesudah.</string>
+    <string name="enhance_saved_hint">Disimpan sebagai PNG baru; foto aslimu nggak diubah.</string>
+    <string name="enhance_run">Percantik</string>
+    <string name="enhance_save">Simpan ke galeri</string>
+    <string name="enhance_processing">Lagi mempercantik\u2026</string>
+    <string name="enhance_processing_desc">Diproses di HP ke seluruh foto, mungkin butuh waktu sebentar.</string>
+    <string name="enhance_progress_preparing">Menyiapkan\u2026</string>
+    <string name="enhance_progress_tiles">Bagian %1$d / %2$d</string>
+    <string name="enhance_progress_finishing">Menyelesaikan\u2026</string>
+    <string name="enhance_strength_title">Kekuatan</string>
+    <string name="enhance_strength_desc">Makin rendah makin natural; makin tinggi makin agresif efeknya.</string>
+    <string name="enhance_strength_recommended">Disarankan %1$d%%</string>
+    <string name="enhance_strength_use_recommended">Pakai yang disarankan</string>
+    <string name="enhance_strength_natural">Natural</string>
+    <string name="enhance_strength_max">Maks</string>
+    <string name="msg_enhance_saved">Disimpan sebagai %1$s</string>
+    <string name="msg_enhance_no_model">Belum ada model</string>
+    <string name="msg_enhance_source_unreadable">Gambar ini nggak bisa dibaca</string>
+    <string name="msg_enhance_failed">Gagal mempercantik foto</string>
+    <string name="msg_enhance_insufficient_memory">%1$s terlalu berat buat RAM HP ini. Coba model lain.</string>
+    <string name="msg_enhance_save_failed">Gagal menyimpan gambar</string>
+    <string name="msg_enhance_cancelled">Dibatalkan</string>
     <!-- Angkat objek (tekan lama di viewer, ala iOS) -->
     <string name="action_copy">Salin</string>
     <string name="lift_processing">Mengangkat objek\u2026</string>

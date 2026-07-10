@@ -54,15 +54,29 @@ The full text of the MIT License is included [below](#mit-license-full-text).
 | Phosphor Icons (icon set) | https://phosphoricons.com | © 2020–2023 Phosphor Icons (Helena Zhang & Tobias Fried) |
 | ONNX Runtime (Android) | `com.microsoft.onnxruntime:onnxruntime-android` | © Microsoft Corporation |
 
-ONNX Runtime powers the on-device AI inference framework (Background Remover in 2.0.0, Subject Lift in 2.1.0, Image Upscaler in 2.2.0, Face Restore in 2.3.0). All models are **user-imported** `.onnx` files executed fully offline; no
+ONNX Runtime powers the on-device AI inference framework (Background Remover in 2.0.0, Subject Lift in 2.1.0, Image Upscaler in 2.2.0, Face Restore in 2.3.0, Photo Enhance in 2.4.0). All models are **user-imported** `.onnx` files executed fully offline; no
 model weights are bundled in the APK and nothing is fetched over the network (no
 `INTERNET` permission).
+
+### User-imported AI models (not bundled)
+
+The AI features run `.onnx` model files that the **user downloads and imports
+themselves**; none are bundled in the APK or fetched by the app. Their licenses
+are listed here for reference only:
+
+| Model | Feature | Source | License |
+|---|---|---|---|
+| U²-Net Lite / IS-Net General Use | Background Remover, Subject Lift | user-imported | Apache-2.0 / MIT (per upstream) |
+| Real-ESRGAN (General x4 v3, x4plus) | Image Upscaler | user-imported | BSD-3-Clause (Real-ESRGAN, xinntao) |
+| GPEN-BFR (256, 512) | Face Restore | user-imported | Apache-2.0 (GPEN, yangxy) |
+| SCUNet (Sharp / Clean) | Photo Enhance | user-imported (`deepghs/image_restoration` ONNX exports) | Apache-2.0 (SCUNet, cszn) |
 
 ### Google ML Kit terms
 
 ML Kit's on-device **Barcode Scanning** and **Face Detection** models are
 **bundled** in the released APK: Barcode Scanning powers offline QR Detection,
-and Face Detection locates faces for the Face Restore feature (2.3.0). Neither
+and Face Detection locates faces for the Face Restore feature (2.3.0). (Photo
+Enhance in 2.4.0 processes the whole image and does not use ML Kit.) Neither
 requires the `INTERNET` permission. They are not distributed under Apache-2.0 or
 MIT; their use is governed by the **Google ML Kit Terms** (free, on-device). The
 libraries also embed third-party open-source components covered by Google's own

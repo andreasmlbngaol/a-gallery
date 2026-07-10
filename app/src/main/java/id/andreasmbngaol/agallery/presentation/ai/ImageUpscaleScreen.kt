@@ -57,7 +57,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import coil3.compose.AsyncImage
-import coil3.compose.SubcomposeAsyncImage
 import com.adamglin.PhosphorIcons
 import com.adamglin.phosphoricons.Bold
 import com.adamglin.phosphoricons.bold.ArrowLeft
@@ -234,23 +233,16 @@ fun ImageUpscaleScreen(
                     style = MaterialTheme.typography.labelLarge,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
-                SubcomposeAsyncImage(
-                    model = File(state.resultPath!!),
-                    contentDescription = stringResource(R.string.upscale_result),
-                    contentScale = ContentScale.Fit,
-                    loading = {
-                        Box(
-                            modifier = Modifier.fillMaxSize(),
-                            contentAlignment = Alignment.Center,
-                        ) {
-                            CircularWavyProgressIndicator(modifier = Modifier.size(32.dp))
-                        }
-                    },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .aspectRatio(1f)
-                        .clip(RoundedCornerShape(16.dp))
-                        .background(MaterialTheme.colorScheme.surfaceContainerHigh),
+                BeforeAfterSlider(
+                    beforeModel = state.sourceUri,
+                    afterModel = File(state.resultPath!!),
+                    beforeLabel = stringResource(R.string.upscale_before),
+                    afterLabel = stringResource(R.string.upscale_after),
+                )
+                Text(
+                    text = stringResource(R.string.upscale_compare_hint),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
                 Text(
                     text = stringResource(R.string.upscale_saved_hint),

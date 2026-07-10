@@ -297,6 +297,7 @@
     <string name="ai_models_feature_bg">Background removal</string>
     <string name="ai_models_feature_upscale">Image upscaling</string>
     <string name="ai_models_feature_face">Face restoration</string>
+    <string name="ai_models_feature_enhance">Photo enhancement</string>
     <string name="ai_model_status_ready">Installed</string>
     <string name="ai_model_status_not_installed">Not installed</string>
     <string name="ai_model_recommended">Recommended</string>
@@ -320,6 +321,8 @@
     <string name="ai_model_rationale_swinir">Highest fidelity 4×, transformer-based. Heaviest to run; best on high-end phones.</string>
     <string name="ai_model_rationale_gpen256">Lightest face restorer. Quick touch-ups on lower-end devices.</string>
     <string name="ai_model_rationale_gpen512">Balanced face detail. Sharper, more natural faces at a moderate size and speed.</string>
+    <string name="ai_model_rationale_scunet_gan">Sharper look. Restores crisp, detailed texture with a light, natural touch — the recommended default.</string>
+    <string name="ai_model_rationale_scunet_psnr">Cleaner look. Smooths noise and artefacts for a gentler, softer result.</string>
     <string name="ai_model_suitability_checking">Checking this device\u2026</string>
     <string name="ai_model_suitability_good">Runs well on this device</string>
     <string name="ai_model_suitability_slow">May be slow on this device</string>
@@ -354,6 +357,7 @@
     <string name="bg_remover_processing_stats">%1$d s \u2192 %2$s RAM used</string>
     <string name="bg_remover_save">Save to gallery</string>
     <string name="bg_remover_saved_hint">Saved as a new PNG; your original photo stays untouched.</string>
+    <string name="bg_remover_hold_hint">Press and hold the result to peek at the original.</string>
     <string name="bg_remover_model_in_use">Using %1$s</string>
     <string name="msg_bg_saved">Saved as %1$s</string>
     <string name="msg_bg_no_model">No model installed</string>
@@ -407,6 +411,9 @@
     <string name="upscale_model_speed_high">slowest</string>
     <string name="upscale_save">Save to gallery</string>
     <string name="upscale_saved_hint">Saved as a new PNG; your original photo stays untouched.</string>
+    <string name="upscale_before">Before</string>
+    <string name="upscale_after">After</string>
+    <string name="upscale_compare_hint">Drag the slider to compare before and after.</string>
     <string name="msg_upscale_saved">Saved as %1$s</string>
     <string name="msg_upscale_no_model">No model installed</string>
     <string name="msg_upscale_source_unreadable">This image can\'t be read</string>
@@ -425,6 +432,9 @@
     <string name="face_restore_run">Restore</string>
     <string name="face_restore_save">Save to gallery</string>
     <string name="face_restore_saved_hint">Saved as a new PNG; your original photo stays untouched.</string>
+    <string name="face_restore_before">Before</string>
+    <string name="face_restore_after">After</string>
+    <string name="face_restore_compare_hint">Drag the slider to compare before and after.</string>
     <string name="face_restore_processing">Restoring faces…</string>
     <string name="face_restore_processing_desc">Running on-device per face, this can take a moment.</string>
     <string name="face_restore_progress_detecting">Detecting faces\u2026</string>
@@ -447,4 +457,39 @@
     <string name="msg_face_restore_insufficient_memory">%1$s is too heavy for this device\'s RAM. Try a lighter model.</string>
     <string name="msg_face_restore_save_failed">Couldn\'t save the image</string>
     <string name="msg_face_restore_cancelled">Face restoration cancelled</string>
+
+    <!-- Photo Enhance (2.4.0) -->
+    <string name="action_enhance_photo">Enhance photo</string>
+    <string name="enhance_title">Enhance photo</string>
+    <string name="enhance_no_model_title">No model installed</string>
+    <string name="enhance_no_model_desc">Import a photo enhancement model to use this feature.</string>
+    <string name="enhance_choose_model">Choose a style</string>
+    <string name="enhance_style_sharp">Sharper, more detailed</string>
+    <string name="enhance_style_clean">Cleaner, smoother</string>
+    <string name="enhance_source">Original</string>
+    <string name="enhance_result">Result</string>
+    <string name="enhance_before">Before</string>
+    <string name="enhance_after">After</string>
+    <string name="enhance_compare_hint">Drag the slider to compare before and after.</string>
+    <string name="enhance_saved_hint">Saved as a new PNG; your original photo stays untouched.</string>
+    <string name="enhance_run">Enhance</string>
+    <string name="enhance_save">Save to gallery</string>
+    <string name="enhance_processing">Enhancing\u2026</string>
+    <string name="enhance_processing_desc">Running on-device across the whole photo, this can take a moment.</string>
+    <string name="enhance_progress_preparing">Preparing\u2026</string>
+    <string name="enhance_progress_tiles">Tile %1$d / %2$d</string>
+    <string name="enhance_progress_finishing">Finishing\u2026</string>
+    <string name="enhance_strength_title">Strength</string>
+    <string name="enhance_strength_desc">Lower keeps the result natural; higher enhances more aggressively.</string>
+    <string name="enhance_strength_recommended">Recommended %1$d%%</string>
+    <string name="enhance_strength_use_recommended">Use recommended</string>
+    <string name="enhance_strength_natural">Natural</string>
+    <string name="enhance_strength_max">Max</string>
+    <string name="msg_enhance_saved">Saved as %1$s</string>
+    <string name="msg_enhance_no_model">No model installed</string>
+    <string name="msg_enhance_source_unreadable">This image can\'t be read</string>
+    <string name="msg_enhance_failed">Couldn\'t enhance the photo</string>
+    <string name="msg_enhance_insufficient_memory">%1$s is too heavy for this device\'s RAM. Try a different model.</string>
+    <string name="msg_enhance_save_failed">Couldn\'t save the image</string>
+    <string name="msg_enhance_cancelled">Enhancement cancelled</string>
 </resources>

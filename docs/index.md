@@ -66,10 +66,10 @@ backdrop.
 
 ### On-device AI
 
-- **ONNX Runtime (Android) 1.27** — runs user-imported `.onnx` models fully offline (CPU execution provider); powers the Background Remover, Subject Lift, Image Upscaler, and Face Restore. No model weights are bundled and the app never downloads anything (no `INTERNET` permission).
+- **ONNX Runtime (Android) 1.27** — runs user-imported `.onnx` models fully offline (CPU execution provider); powers the Background Remover, Subject Lift, Image Upscaler, Face Restore, and Photo Enhance. No model weights are bundled and the app never downloads anything (no `INTERNET` permission).
 - **Google ML Kit Face Detection (bundled, on-device)** — locates faces in a photo before Face Restore runs; fully offline, no `INTERNET` permission.
 
-## Feature status (v2.3.0)
+## Feature status (v2.4.0)
 
 | Area | Status |
 |---|---|
@@ -98,11 +98,12 @@ backdrop.
 | Image upscaler (AI super-resolution) | ✅ |
 | Auto upscale (batch / whole selection) | ✅ |
 | Face restore (on-device AI) | ✅ |
-| Photo restore / enhance (AI denoise, sharpen, deblur) | ⏳ planned (2.4.0) |
-| Auto enhance (one-tap AI pipeline: face + restore + upscale) | ⏳ planned (2.5.0) |
+| Photo enhance (AI denoise, sharpen, deblur — whole image) | ✅ |
+| Upscaler XNNPACK acceleration (perf; Real-ESRGAN only) | ⏳ planned (2.4.1) |
+| Auto enhance (one-tap AI pipeline: face + enhance + upscale) | ⏳ planned (2.5.0) |
 | Image compress (non-AI size reduction) | ⏳ planned (2.6.0) |
 | Bulk metadata / format operations | ⏳ planned |
-| Other on-device AI tools (scanner, OCR) | ⏳ planned (2.7.0 / 2.8.0) |
-| On-device semantic search (AI) | ⏳ planned (2.9.0) |
+| Other on-device AI tools (scanner, old photo restoration, OCR) | ⏳ planned (2.7.0 / 2.8.0 / 2.9.0) |
+| On-device semantic search (AI) | ⏳ planned (2.10.0) |
 | In-app map view | ❌ out of scope (opens external maps) |
 | Photo editing | ❌ out of scope |

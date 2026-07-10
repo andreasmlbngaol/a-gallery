@@ -64,7 +64,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import coil3.compose.AsyncImage
-import coil3.compose.SubcomposeAsyncImage
 import com.adamglin.PhosphorIcons
 import com.adamglin.phosphoricons.Bold
 import com.adamglin.phosphoricons.bold.ArrowLeft
@@ -274,23 +273,16 @@ fun FaceRestoreScreen(
                     style = MaterialTheme.typography.labelLarge,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
-                SubcomposeAsyncImage(
-                    model = File(state.resultPath!!),
-                    contentDescription = stringResource(R.string.face_restore_result),
-                    contentScale = ContentScale.Fit,
-                    loading = {
-                        Box(
-                            modifier = Modifier.fillMaxSize(),
-                            contentAlignment = Alignment.Center,
-                        ) {
-                            CircularWavyProgressIndicator(modifier = Modifier.size(32.dp))
-                        }
-                    },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .aspectRatio(1f)
-                        .clip(RoundedCornerShape(16.dp))
-                        .background(MaterialTheme.colorScheme.surfaceContainerHigh),
+                BeforeAfterSlider(
+                    beforeModel = state.sourceUri,
+                    afterModel = File(state.resultPath!!),
+                    beforeLabel = stringResource(R.string.face_restore_before),
+                    afterLabel = stringResource(R.string.face_restore_after),
+                )
+                Text(
+                    text = stringResource(R.string.face_restore_compare_hint),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
                 Text(
                     text = stringResource(R.string.face_restore_saved_hint),
@@ -623,7 +615,7 @@ private fun ProcessingDialog(
                 // load, before the face count is known) and the final finishing
                 // phase (encoding the full-res PNG after the last face, which
                 // isn't part of the face count).
-                val finishing = totalFaces > 0 && completedFaces >= totalFaces
+                val finishing = totalFaces in 1..completedFaces
                 if (totalFaces > 1 && !finishing) {
                     val fraction = (completedFaces.toFloat() / totalFaces).coerceIn(0f, 1f)
                     LinearWavyProgressIndicator(

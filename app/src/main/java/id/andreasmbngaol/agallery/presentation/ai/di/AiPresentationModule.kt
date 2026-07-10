@@ -4,6 +4,7 @@ import id.andreasmbngaol.agallery.presentation.ai.AiModelsViewModel
 import id.andreasmbngaol.agallery.presentation.ai.BackgroundRemoverViewModel
 import id.andreasmbngaol.agallery.presentation.ai.FaceRestoreViewModel
 import id.andreasmbngaol.agallery.presentation.ai.ImageUpscaleViewModel
+import id.andreasmbngaol.agallery.presentation.ai.PhotoEnhanceViewModel
 import org.koin.core.module.dsl.viewModelOf
 import org.koin.core.module.dsl.viewModel
 import org.koin.dsl.module
@@ -47,6 +48,17 @@ val aiPresentationModule = module {
             getSettings = get(),
             detectFacesUseCase = get(),
             restoreFaces = get(),
+            saveResult = get(),
+            deviceBenchmark = get(),
+        )
+    }
+    viewModel { (sourceUri: String, sourceDisplayName: String) ->
+        PhotoEnhanceViewModel(
+            sourceUri = sourceUri,
+            sourceDisplayName = sourceDisplayName,
+            observeModelStatus = get(),
+            getSettings = get(),
+            enhancePhoto = get(),
             saveResult = get(),
             deviceBenchmark = get(),
         )

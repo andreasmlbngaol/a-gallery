@@ -77,18 +77,20 @@ class AiModelsViewModel(
         observeModelStatus(feature),
         observeModelStatus(AiFeature.IMAGE_UPSCALE),
         observeModelStatus(AiFeature.FACE_RESTORATION),
-    ) { bg, upscale, face -> Triple(bg, upscale, face) }
+        observeModelStatus(AiFeature.IMAGE_ENHANCE),
+    ) { bg, upscale, face, enhance -> FeatureStatuses(bg, upscale, face, enhance) }
 
     val uiState: StateFlow<AiModelsUiState> = combine(
         featureStatuses,
         importState,
         settings,
         capability,
-    ) { (statuses, upscaleStatuses, faceStatuses), import, s, cap ->
+    ) { statuses, import, s, cap ->
         AiModelsUiState(
-            rows = statuses.toRows(import, cap),
-            upscaleRows = upscaleStatuses.toRows(import, cap),
-            faceRestoreRows = faceStatuses.toRows(import, cap),
+            rows = statuses.background.toRows(import, cap),
+            upscaleRows = statuses.upscale.toRows(import, cap),
+            faceRestoreRows = statuses.face.toRows(import, cap),
+            enhanceRows = statuses.enhance.toRows(import, cap),
             componentStyleChosen = s.componentStyle,
             edgeEffectMode = s.edgeEffectMode,
             deviceCapability = cap,
@@ -99,6 +101,14 @@ class AiModelsViewModel(
         viewModelScope,
         SharingStarted.WhileSubscribed(5_000L),
         AiModelsUiState(),
+    )
+
+    /** Pre-combined install-state snapshots for every AI feature's models. */
+    private data class FeatureStatuses(
+        val background: List<ModelStatus>,
+        val upscale: List<ModelStatus>,
+        val face: List<ModelStatus>,
+        val enhance: List<ModelStatus>,
     )
 
     /** Joins each catalog [ModelStatus] with its live import/suitability state. */

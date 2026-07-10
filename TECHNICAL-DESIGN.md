@@ -46,7 +46,7 @@
 | `namespace` / `applicationId` | `id.andreasmbngaol.agallery` |
 | `minSdk` | **29 (Android 10)** |
 | `targetSdk` / `compileSdk` | 37 (compileSdk minor `37.1`) |
-| `versionCode` / `versionName` | `24` / `2.3.0` |
+| `versionCode` / `versionName` | `25` / `2.4.0` |
 | Language | Kotlin `2.4.0` (KSP `2.3.9`) |
 | UI | Jetpack Compose (BOM `2026.06.01`), Material 3 `1.5.0-alpha23` |
 | Build | AGP `9.2.1`, R8 (minify + shrink resources; **full mode disabled** so ML Kit consumer rules survive) |
@@ -161,12 +161,13 @@ below); the rest of the `2.x` line is planned.
 | `2.1.0` | **Subject Lift** — iOS-style long-press "lift" of a photo's subject in the viewer (drag, copy, share); reuses the Background Remover models & framework | ✅ Shipped |
 | `2.2.0` | **Image Upscaler** — on-device AI super-resolution (single photo + **Auto Upscale** batch); the old "Image Enhancer" is split so `2.2.0` ships upscaling only | ✅ Shipped |
 | `2.3.0` | **Face Restore** — on-device AI restoration of blurry / low-quality faces (single photo); the second AI capability split out of the old "Image Enhancer" | ✅ Shipped |
-| `2.4.0` | **Photo Restore / Enhance** — general AI denoise / sharpen / deblur for a whole photo | ⏳ Planned |
-| `2.5.0` | **Auto Enhance** — one-tap pipeline that recombines face restore + restore + upscale | ⏳ Planned |
+| `2.4.0` | **Photo Enhance** — general AI denoise / sharpen / deblur for a whole photo (single photo), using user-imported **SCUNet** models offered as a Sharper/Cleaner style choice | ✅ Shipped |
+| `2.5.0` | **Auto Enhance** — one-tap pipeline that recombines face restore + enhance + upscale | ⏳ Planned |
 | `2.6.0` | **Image Compress** — reduce a photo's file size (non-AI utility) | ⏳ Planned |
 | `2.7.0` | **Smart Scanner** module | ⏳ Planned |
-| `2.8.0` | **OCR → PDF** | ⏳ Planned |
-| `2.9.0` | **AI Semantic Search** — AGallery's only search (on-device) | ⏳ Planned |
+| `2.8.0` | **Old Photo Restoration** — AI restoration tuned for scanned / vintage prints (scratches, fading, heavy degradation) | ⏳ Planned |
+| `2.9.0` | **OCR → PDF** | ⏳ Planned |
+| `2.10.0` | **AI Semantic Search** — AGallery's only search (on-device) | ⏳ Planned |
 
 > **Patch `2.1.1`.** Maintenance polish on the `2.1.0` framework: the
 > model catalog is trimmed to **two** background-removal models (the heavy
@@ -176,13 +177,28 @@ below); the rest of the `2.x` line is planned.
 > **Background Remover** screens no longer let their top content slip under the
 > top bar.
 
+> **Patch `2.4.1` (planned).** Performance patch: **selective XNNPACK
+> acceleration for the Upscaler only.** A static ONNX graph scan of all eight
+> catalog models showed the two **Real-ESRGAN** upscaler models are
+> Conv/activation-dominated with `nearest`-mode `Resize` (XNNPACK-friendly),
+> whereas **SCUNet** (Enhance) is transformer-heavy (~2% Conv → no XNNPACK
+> gain), **GPEN** (Face Restore) is StyleGAN with heavy op fallback, and the
+> **ISNet/U²-Netp** background-removal models are *blocked* by `linear`-mode
+> `Resize` (the existing `xnn_create_resize_bilinear2d_nhwc_fp32` build
+> failure). So `2.4.1` enables XNNPACK **per-model** for the Real-ESRGAN
+> upscalers (keeping the write-ahead crash guard) and leaves everything else on
+> the CPU provider. Full analysis, design, and on-device verification steps are
+> in [`docs/plan-2.4.1-xnnpack-upscaler.md`](./docs/plan-2.4.1-xnnpack-upscaler.md).
+> The slow **Photo Enhance** is inherent to SCUNet's transformer architecture
+> and is explicitly **not** addressed by this patch.
+
 > There is **no classic search**. Search arrives only as on-device semantic
-> search in `2.9.0`. Document the milestone reasoning in `docs/releasing.md`.
+> search in `2.10.0`. Document the milestone reasoning in `docs/releasing.md`.
 
 > **Enhancer split.** The old single "Image Enhancer" is separated into
 > independent AI capabilities, each shipped and validated on its own:
 > **Image Upscaler** + *Auto Upscale* (`2.2.0`, shipped), **Face Restore**
-> (`2.3.0`, shipped), **Photo Restore / Enhance** (`2.4.0`, general
+> (`2.3.0`, shipped), **Photo Enhance** (`2.4.0`, shipped — general
 > denoise / sharpen / deblur), and **Auto Enhance** (`2.5.0`, a one-tap
 > pipeline that recombines all three).
 
@@ -217,19 +233,20 @@ operate on a photo that already exists?*
 | Image Upscaler | Yes (single) | Viewer | 2.2.0 |
 | Auto Upscale (batch) | Yes (multi-select) | Viewer + album multi-select | 2.2.0 |
 | Face Restore | Yes (single) | Viewer | 2.3.0 |
-| Photo Restore / Enhance | Yes | Viewer | 2.4.0 |
+| Photo Enhance | Yes (single) | Viewer | 2.4.0 |
 | Auto Enhance | Yes (single / batch) | Viewer | 2.5.0 |
 | Image Compress | Yes | Viewer (detail panel) | 2.6.0 |
 | Smart Scanner | Mixed (photo or capture) | Tools hub (+ viewer surfacing) | 2.7.0 |
-| OCR → PDF | Mixed (capture / scan) | Tools hub | 2.8.0 |
-| AI Semantic Search | No (searches library) | Search feature | 2.9.0 |
+| Old Photo Restoration | Yes (single) | Viewer | 2.8.0 |
+| OCR → PDF | Mixed (capture / scan) | Tools hub | 2.9.0 |
+| AI Semantic Search | No (searches library) | Search feature | 2.10.0 |
 
 ### 4.2 Navigation changes
 
 - **Done (1.6.0):** the Home pager has a **4th tab** — `Settings · Gallery · Albums · Tools`.
 - **Done:** each tool is its **own Nav3 route** pushed on the backstack, triggered
   from the hub — mirroring the existing `onOpenAlbum` / `onOpenTrash` pattern.
-- A `Screen.Search` route is added only with AI Semantic Search (`2.9.0`).
+- A `Screen.Search` route is added only with AI Semantic Search (`2.10.0`).
 
 ---
 
@@ -295,7 +312,7 @@ already certain. Detailed design is done per-feature at build time.
   in 1.5.0:
   - **Target picker** — the source's current format is disabled (no converting a
     file to itself). All other formats are selectable.
-  - **Quality slider** (1–100, default 95) shown only for **lossy** targets
+  - **Quality slider** (1���100, default 95) shown only for **lossy** targets
     (JPG / WEBP / HEIC). **PNG** is lossless, so the slider is hidden.
   - **Decode** via `ImageDecoder` into a software bitmap; orientation is baked
     into the pixels, then the output EXIF orientation is reset to `NORMAL` to
@@ -408,19 +425,43 @@ All depend on the AI model framework (Section 7).
     seamless; progress is reported per face.
   - **Output.** Results are written as PNG into a dedicated folder and registered
     with MediaStore; originals are never touched.
-- **Photo Restore / Enhance** (2.4.0) — *Viewer.* The remaining capability split
-  out of the original enhancer: general AI **denoise / sharpen / deblur** for the
-  whole photo (not just faces). Same offline framework; specific models are
-  decided when the feature is built.
+- **Photo Enhance** (2.4.0, ✅ shipped) — *Viewer.* On-device AI **whole-image
+  restoration**: denoise / sharpen / deblur the entire photo (not just faces)
+  while keeping its original resolution — the remaining capability split out of
+  the original enhancer. Built on the **same ONNX Runtime framework and
+  user-imported model flow** as the Background Remover, Upscaler, and Face
+  Restore — no bundled weights, no network, same device-suitability guard.
+  Shipped in 2.4.0:
+  - **Models (user-imported, license-safe).** **SCUNet** (Swin-Conv-UNet blind
+    denoiser) `.onnx` models, opened from their download page in the browser and
+    imported like every other model. Two models are offered as a **style choice,
+    not a speed tier** (both ~87 MB, both BALANCED): **SCUNet (Sharp)** — the
+    recommended default, restoring crisp, detailed texture — and **SCUNet
+    (Clean)** — a smoother, lower-noise look. SCUNet is Apache-2.0 (cszn); the
+    ONNX exports are the dynamic-input builds from `deepghs/image_restoration`.
+  - **Whole-image tiled processing.** SCUNet is fully-convolutional and keeps the
+    input resolution (scale ×1); the photo is processed in overlapping 256²
+    tiles and stitched back so memory stays bounded on mobile, with progress
+    reported per tile.
+  - **Strength.** A slider blends the enhanced result back over the original
+    (recommended ≈ 80%, with a one-tap "use recommended").
+  - **Before/after compare.** A draggable slider reveals the original under the
+    enhanced result so the effect is easy to judge before saving.
+  - **Output.** Results are written as PNG into a dedicated `Pictures/AGallery
+    Enhanced` folder and registered with MediaStore; originals are never touched.
 - **Auto Enhance** (2.5.0) — *Viewer.* A **one-tap pipeline** that recombines the
-  three AI capabilities — face restore + photo restore + upscale — into a single
+  three AI capabilities — face restore + photo enhance + upscale — into a single
   action, with sensible defaults and this device's suitability verdict as advice.
 - **Smart Scanner** (2.7.0) — *Tools hub (+ viewer surfacing).* An extensible
   on-device detector module; starts by surfacing QR detection, more detectors
   later.
-- **OCR → PDF** (2.8.0) — *Tools hub.* Photograph notes / a whiteboard, OCR the
+- **Old Photo Restoration** (2.8.0) — *Viewer.* AI restoration tuned for
+  **scanned / vintage prints** — repairing scratches, tears, fading, and heavy
+  degradation that the general Photo Enhance is not specialised for. Same offline
+  framework; specific models are decided when the feature is built.
+- **OCR → PDF** (2.9.0) — *Tools hub.* Photograph notes / a whiteboard, OCR the
   text, and produce a PDF. Output format TBD (Section 9).
-- **AI Semantic Search** (2.9.0) — *Search feature.* Search the library by
+- **AI Semantic Search** (2.10.0) — *Search feature.* Search the library by
   meaning using on-device embeddings; all data stays local. This is AGallery's
   only search.
 
@@ -499,8 +540,9 @@ Established during the codebase-wide cleanup; all layers now follow these:
    **Real-ESRGAN** models (General x4 v3 + x4plus), and **Face Restore** uses
    user-imported **GPEN** blind-face-restoration models (GPEN-BFR-256 +
    GPEN-BFR-512), with face location handled on-device by **ML Kit Face
-   Detection**. Model choices for the later photo-restore/denoise, scanner, OCR,
-   and semantic-search features are still open.
+   Detection**, and **Photo Enhance** uses user-imported **SCUNet** blind-denoiser
+   models (Sharp + Clean, a style choice). Model choices for the later old-photo
+   restoration, scanner, OCR, and semantic-search features are still open.
 2. **OCR → PDF output** — undecided (searchable image+text PDF vs. reflowed
    text). Decide when building the feature.
 
@@ -515,7 +557,7 @@ Established during the codebase-wide cleanup; all layers now follow these:
 | Use cases | `domain/usecase` |
 | MediaStore / EXIF / model IO implementations | `data/...` + `data/repository` |
 | Tool screens + ViewModels | `presentation/tools/<tool>/` (+ `di`) |
-| Search screen | `presentation/search/` (2.9.0) |
+| Search screen | `presentation/search/` (2.10.0) |
 | Nav routes | `core/navigation/NavKeys.kt` (`Screen.*`) + wire in `AGalleryNavDisplay` |
 | New Home tab (Tools) | `presentation/home` (extend the pager to 4 pages) |
 | DI wiring | one Koin module per feature |

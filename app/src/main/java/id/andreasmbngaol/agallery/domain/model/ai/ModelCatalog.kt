@@ -218,6 +218,80 @@ object ModelCatalog {
         estimatedPeakMemoryBytes = 1_600L * 1024 * 1024,
     )
 
+    // ------------------------------------------------------------------
+    // Photo enhancement (2.4.0)
+    //
+    // Whole-image restoration with SCUNet (Swin-Conv-UNet blind denoiser). Both
+    // models are fed RGB in 0..1 with NO mean/std shift (mean 0 / std 1) and
+    // output a cleaned RGB image the SAME size as the input (scaleFactor = 1),
+    // read back by the shared 0..1 reader (NOT the signed face-restore reader).
+    // SCUNet is fully-convolutional; the enhance processor runs it tiled across
+    // the whole photo at a fixed 256x256 window (a multiple of the network's
+    // downsampling factor) and blends the result over the original by strength.
+    //
+    // The two models are a STYLE choice, NOT a speed tier (both are BALANCED and
+    // the same size): SCUNet-GAN restores sharper, more detailed texture, while
+    // SCUNet-PSNR is cleaner and smoother. The UI describes them as Sharp/Clean
+    // rather than by tier. SCUNet is Apache-2.0 (cszn); the ONNX exports are the
+    // dynamic-input builds from deepghs/image_restoration.
+    // ------------------------------------------------------------------
+
+    /**
+     * SCUNet-GAN (Sharp) — the recommended default enhancer: restores crisp,
+     * detailed texture with a light, natural sharpening. Apache-2.0 (cszn).
+     */
+    val SCUNET_GAN: AiModelSpec = AiModelSpec(
+        id = AiModelId("scunet-gan"),
+        feature = AiFeature.IMAGE_ENHANCE,
+        tier = ModelTier.BALANCED,
+        displayName = "SCUNet (Sharp)",
+        approxSizeBytes = 87L * 1024 * 1024,
+        expectedSizeBytes = 0L,
+        sha256 = "79ae6073c91c2d25d1f199137a67c8d0f0807df27219cdd7d890f3cc6d5b43e7",
+        io = ModelIoSpec(
+            inputName = "",
+            outputName = "",
+            inputWidth = 256,
+            inputHeight = 256,
+            layout = TensorLayout.NCHW,
+            mean = listOf(0f, 0f, 0f),
+            std = listOf(1f, 1f, 1f),
+            scaleFactor = 1,
+        ),
+        downloadUrl = "https://huggingface.co/andreasmlbngaol/a-gallery/resolve/main/SCUNet-GAN.onnx?download=true",
+        recommended = true,
+        offersQualityChoice = false,
+        estimatedPeakMemoryBytes = 700L * 1024 * 1024,
+    )
+
+    /**
+     * SCUNet-PSNR (Clean) — the smooth, low-noise alternative: maximises
+     * clean-up (highest PSNR) for a gentler, softer look. Apache-2.0 (cszn).
+     */
+    val SCUNET_PSNR: AiModelSpec = AiModelSpec(
+        id = AiModelId("scunet-psnr"),
+        feature = AiFeature.IMAGE_ENHANCE,
+        tier = ModelTier.BALANCED,
+        displayName = "SCUNet (Clean)",
+        approxSizeBytes = 87L * 1024 * 1024,
+        expectedSizeBytes = 0L,
+        sha256 = "b0f8c12f1575bb49e39a85924152f1c6d4b527a4aae0432c9e5c7397123465e3",
+        io = ModelIoSpec(
+            inputName = "",
+            outputName = "",
+            inputWidth = 256,
+            inputHeight = 256,
+            layout = TensorLayout.NCHW,
+            mean = listOf(0f, 0f, 0f),
+            std = listOf(1f, 1f, 1f),
+            scaleFactor = 1,
+        ),
+        downloadUrl = "https://huggingface.co/andreasmlbngaol/a-gallery/resolve/main/SCUNet-PSNR.onnx?download=true",
+        recommended = false,
+        offersQualityChoice = false,
+        estimatedPeakMemoryBytes = 700L * 1024 * 1024,
+    )
+
     /** Every known model, in display order (recommended first within a feature). */
     val ALL: List<AiModelSpec> = listOf(
         ISNET_GENERAL_USE,
@@ -226,6 +300,8 @@ object ModelCatalog {
         REAL_ESRGAN_GENERAL_X4V3,
         GPEN_BFR_512,
         GPEN_BFR_256,
+        SCUNET_GAN,
+        SCUNET_PSNR,
     )
 
     /** Models that power the given [feature], recommended entry first. */

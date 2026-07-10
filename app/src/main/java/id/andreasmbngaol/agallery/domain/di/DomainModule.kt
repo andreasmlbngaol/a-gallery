@@ -8,6 +8,7 @@ import id.andreasmbngaol.agallery.domain.usecase.editing.RemoveMetadataUseCase
 import id.andreasmbngaol.agallery.domain.usecase.editing.RenameMediaUseCase
 import id.andreasmbngaol.agallery.domain.usecase.ai.DeleteModelUseCase
 import id.andreasmbngaol.agallery.domain.usecase.ai.DetectFacesUseCase
+import id.andreasmbngaol.agallery.domain.usecase.ai.EnhancePhotoUseCase
 import id.andreasmbngaol.agallery.domain.usecase.ai.GetModelCatalogUseCase
 import id.andreasmbngaol.agallery.domain.usecase.ai.ImportModelUseCase
 import id.andreasmbngaol.agallery.domain.usecase.ai.ObserveModelStatusUseCase
@@ -16,6 +17,7 @@ import id.andreasmbngaol.agallery.domain.usecase.ai.ResolveModelPathUseCase
 import id.andreasmbngaol.agallery.domain.usecase.ai.RestoreFacesUseCase
 import id.andreasmbngaol.agallery.domain.usecase.ai.SaveBackgroundResultUseCase
 import id.andreasmbngaol.agallery.domain.usecase.ai.SaveFaceRestoreResultUseCase
+import id.andreasmbngaol.agallery.domain.usecase.ai.SavePhotoEnhanceResultUseCase
 import id.andreasmbngaol.agallery.domain.usecase.ai.SaveUpscaleResultUseCase
 import id.andreasmbngaol.agallery.domain.usecase.ai.UpscaleImageUseCase
 import id.andreasmbngaol.agallery.domain.usecase.editing.RequestWriteAccessUseCase
@@ -92,6 +94,8 @@ val domainModule = module {
     factoryOf(::RestoreFacesUseCase)
     factoryOf(::SaveFaceRestoreResultUseCase)
     factoryOf(::DetectFacesUseCase)
+    factoryOf(::EnhancePhotoUseCase)
+    factoryOf(::SavePhotoEnhanceResultUseCase)
 
     // settings
     factoryOf(::GetSettingsUseCase)

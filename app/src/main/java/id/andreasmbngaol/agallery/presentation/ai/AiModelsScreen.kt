@@ -187,7 +187,8 @@ fun AiModelsScreen(
             // A single import runs at a time across every feature, so disable
             // all import buttons whenever any row (in any section) is busy.
             val importing =
-                (state.rows + state.upscaleRows + state.faceRestoreRows).any { it.isImporting }
+                (state.rows + state.upscaleRows + state.faceRestoreRows + state.enhanceRows)
+                    .any { it.isImporting }
             val launchImport: (AiModelRow) -> Unit = { row ->
                 pendingSpec = row.spec
                 importLauncher.launch(arrayOf("application/octet-stream", "*/*"))
@@ -259,6 +260,25 @@ fun AiModelsScreen(
                     onOpenDownloadPage = { row -> openDownloadPage(context, row.spec.downloadUrl) },
                 )
             }
+            FeatureSection(
+                title = stringResource(R.string.ai_models_feature_enhance),
+                expanded = expandedSection == AiFeatureSection.ENHANCE,
+                onToggle = {
+                    expandedSection = if (expandedSection == AiFeatureSection.ENHANCE) {
+                        null
+                    } else {
+                        AiFeatureSection.ENHANCE
+                    }
+                },
+            ) {
+                AiModelsCard(
+                    rows = state.enhanceRows,
+                    importDisabled = importing,
+                    onImport = launchImport,
+                    onDelete = { row -> pendingDelete = row },
+                    onOpenDownloadPage = { row -> openDownloadPage(context, row.spec.downloadUrl) },
+                )
+            }
             Text(
                 text = stringResource(R.string.ai_model_import_hint),
                 style = MaterialTheme.typography.bodySmall,
@@ -283,7 +303,7 @@ fun AiModelsScreen(
  * Feature sections on the AI models screen. Used as the accordion key so only
  * one section can be expanded at a time.
  */
-private enum class AiFeatureSection { BACKGROUND, UPSCALE, FACE }
+private enum class AiFeatureSection { BACKGROUND, UPSCALE, FACE, ENHANCE }
 
 /**
  * A collapsible section header (e.g. "Background removal") with its content. The

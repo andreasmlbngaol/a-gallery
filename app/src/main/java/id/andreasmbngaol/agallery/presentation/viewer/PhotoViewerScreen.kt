@@ -108,6 +108,7 @@ fun PhotoViewerScreen(
     onOpenBackgroundRemover: (mediaUri: String, displayName: String) -> Unit = { _, _ -> },
     onOpenImageUpscale: (mediaUri: String, displayName: String) -> Unit = { _, _ -> },
     onOpenFaceRestore: (mediaUri: String, displayName: String) -> Unit = { _, _ -> },
+    onOpenPhotoEnhance: (mediaUri: String, displayName: String) -> Unit = { _, _ -> },
     viewModel: PhotoViewerViewModel = koinViewModel(),
 ) {
     BackHandler(onBack = onBack)
@@ -393,6 +394,10 @@ fun PhotoViewerScreen(
 
             if (showAiSheet && !isVideo) {
                 AiSheet(
+                    onEnhancePhoto = {
+                        showAiSheet = false
+                        onOpenPhotoEnhance(item.uri, item.displayName)
+                    },
                     onRemoveBackground = {
                         showAiSheet = false
                         onOpenBackgroundRemover(item.uri, item.displayName)

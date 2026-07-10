@@ -14,6 +14,7 @@ import androidx.navigation3.ui.NavDisplay
 import id.andreasmbngaol.agallery.presentation.ai.AiModelsScreen
 import id.andreasmbngaol.agallery.presentation.ai.BackgroundRemoverScreen
 import id.andreasmbngaol.agallery.presentation.ai.FaceRestoreScreen
+import id.andreasmbngaol.agallery.presentation.ai.PhotoEnhanceScreen
 import id.andreasmbngaol.agallery.presentation.ai.ImageUpscaleScreen
 import id.andreasmbngaol.agallery.presentation.albums.AlbumDetailScreen
 import id.andreasmbngaol.agallery.presentation.albums.CreateAlbumScreen
@@ -111,6 +112,14 @@ fun AGalleryNavDisplay() {
                                         ),
                                     )
                                 },
+                                onOpenPhotoEnhance = { mediaUri, displayName ->
+                                    backStack.add(
+                                        Screen.PhotoEnhance(
+                                            mediaUri = mediaUri,
+                                            displayName = displayName,
+                                        ),
+                                    )
+                                },
                             )
                         }
 
@@ -176,6 +185,15 @@ fun AGalleryNavDisplay() {
 
                         is Screen.FaceRestore -> NavEntry(key) {
                             FaceRestoreScreen(
+                                mediaUri = key.mediaUri,
+                                displayName = key.displayName,
+                                onBack = { backStack.removeLastOrNull() },
+                                onOpenAiModels = { backStack.add(Screen.AiModels) },
+                            )
+                        }
+
+                        is Screen.PhotoEnhance -> NavEntry(key) {
+                            PhotoEnhanceScreen(
                                 mediaUri = key.mediaUri,
                                 displayName = key.displayName,
                                 onBack = { backStack.removeLastOrNull() },

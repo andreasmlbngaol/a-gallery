@@ -18,4 +18,13 @@ enum class AiFeature {
 
     /** Blind face restoration (GPEN) used by Face Restore (2.3.0). */
     FACE_RESTORATION,
+
+    /**
+     * Whole-image restoration / denoising (SCUNet) used by Photo Enhance (2.4.0).
+     * Cleans sensor noise, JPEG artefacts and mild blur across the ENTIRE frame
+     * while keeping the original resolution (unlike [IMAGE_UPSCALE], which
+     * enlarges). The two SCUNet models are a STYLE choice (sharper vs cleaner),
+     * not a speed tier.
+     */
+    IMAGE_ENHANCE,
 }

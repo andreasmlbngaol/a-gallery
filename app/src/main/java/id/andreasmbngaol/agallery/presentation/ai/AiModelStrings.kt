@@ -35,6 +35,8 @@ object AiModelStrings {
         "swinir-m-x4-gan" -> R.string.ai_model_rationale_swinir
         "gpen-bfr-256" -> R.string.ai_model_rationale_gpen256
         "gpen-bfr-512" -> R.string.ai_model_rationale_gpen512
+        "scunet-gan" -> R.string.ai_model_rationale_scunet_gan
+        "scunet-psnr" -> R.string.ai_model_rationale_scunet_psnr
         else -> 0
     }
 

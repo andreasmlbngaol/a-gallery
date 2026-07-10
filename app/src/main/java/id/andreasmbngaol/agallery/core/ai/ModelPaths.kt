@@ -7,8 +7,9 @@ import java.io.File
 /**
  * Resolves where AI artifacts live in app-private storage. Model files sit under
  * `filesDir/ai_models/<id>.onnx`; transient result previews sit under
- * `cacheDir/ai_bg/` (cutouts), `cacheDir/ai_upscale/` (upscaled images), and
- * `cacheDir/ai_face/` (face-restored images).
+ * `cacheDir/ai_bg/` (cutouts), `cacheDir/ai_upscale/` (upscaled images),
+ * `cacheDir/ai_face/` (face-restored images), and `cacheDir/ai_enhance/`
+ * (enhanced images).
  * Nothing here is world-readable and nothing is fetched over the network.
  */
 class ModelPaths(
@@ -41,11 +42,19 @@ class ModelPaths(
     fun newFaceRestoreFile(): File =
         File(faceRestoreCacheDir(), "restored_${System.currentTimeMillis()}.png")
 
+    /** The cache directory for transient photo-enhance previews (on demand). */
+    fun enhanceCacheDir(): File = File(context.cacheDir, ENHANCE_DIR).apply { mkdirs() }
+
+    /** A fresh, unique cache file for an enhanced-image preview PNG. */
+    fun newEnhanceFile(): File =
+        File(enhanceCacheDir(), "enhanced_${System.currentTimeMillis()}.png")
+
     private companion object {
         const val MODELS_DIR = "ai_models"
         const val PREVIEW_DIR = "ai_bg"
         const val UPSCALE_DIR = "ai_upscale"
         const val FACE_DIR = "ai_face"
+        const val ENHANCE_DIR = "ai_enhance"
         const val MODEL_EXT = "onnx"
     }
 }

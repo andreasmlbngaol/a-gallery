@@ -40,6 +40,7 @@ while keeping you in full control of your media.
 - **Subject lift** — press and hold a photo to lift its subject out as a sticker you can drag, then copy or share it as a transparent cutout — all on-device.
 - **AI photo upscaler (on-device)** — enlarge and sharpen a photo with super-resolution, using an AI model you import yourself. Choose a quality level (Eco, Balanced, or Quality) that fits your phone, or use **Auto Upscale** to process a whole selection at once. Nothing leaves your device.
 - **AI face restore (on-device)** — bring blurry or low-quality faces back to life, using an AI model you import yourself. Faces are found automatically and shown with a highlight, and a strength slider controls how much restoration to apply. Nothing leaves your device.
+- **AI photo enhance (on-device)** — clean up an entire photo, removing noise, compression artefacts, and mild blur while keeping its original resolution, using an AI model you import yourself. Pick a style (Sharper or Cleaner), tune the strength, and compare before/after with a slider. Nothing leaves your device.
 - **QR tools** — generate a customizable QR code, and detect and read QR/barcodes right inside your photos.
 - **English & Bahasa Indonesia** — the app follows your system language.
 - **Make it yours** — tune the grid density and the overall look in Settings until it feels exactly right.
