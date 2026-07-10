@@ -1,6 +1,7 @@
 package id.andreasmbngaol.agallery.presentation.ai
 
 import android.widget.Toast
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -30,10 +31,11 @@ import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.ExposedDropdownMenuAnchorType
 import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
-import androidx.compose.material3.LinearWavyProgressIndicator
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Icon
+import androidx.compose.material3.LinearWavyProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Slider
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -47,10 +49,11 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalResources
@@ -61,6 +64,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import coil3.compose.AsyncImage
+import coil3.compose.SubcomposeAsyncImage
 import com.adamglin.PhosphorIcons
 import com.adamglin.phosphoricons.Bold
 import com.adamglin.phosphoricons.bold.ArrowLeft
@@ -72,40 +76,41 @@ import com.kyant.backdrop.backdrops.rememberLayerBackdrop
 import id.andreasmbngaol.agallery.R
 import id.andreasmbngaol.agallery.domain.model.ai.AiModelId
 import id.andreasmbngaol.agallery.domain.model.ai.AiModelSpec
+import id.andreasmbngaol.agallery.domain.model.ai.FaceBox
 import id.andreasmbngaol.agallery.domain.model.ai.ModelTier
-import id.andreasmbngaol.agallery.domain.model.ai.RemovalQuality
-import id.andreasmbngaol.agallery.domain.model.settings.ComponentStyle
 import id.andreasmbngaol.agallery.core.ui.ScreenTopBarHeight
 import id.andreasmbngaol.agallery.core.ui.SystemBarScrim
 import id.andreasmbngaol.agallery.core.ui.drawsBackdrop
-import id.andreasmbngaol.agallery.core.ui.SegmentedGlassItem
-import id.andreasmbngaol.agallery.core.ui.SegmentedGlassTrack
 import id.andreasmbngaol.agallery.core.ui.rememberEffectiveComponentStyle
 import id.andreasmbngaol.agallery.core.ui.rememberEffectiveEdgeEffectMode
 import id.andreasmbngaol.agallery.presentation.viewer.GlassActionButton
 import id.andreasmbngaol.agallery.presentation.viewer.GlassIconButton
 import java.io.File
 import java.util.Locale
+import kotlin.math.abs
+import kotlin.math.roundToInt
 import org.koin.androidx.compose.koinViewModel
 import org.koin.core.parameter.parametersOf
 
 /**
- * Background Remover screen for a single image. If no model is installed it
- * shows an empty state that sends the user to the AI models screen; otherwise it
- * offers a model chooser, runs on-device removal into a transparent preview, and
- * saves that preview into the gallery as a NEW PNG (the original is untouched).
+ * Face Restore screen for a single image. If no face-restore model is installed
+ * it shows an empty state that sends the user to the AI models screen; otherwise
+ * it offers a model chooser and a blend-strength slider, runs on-device GPEN
+ * restoration on every detected face into a preview, and saves that preview into
+ * the gallery as a NEW PNG (the original is untouched).
  *
- * [mediaUri] and [displayName] come from the navigation route and are passed to
- * the view model as Koin parameters.
+ * Mirrors the Image Upscaler screen but replaces the output-size mode dropdown
+ * with a strength slider and reports progress in faces rather than tiles.
  */
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
-fun BackgroundRemoverScreen(
+fun FaceRestoreScreen(
     mediaUri: String,
     displayName: String,
     onBack: () -> Unit,
     onOpenAiModels: () -> Unit,
 ) {
-    val viewModel: BackgroundRemoverViewModel =
+    val viewModel: FaceRestoreViewModel =
         koinViewModel(key = mediaUri) { parametersOf(mediaUri, displayName) }
     val state by viewModel.uiState.collectAsState()
     val componentStyle = rememberEffectiveComponentStyle(state.componentStyleChosen)
@@ -114,6 +119,7 @@ fun BackgroundRemoverScreen(
     val context = LocalContext.current
     val resources = LocalResources.current
     val safeDrawing = WindowInsets.safeDrawing.asPaddingValues()
+    val scrollState = rememberScrollState()
 
     LaunchedEffect(viewModel) {
         viewModel.messages.collect { message ->
@@ -124,6 +130,15 @@ fun BackgroundRemoverScreen(
                 resources.getString(message.textRes)
             }
             Toast.makeText(context, text, Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    // When the result becomes available, scroll it into view so the user isn't
+    // left staring at the source image thinking nothing happened while the
+    // result PNG is still being decoded for display.
+    LaunchedEffect(state.resultPath, scrollState.maxValue) {
+        if (state.resultPath != null && scrollState.maxValue > 0) {
+            scrollState.animateScrollTo(scrollState.maxValue)
         }
     }
 
@@ -154,7 +169,7 @@ fun BackgroundRemoverScreen(
                 }
                 Spacer(Modifier.width(16.dp))
                 Text(
-                    text = stringResource(R.string.bg_remover_title),
+                    text = stringResource(R.string.face_restore_title),
                     style = MaterialTheme.typography.headlineSmall,
                     fontWeight = FontWeight.SemiBold,
                     color = MaterialTheme.colorScheme.onSurface,
@@ -171,7 +186,7 @@ fun BackgroundRemoverScreen(
         Column(
             modifier = backdropModifier
                 .then(sourceModifier)
-                .verticalScroll(rememberScrollState())
+                .verticalScroll(scrollState)
                 .padding(horizontal = 16.dp)
                 .padding(
                     top = safeDrawing.calculateTopPadding() + ScreenTopBarHeight + 8.dp,
@@ -190,7 +205,7 @@ fun BackgroundRemoverScreen(
             }
 
             Text(
-                text = stringResource(R.string.bg_remover_choose_model),
+                text = stringResource(R.string.face_restore_choose_model),
                 style = MaterialTheme.typography.labelLarge,
                 color = MaterialTheme.colorScheme.primary,
             )
@@ -201,58 +216,84 @@ fun BackgroundRemoverScreen(
                 onSelect = { viewModel.selectModel(it) },
             )
 
-            if (state.qualitySelectable) {
-                Text(
-                    text = stringResource(R.string.bg_remover_quality),
-                    style = MaterialTheme.typography.labelLarge,
-                    color = MaterialTheme.colorScheme.primary,
-                )
-                QualitySelector(
-                    selected = state.selectedQuality,
-                    enabled = !state.processing,
-                    onSelect = { viewModel.selectQuality(it) },
-                    componentStyle = componentStyle,
-                )
-            }
+            StrengthSlider(
+                strength = state.strength,
+                enabled = !state.processing,
+                onChange = { viewModel.setStrength(it) },
+            )
 
             Text(
-                text = stringResource(R.string.bg_remover_source),
+                text = stringResource(R.string.face_restore_source),
                 style = MaterialTheme.typography.labelLarge,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
-            AsyncImage(
-                model = state.sourceUri,
-                contentDescription = state.sourceDisplayName,
-                contentScale = ContentScale.Fit,
+            Box(
                 modifier = Modifier
                     .fillMaxWidth()
                     .aspectRatio(1f)
                     .clip(RoundedCornerShape(16.dp))
                     .background(MaterialTheme.colorScheme.surfaceContainerHigh),
-            )
+            ) {
+                AsyncImage(
+                    model = state.sourceUri,
+                    contentDescription = state.sourceDisplayName,
+                    contentScale = ContentScale.Fit,
+                    modifier = Modifier.fillMaxSize(),
+                )
+                if (state.detectedFaces.isNotEmpty() &&
+                    state.sourceWidth > 0 &&
+                    state.sourceHeight > 0
+                ) {
+                    FaceBoxesOverlay(
+                        faces = state.detectedFaces,
+                        imageWidth = state.sourceWidth,
+                        imageHeight = state.sourceHeight,
+                        color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.fillMaxSize(),
+                    )
+                }
+            }
+            if (state.detectionDone) {
+                Text(
+                    text = if (state.detectedFaces.isEmpty()) {
+                        stringResource(R.string.face_restore_faces_none)
+                    } else {
+                        stringResource(
+                            R.string.face_restore_faces_detected,
+                            state.detectedFaces.size,
+                        )
+                    },
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
 
             if (state.resultPath != null) {
                 Text(
-                    text = stringResource(R.string.bg_remover_result),
+                    text = stringResource(R.string.face_restore_result),
                     style = MaterialTheme.typography.labelLarge,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
-                Box(
+                SubcomposeAsyncImage(
+                    model = File(state.resultPath!!),
+                    contentDescription = stringResource(R.string.face_restore_result),
+                    contentScale = ContentScale.Fit,
+                    loading = {
+                        Box(
+                            modifier = Modifier.fillMaxSize(),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            CircularWavyProgressIndicator(modifier = Modifier.size(32.dp))
+                        }
+                    },
                     modifier = Modifier
                         .fillMaxWidth()
                         .aspectRatio(1f)
                         .clip(RoundedCornerShape(16.dp))
-                        .checkerboard(),
-                ) {
-                    AsyncImage(
-                        model = File(state.resultPath!!),
-                        contentDescription = stringResource(R.string.bg_remover_result),
-                        contentScale = ContentScale.Fit,
-                        modifier = Modifier.fillMaxSize(),
-                    )
-                }
+                        .background(MaterialTheme.colorScheme.surfaceContainerHigh),
+                )
                 Text(
-                    text = stringResource(R.string.bg_remover_saved_hint),
+                    text = stringResource(R.string.face_restore_saved_hint),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -262,7 +303,9 @@ fun BackgroundRemoverScreen(
                 ProcessingDialog(
                     elapsedSeconds = state.processingElapsedSeconds,
                     usedMemoryBytes = state.processingUsedMemoryBytes,
-                    onCancel = viewModel::cancelRemoval,
+                    completedFaces = state.processingCompletedFaces,
+                    totalFaces = state.processingTotalFaces,
+                    onCancel = viewModel::cancelRestore,
                 )
             }
         }
@@ -270,11 +313,17 @@ fun BackgroundRemoverScreen(
         if (state.hasModel) {
             BottomActionBar(
                 showSave = state.resultPath != null,
-                removeEnabled = !state.processing && !state.saving,
+                // Only allow a run once detection has finished AND found at least
+                // one face: restoring an image with no detected faces would just
+                // fail, so the button stays disabled (with the "no faces" caption
+                // under the preview explaining why).
+                restoreEnabled = !state.processing &&
+                    !state.saving &&
+                    state.detectedFaces.isNotEmpty(),
                 saveEnabled = !state.saving && !state.processing,
                 style = componentStyle,
                 backdrop = backdrop,
-                onRemove = viewModel::removeBackground,
+                onRestore = viewModel::restore,
                 onSave = viewModel::save,
                 modifier = Modifier.align(Alignment.BottomCenter),
             )
@@ -302,7 +351,7 @@ private fun ModelDropdown(
             onValueChange = {},
             readOnly = true,
             enabled = enabled,
-            label = { Text(stringResource(R.string.bg_remover_choose_model)) },
+            label = { Text(stringResource(R.string.face_restore_choose_model)) },
             supportingText = if (selected != null) {
                 { Text(text = modelTierAndSpeed(selected.tier)) }
             } else null,
@@ -341,51 +390,160 @@ private fun ModelDropdown(
     }
 }
 
-/** Localized "Tier \u00b7 speed" hint for a model (e.g. "Light \u00b7 fast"). */
+/**
+ * Blend-strength slider (0..1). Higher blends the restored face in more strongly
+ * (sharper but can look less natural / drift from the real identity); lower
+ * keeps more of the original for a subtler result.
+ */
+@Composable
+private fun StrengthSlider(
+    strength: Float,
+    enabled: Boolean,
+    onChange: (Float) -> Unit,
+) {
+    val recommended = FaceRestoreUiState.RECOMMENDED_STRENGTH
+    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                text = stringResource(R.string.face_restore_strength_title),
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Text(
+                text = "${(strength * 100).roundToInt()}%",
+                style = MaterialTheme.typography.labelLarge,
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.primary,
+            )
+        }
+        Slider(
+            value = strength,
+            onValueChange = onChange,
+            valueRange = 0f..1f,
+            enabled = enabled,
+            modifier = Modifier.fillMaxWidth(),
+        )
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+        ) {
+            Text(
+                text = stringResource(R.string.face_restore_strength_natural),
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Text(
+                text = stringResource(R.string.face_restore_strength_max),
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                text = stringResource(
+                    R.string.face_restore_strength_recommended,
+                    (recommended * 100).roundToInt(),
+                ),
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.primary,
+            )
+            if (abs(strength - recommended) > 0.005f) {
+                TextButton(
+                    onClick = { onChange(recommended) },
+                    enabled = enabled,
+                ) {
+                    Text(stringResource(R.string.face_restore_strength_use_recommended))
+                }
+            }
+        }
+        Text(
+            text = stringResource(R.string.face_restore_strength_desc),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+    }
+}
+
+/**
+ * Draws each detected face as a rounded bounding box over the source preview.
+ * [faces] are normalized (0..1) to [imageWidth] x [imageHeight]; because the
+ * image is shown with [ContentScale.Fit] inside a square, the boxes are mapped
+ * onto the fitted (letterboxed) image rectangle rather than the whole canvas.
+ */
+@Composable
+private fun FaceBoxesOverlay(
+    faces: List<FaceBox>,
+    imageWidth: Int,
+    imageHeight: Int,
+    color: Color,
+    modifier: Modifier = Modifier,
+) {
+    Canvas(modifier = modifier) {
+        val canvasW = size.width
+        val canvasH = size.height
+        if (imageWidth <= 0 || imageHeight <= 0 || canvasW <= 0f || canvasH <= 0f) return@Canvas
+        val imageAspect = imageWidth.toFloat() / imageHeight.toFloat()
+        val canvasAspect = canvasW / canvasH
+        // Fitted image rect inside the canvas (ContentScale.Fit letterboxing).
+        val fittedW: Float
+        val fittedH: Float
+        if (imageAspect > canvasAspect) {
+            fittedW = canvasW
+            fittedH = canvasW / imageAspect
+        } else {
+            fittedH = canvasH
+            fittedW = canvasH * imageAspect
+        }
+        val offsetX = (canvasW - fittedW) / 2f
+        val offsetY = (canvasH - fittedH) / 2f
+        val strokeWidth = 2.dp.toPx()
+        val corner = CornerRadius(6.dp.toPx(), 6.dp.toPx())
+        faces.forEach { f ->
+            val left = offsetX + f.left * fittedW
+            val top = offsetY + f.top * fittedH
+            val right = offsetX + f.right * fittedW
+            val bottom = offsetY + f.bottom * fittedH
+            val w = (right - left).coerceAtLeast(0f)
+            val h = (bottom - top).coerceAtLeast(0f)
+            drawRoundRect(
+                color = color,
+                topLeft = Offset(left, top),
+                size = Size(w, h),
+                cornerRadius = corner,
+                style = Stroke(width = strokeWidth),
+            )
+        }
+    }
+}
+
+/** Localized "Tier \u00b7 speed" hint for a face-restore model. */
 @Composable
 private fun modelTierAndSpeed(tier: ModelTier): String =
     stringResource(AiModelStrings.tierLabel(tier)) +
-        " \u00b7 " + stringResource(modelSpeedLabel(tier))
+        " \u00b7 " + stringResource(faceRestoreModelSpeed(tier))
 
-private fun modelSpeedLabel(tier: ModelTier): Int = when (tier) {
+private fun faceRestoreModelSpeed(tier: ModelTier): Int = when (tier) {
     ModelTier.LIGHT -> R.string.upscale_model_speed_light
     ModelTier.BALANCED -> R.string.upscale_model_speed_balanced
     ModelTier.HIGH_QUALITY -> R.string.upscale_model_speed_high
 }
 
 @Composable
-private fun QualitySelector(
-    selected: RemovalQuality,
-    enabled: Boolean,
-    onSelect: (RemovalQuality) -> Unit,
-    componentStyle: ComponentStyle,
-) {
-    val options = listOf(
-        RemovalQuality.ECO to R.string.bg_remover_quality_eco,
-        RemovalQuality.BALANCED to R.string.bg_remover_quality_balanced,
-        RemovalQuality.HIGH to R.string.bg_remover_quality_high,
-    )
-    SegmentedGlassTrack(componentStyle = componentStyle) {
-        options.forEach { (quality, labelRes) ->
-            SegmentedGlassItem(
-                label = stringResource(labelRes),
-                selected = selected == quality,
-                onClick = { onSelect(quality) },
-                enabled = enabled,
-                modifier = Modifier.weight(1f),
-            )
-        }
-    }
-}
-
-@Composable
 private fun BottomActionBar(
     showSave: Boolean,
-    removeEnabled: Boolean,
+    restoreEnabled: Boolean,
     saveEnabled: Boolean,
-    style: ComponentStyle,
+    style: id.andreasmbngaol.agallery.domain.model.settings.ComponentStyle,
     backdrop: Backdrop,
-    onRemove: () -> Unit,
+    onRestore: () -> Unit,
     onSave: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -399,7 +557,7 @@ private fun BottomActionBar(
     ) {
         if (showSave) {
             GlassActionButton(
-                text = stringResource(R.string.bg_remover_save),
+                text = stringResource(R.string.face_restore_save),
                 onClick = onSave,
                 style = style,
                 backdrop = backdrop,
@@ -409,24 +567,26 @@ private fun BottomActionBar(
             )
         }
         GlassActionButton(
-            text = stringResource(R.string.bg_remover_remove),
-            onClick = onRemove,
+            text = stringResource(R.string.face_restore_run),
+            onClick = onRestore,
             style = style,
             backdrop = backdrop,
-            enabled = removeEnabled,
+            enabled = restoreEnabled,
             leadingIcon = PhosphorIcons.Bold.Sparkle,
             modifier = Modifier.fillMaxWidth(),
         )
     }
 }
 
-/**
- * Blocking loading dialog shown while on-device inference runs, so the action
- * button no longer needs an inline spinner.
- */
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
-private fun ProcessingDialog(elapsedSeconds: Int, usedMemoryBytes: Long, onCancel: () -> Unit) {
+private fun ProcessingDialog(
+    elapsedSeconds: Int,
+    usedMemoryBytes: Long,
+    completedFaces: Int,
+    totalFaces: Int,
+    onCancel: () -> Unit,
+) {
     Dialog(
         onDismissRequest = onCancel,
         properties = DialogProperties(
@@ -441,13 +601,13 @@ private fun ProcessingDialog(elapsedSeconds: Int, usedMemoryBytes: Long, onCance
             Column(modifier = Modifier.padding(24.dp)) {
                 Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     Text(
-                        text = stringResource(R.string.bg_remover_processing),
+                        text = stringResource(R.string.face_restore_processing),
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.SemiBold,
                         color = MaterialTheme.colorScheme.onSurface,
                     )
                     Text(
-                        text = stringResource(R.string.bg_remover_processing_desc),
+                        text = stringResource(R.string.face_restore_processing_desc),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -455,25 +615,55 @@ private fun ProcessingDialog(elapsedSeconds: Int, usedMemoryBytes: Long, onCance
 
                 Spacer(Modifier.height(20.dp))
 
-                // Background removal is a single-shot inference with no meaningful
-                // progress fraction, so the bar runs as an indeterminate linear
-                // wavy. Using the SAME linear wavy shape as Upscale and Restore
-                // keeps every AI processing dialog visually consistent (see the
-                // matching ProcessingDialog in FaceRestoreScreen/ImageUpscaleScreen).
-                LinearWavyProgressIndicator(
-                    modifier = Modifier.fillMaxWidth(),
-                )
+                // Determinate progress only makes sense with MORE THAN ONE face:
+                // the bar advances one step per finished face. With a single face
+                // there is nothing meaningful to fill toward, so a continuously
+                // running indeterminate wavy bar reads better. The same
+                // indeterminate bar also covers the warm-up (decode/detect/model
+                // load, before the face count is known) and the final finishing
+                // phase (encoding the full-res PNG after the last face, which
+                // isn't part of the face count).
+                val finishing = totalFaces > 0 && completedFaces >= totalFaces
+                if (totalFaces > 1 && !finishing) {
+                    val fraction = (completedFaces.toFloat() / totalFaces).coerceIn(0f, 1f)
+                    LinearWavyProgressIndicator(
+                        progress = { fraction },
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                } else {
+                    LinearWavyProgressIndicator(
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                }
 
                 Spacer(Modifier.height(12.dp))
 
                 Text(
+                    text = when {
+                        finishing -> stringResource(R.string.face_restore_progress_finishing)
+                        totalFaces > 1 -> stringResource(
+                            R.string.face_restore_progress_faces,
+                            completedFaces,
+                            totalFaces,
+                        )
+                        totalFaces == 1 -> stringResource(R.string.face_restore_progress_single)
+                        else -> stringResource(R.string.face_restore_progress_detecting)
+                    },
+                    style = MaterialTheme.typography.labelLarge,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.onSurface,
+                )
+
+                Spacer(Modifier.height(6.dp))
+
+                Text(
                     text = stringResource(
-                        R.string.bg_remover_processing_stats,
+                        R.string.upscale_processing_stats,
                         elapsedSeconds,
                         formatUsedMemory(usedMemoryBytes),
                     ),
                     style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.primary,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
 
                 Spacer(Modifier.height(8.dp))
@@ -488,7 +678,6 @@ private fun ProcessingDialog(elapsedSeconds: Int, usedMemoryBytes: Long, onCance
     }
 }
 
-/** Formats process memory usage for the live inference meter (MB, or a dash). */
 private fun formatUsedMemory(bytes: Long): String {
     if (bytes <= 0L) return "\u2014"
     val mb = bytes / (1024L * 1024L)
@@ -499,10 +688,6 @@ private fun formatUsedMemory(bytes: Long): String {
     }
 }
 
-/**
- * Brief loading state shown while the installed-model check runs, so opening the
- * screen for an already-installed model no longer flashes the empty state.
- */
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 private fun CheckingModelsState() {
@@ -532,50 +717,21 @@ private fun NoModelState(onOpenAiModels: () -> Unit) {
             modifier = Modifier.size(48.dp),
         )
         Text(
-            text = stringResource(R.string.bg_remover_no_model_title),
+            text = stringResource(R.string.face_restore_no_model_title),
             style = MaterialTheme.typography.titleMedium,
             fontWeight = FontWeight.SemiBold,
             color = MaterialTheme.colorScheme.onSurface,
             textAlign = TextAlign.Center,
         )
         Text(
-            text = stringResource(R.string.bg_remover_no_model_desc),
+            text = stringResource(R.string.face_restore_no_model_desc),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center,
         )
         Spacer(Modifier.height(4.dp))
         Button(onClick = onOpenAiModels) {
-            Text(stringResource(R.string.bg_remover_choose_model))
+            Text(stringResource(R.string.face_restore_choose_model))
         }
-    }
-}
-
-/**
- * Draws a light/grey checkerboard behind transparent content so the removed
- * background reads as "transparent" rather than white.
- */
-private fun Modifier.checkerboard(cell: Float = 24f): Modifier = drawBehind {
-    val light = Color(0xFFFFFFFF)
-    val dark = Color(0xFFE0E0E0)
-    drawRect(light)
-    var y = 0f
-    var row = 0
-    while (y < size.height) {
-        var x = 0f
-        var col = 0
-        while (x < size.width) {
-            if ((row + col) % 2 == 0) {
-                drawRect(
-                    color = dark,
-                    topLeft = Offset(x, y),
-                    size = Size(cell, cell),
-                )
-            }
-            x += cell
-            col++
-        }
-        y += cell
-        row++
     }
 }

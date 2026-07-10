@@ -89,7 +89,7 @@ a-gallery/
 │        │  ├─ mapper/                 #   DTO ↔ domain mappers
 │        │  ├─ paging/                 #   MediaPagingSource
 │        │  ├─ repository/             #   Repository implementations
-│        │  └─ ai/                     #   AI model repo + background-removal processor
+│        │  └─ ai/                     #   AI model repo + background-removal / upscale / face-restore processors
 │        ├─ domain/                    # Domain layer (pure Kotlin)
 │        │  ├─ di/                     #   use-case factories
 │        │  ├─ model/                  #   MediaItem, Album, AppSettings… + ai/ (ModelCatalog, specs)
@@ -104,7 +104,7 @@ a-gallery/
 │           ├─ trash/                  #   TrashScreen + ViewModel
 │           ├─ settings/               #   SettingsScreen + ViewModel
 │           ├─ tools/                  #   Tools hub + QR generator
-│           ├─ ai/                     #   AI models screen, import UX, Background Remover, Image Upscaler
+│           ├─ ai/                     #   AI models screen, import UX, Background Remover, Image Upscaler, Face Restore
 │           └─ theme/                  #   Material 3 theme
 ├─ .github/workflows/release.yml       # CI: build & publish a signed release APK on tag
 ├─ gradle/libs.versions.toml           # Version catalog
@@ -128,6 +128,7 @@ a-gallery/
 - **On-device AI framework** — `core/ai` wraps ONNX Runtime behind an
   `InferenceEngine` interface; `domain/model/ai` holds the pure-Kotlin model
   catalog, tier / suitability types, and a `DeviceBenchmark`-driven guard, while
-  `data/ai` imports user-supplied `.onnx` files and runs the Background Remover
-  and the Image Upscaler (tiled super-resolution). No models are bundled and
-  nothing is fetched over the network.
+  `data/ai` imports user-supplied `.onnx` files and runs the Background Remover,
+  the Image Upscaler (tiled super-resolution), and Face Restore (on-device ML Kit
+  face detection + per-face GPEN restoration). No models are bundled and nothing
+  is fetched over the network.

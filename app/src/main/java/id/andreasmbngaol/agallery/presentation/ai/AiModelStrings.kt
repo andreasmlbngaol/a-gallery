@@ -33,6 +33,8 @@ object AiModelStrings {
         "real-esrgan-general-x4v3" -> R.string.ai_model_rationale_esrgan_general
         "real-esrgan-x4plus" -> R.string.ai_model_rationale_esrgan_x4plus
         "swinir-m-x4-gan" -> R.string.ai_model_rationale_swinir
+        "gpen-bfr-256" -> R.string.ai_model_rationale_gpen256
+        "gpen-bfr-512" -> R.string.ai_model_rationale_gpen512
         else -> 0
     }
 

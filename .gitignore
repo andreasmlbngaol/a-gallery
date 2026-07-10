@@ -22,3 +22,4 @@ keystore.properties
 keys
 *.tar.gz
 *.onnx
+models

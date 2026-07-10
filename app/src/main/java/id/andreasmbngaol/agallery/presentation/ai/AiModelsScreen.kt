@@ -98,8 +98,11 @@ fun AiModelsScreen(
     val safeDrawing = WindowInsets.safeDrawing.asPaddingValues()
 
     var pendingSpec by remember { mutableStateOf<AiModelSpec?>(null) }
-    var bgExpanded by remember { mutableStateOf(true) }
-    var upscaleExpanded by remember { mutableStateOf(true) }
+    // Accordion state: at most ONE feature section is open at a time and every
+    // section starts collapsed, so the screen stays short and the user can jump
+    // straight to the feature whose model they want to download. Opening a
+    // section closes whichever was open; tapping the open one collapses it.
+    var expandedSection by remember { mutableStateOf<AiFeatureSection?>(null) }
     var pendingDelete by remember { mutableStateOf<AiModelRow?>(null) }
     val importLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.OpenDocument(),
@@ -182,16 +185,23 @@ fun AiModelsScreen(
                 )
             }
             // A single import runs at a time across every feature, so disable
-            // all import buttons whenever any row (in either section) is busy.
-            val importing = (state.rows + state.upscaleRows).any { it.isImporting }
+            // all import buttons whenever any row (in any section) is busy.
+            val importing =
+                (state.rows + state.upscaleRows + state.faceRestoreRows).any { it.isImporting }
             val launchImport: (AiModelRow) -> Unit = { row ->
                 pendingSpec = row.spec
                 importLauncher.launch(arrayOf("application/octet-stream", "*/*"))
             }
             FeatureSection(
                 title = stringResource(R.string.ai_models_feature_bg),
-                expanded = bgExpanded,
-                onToggle = { bgExpanded = !bgExpanded },
+                expanded = expandedSection == AiFeatureSection.BACKGROUND,
+                onToggle = {
+                    expandedSection = if (expandedSection == AiFeatureSection.BACKGROUND) {
+                        null
+                    } else {
+                        AiFeatureSection.BACKGROUND
+                    }
+                },
             ) {
                 Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
                 AiModelsCard(
@@ -213,11 +223,36 @@ fun AiModelsScreen(
             }
             FeatureSection(
                 title = stringResource(R.string.ai_models_feature_upscale),
-                expanded = upscaleExpanded,
-                onToggle = { upscaleExpanded = !upscaleExpanded },
+                expanded = expandedSection == AiFeatureSection.UPSCALE,
+                onToggle = {
+                    expandedSection = if (expandedSection == AiFeatureSection.UPSCALE) {
+                        null
+                    } else {
+                        AiFeatureSection.UPSCALE
+                    }
+                },
             ) {
                 AiModelsCard(
                     rows = state.upscaleRows,
+                    importDisabled = importing,
+                    onImport = launchImport,
+                    onDelete = { row -> pendingDelete = row },
+                    onOpenDownloadPage = { row -> openDownloadPage(context, row.spec.downloadUrl) },
+                )
+            }
+            FeatureSection(
+                title = stringResource(R.string.ai_models_feature_face),
+                expanded = expandedSection == AiFeatureSection.FACE,
+                onToggle = {
+                    expandedSection = if (expandedSection == AiFeatureSection.FACE) {
+                        null
+                    } else {
+                        AiFeatureSection.FACE
+                    }
+                },
+            ) {
+                AiModelsCard(
+                    rows = state.faceRestoreRows,
                     importDisabled = importing,
                     onImport = launchImport,
                     onDelete = { row -> pendingDelete = row },
@@ -245,9 +280,17 @@ fun AiModelsScreen(
 }
 
 /**
+ * Feature sections on the AI models screen. Used as the accordion key so only
+ * one section can be expanded at a time.
+ */
+private enum class AiFeatureSection { BACKGROUND, UPSCALE, FACE }
+
+/**
  * A collapsible section header (e.g. "Background removal") with its content. The
- * header toggles [expanded]; a caret rotates to indicate state. Keeping each
- * feature collapsible keeps the screen tidy as more AI modules are added.
+ * header toggles [expanded]; a caret rotates to indicate state. Sections behave
+ * as an accordion (see the screen's [AiFeatureSection] state): all start
+ * collapsed and opening one closes the others, keeping the screen tidy as more
+ * AI modules are added.
  */
 @Composable
 private fun FeatureSection(

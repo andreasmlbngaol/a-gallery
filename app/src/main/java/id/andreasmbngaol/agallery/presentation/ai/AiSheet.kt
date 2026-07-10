@@ -27,20 +27,23 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import com.adamglin.PhosphorIcons
 import com.adamglin.phosphoricons.Bold
 import com.adamglin.phosphoricons.bold.CaretRight
-import com.adamglin.phosphoricons.bold.CornersOut
-import com.adamglin.phosphoricons.bold.Scissors
+import com.adamglin.phosphoricons.bold.MagnifyingGlassPlus
+import com.adamglin.phosphoricons.bold.Smiley
+import com.adamglin.phosphoricons.bold.UserRectangle
 import id.andreasmbngaol.agallery.R
 
 /**
  * Bottom sheet of on-device AI actions for a photo, opened from the viewer's AI
- * button. It lists the available on-device AI actions (Remove background, Upscale image) and is
- * structured as a list so future AI tools can be added without reshaping the UI.
+ * button. It lists the available on-device AI actions (Remove background, Upscale
+ * image, Restore faces) and is structured as a list so future AI tools can be
+ * added without reshaping the UI.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AiSheet(
     onRemoveBackground: () -> Unit,
     onUpscaleImage: () -> Unit,
+    onRestoreFaces: () -> Unit,
     onDismiss: () -> Unit,
 ) {
     val sheetState = rememberBottomSheetState(
@@ -62,14 +65,23 @@ fun AiSheet(
             )
             Spacer(Modifier.height(16.dp))
             AiActionRow(
-                icon = PhosphorIcons.Bold.Scissors,
+                // Subject lifted out of its background rectangle — reads as
+                // "separate the person from the background" better than scissors.
+                icon = PhosphorIcons.Bold.UserRectangle,
                 title = stringResource(R.string.action_remove_background),
                 onClick = onRemoveBackground,
             )
             AiActionRow(
-                icon = PhosphorIcons.Bold.CornersOut,
+                // Magnifier with a plus — clearly "enlarge / increase detail".
+                icon = PhosphorIcons.Bold.MagnifyingGlassPlus,
                 title = stringResource(R.string.action_upscale_image),
                 onClick = onUpscaleImage,
+            )
+            AiActionRow(
+                // A smiling face — simple and unmistakably about faces.
+                icon = PhosphorIcons.Bold.Smiley,
+                title = stringResource(R.string.action_restore_faces),
+                onClick = onRestoreFaces,
             )
         }
     }

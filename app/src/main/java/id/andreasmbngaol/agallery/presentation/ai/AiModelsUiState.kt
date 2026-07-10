@@ -12,6 +12,7 @@ import id.andreasmbngaol.agallery.domain.model.settings.EdgeEffectMode
  *
  * @property rows one entry per background-removal model, in display order.
  * @property upscaleRows one entry per image-upscaling model, in display order.
+ * @property faceRestoreRows one entry per face-restoration model, in display order.
  * @property componentStyleChosen the user's chosen component style, or null while
  *   settings load.
  * @property edgeEffectMode the user's chosen edge-effect mode, or null while
@@ -22,6 +23,7 @@ import id.andreasmbngaol.agallery.domain.model.settings.EdgeEffectMode
 data class AiModelsUiState(
     val rows: List<AiModelRow> = emptyList(),
     val upscaleRows: List<AiModelRow> = emptyList(),
+    val faceRestoreRows: List<AiModelRow> = emptyList(),
     val componentStyleChosen: ComponentStyle? = null,
     val edgeEffectMode: EdgeEffectMode? = null,
     val deviceCapability: DeviceCapability? = null,

@@ -13,6 +13,7 @@ import androidx.navigation3.runtime.rememberNavBackStack
 import androidx.navigation3.ui.NavDisplay
 import id.andreasmbngaol.agallery.presentation.ai.AiModelsScreen
 import id.andreasmbngaol.agallery.presentation.ai.BackgroundRemoverScreen
+import id.andreasmbngaol.agallery.presentation.ai.FaceRestoreScreen
 import id.andreasmbngaol.agallery.presentation.ai.ImageUpscaleScreen
 import id.andreasmbngaol.agallery.presentation.albums.AlbumDetailScreen
 import id.andreasmbngaol.agallery.presentation.albums.CreateAlbumScreen
@@ -102,6 +103,14 @@ fun AGalleryNavDisplay() {
                                         ),
                                     )
                                 },
+                                onOpenFaceRestore = { mediaUri, displayName ->
+                                    backStack.add(
+                                        Screen.FaceRestore(
+                                            mediaUri = mediaUri,
+                                            displayName = displayName,
+                                        ),
+                                    )
+                                },
                             )
                         }
 
@@ -158,6 +167,15 @@ fun AGalleryNavDisplay() {
 
                         is Screen.ImageUpscale -> NavEntry(key) {
                             ImageUpscaleScreen(
+                                mediaUri = key.mediaUri,
+                                displayName = key.displayName,
+                                onBack = { backStack.removeLastOrNull() },
+                                onOpenAiModels = { backStack.add(Screen.AiModels) },
+                            )
+                        }
+
+                        is Screen.FaceRestore -> NavEntry(key) {
+                            FaceRestoreScreen(
                                 mediaUri = key.mediaUri,
                                 displayName = key.displayName,
                                 onBack = { backStack.removeLastOrNull() },

@@ -107,6 +107,7 @@ fun PhotoViewerScreen(
     albumKey: String? = null,
     onOpenBackgroundRemover: (mediaUri: String, displayName: String) -> Unit = { _, _ -> },
     onOpenImageUpscale: (mediaUri: String, displayName: String) -> Unit = { _, _ -> },
+    onOpenFaceRestore: (mediaUri: String, displayName: String) -> Unit = { _, _ -> },
     viewModel: PhotoViewerViewModel = koinViewModel(),
 ) {
     BackHandler(onBack = onBack)
@@ -399,6 +400,10 @@ fun PhotoViewerScreen(
                     onUpscaleImage = {
                         showAiSheet = false
                         onOpenImageUpscale(item.uri, item.displayName)
+                    },
+                    onRestoreFaces = {
+                        showAiSheet = false
+                        onOpenFaceRestore(item.uri, item.displayName)
                     },
                     onDismiss = { showAiSheet = false },
                 )

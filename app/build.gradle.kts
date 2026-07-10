@@ -34,8 +34,8 @@ android {
         applicationId = "id.andreasmbngaol.agallery"
         minSdk = 29
         targetSdk = 37
-        versionCode = 23
-        versionName = "2.2.0"
+        versionCode = 24
+        versionName = "2.3.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -192,6 +192,7 @@ dependencies {
     // INTERNET permission) for QR Detection. The model is embedded in the APK
     // (~2.4MB) and returns classified structures (URL/WiFi/contact/email/phone/geo).
     implementation(libs.mlkit.barcode.scanning)
+    implementation(libs.mlkit.face.detection)
 
     // ONNX Runtime (Android) — on-device AI inference engine for the AI model
     // framework (Background Remover in 2.0.0). Runs fully offline: models are

@@ -15,4 +15,7 @@ enum class AiFeature {
 
     /** Super-resolution (4x) upscaling used by the Image Enhancer (2.2.0). */
     IMAGE_UPSCALE,
+
+    /** Blind face restoration (GPEN) used by Face Restore (2.3.0). */
+    FACE_RESTORATION,
 }

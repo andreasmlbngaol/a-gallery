@@ -71,16 +71,24 @@ class AiModelsViewModel(
     private val settings: StateFlow<AppSettings> = getSettings()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000L), AppSettings())
 
-    val uiState: StateFlow<AiModelsUiState> = combine(
+    // The per-feature install-state flows, pre-combined into one flow so the main
+    // uiState combine stays within kotlinx's 5-flow typed overload.
+    private val featureStatuses = combine(
         observeModelStatus(feature),
         observeModelStatus(AiFeature.IMAGE_UPSCALE),
+        observeModelStatus(AiFeature.FACE_RESTORATION),
+    ) { bg, upscale, face -> Triple(bg, upscale, face) }
+
+    val uiState: StateFlow<AiModelsUiState> = combine(
+        featureStatuses,
         importState,
         settings,
         capability,
-    ) { statuses, upscaleStatuses, import, s, cap ->
+    ) { (statuses, upscaleStatuses, faceStatuses), import, s, cap ->
         AiModelsUiState(
             rows = statuses.toRows(import, cap),
             upscaleRows = upscaleStatuses.toRows(import, cap),
+            faceRestoreRows = faceStatuses.toRows(import, cap),
             componentStyleChosen = s.componentStyle,
             edgeEffectMode = s.edgeEffectMode,
             deviceCapability = cap,

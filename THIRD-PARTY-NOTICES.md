@@ -54,21 +54,24 @@ The full text of the MIT License is included [below](#mit-license-full-text).
 | Phosphor Icons (icon set) | https://phosphoricons.com | © 2020–2023 Phosphor Icons (Helena Zhang & Tobias Fried) |
 | ONNX Runtime (Android) | `com.microsoft.onnxruntime:onnxruntime-android` | © Microsoft Corporation |
 
-ONNX Runtime powers the on-device AI inference framework (Background Remover in 2.0.0, Subject Lift in 2.1.0). All models are **user-imported** `.onnx` files executed fully offline; no
+ONNX Runtime powers the on-device AI inference framework (Background Remover in 2.0.0, Subject Lift in 2.1.0, Image Upscaler in 2.2.0, Face Restore in 2.3.0). All models are **user-imported** `.onnx` files executed fully offline; no
 model weights are bundled in the APK and nothing is fetched over the network (no
 `INTERNET` permission).
 
 ### Google ML Kit terms
 
-ML Kit's on-device Barcode Scanning model is **bundled** in the released APK and
-powers offline QR Detection (no `INTERNET` permission). It is not distributed
-under Apache-2.0 or MIT; its use is governed by the **Google ML Kit Terms**
-(free, on-device). The library also embeds third-party open-source components
-covered by Google's own bundled notices.
+ML Kit's on-device **Barcode Scanning** and **Face Detection** models are
+**bundled** in the released APK: Barcode Scanning powers offline QR Detection,
+and Face Detection locates faces for the Face Restore feature (2.3.0). Neither
+requires the `INTERNET` permission. They are not distributed under Apache-2.0 or
+MIT; their use is governed by the **Google ML Kit Terms** (free, on-device). The
+libraries also embed third-party open-source components covered by Google's own
+bundled notices.
 
 | Library | Coordinates | License |
 |---|---|---|
 | ML Kit Barcode Scanning (bundled) | `com.google.mlkit:barcode-scanning` | Google ML Kit Terms (proprietary, free, on-device) |
+| ML Kit Face Detection (bundled) | `com.google.mlkit:face-detection` | Google ML Kit Terms (proprietary, free, on-device) |
 
 ---
 

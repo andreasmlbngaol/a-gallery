@@ -6,11 +6,12 @@ package id.andreasmbngaol.agallery.domain.model.ai
  * download the `.onnx` file and tells the inference engine exactly how to feed
  * images in and read the result out.
  *
- * All bundled models are permissively licensed for commercial use
- * (Apache-2.0 / MIT / BSD). Models with non-commercial licenses (e.g. BRIA RMBG
- * for background removal, or CodeFormer for face restoration) are intentionally
- * excluded so the user can ship freely; because models are imported by the user
- * anyway, license choice ultimately rests with them.
+ * AGallery itself ships under the PolyForm Noncommercial 1.0.0 license, so the
+ * catalog is free to reference the best NON-COMMERCIAL research weights (e.g.
+ * GPEN for face restoration) alongside permissive ones — commercial
+ * redistribution is out of scope by design. No weights ship with the app; the
+ * user downloads each `.onnx` themselves, so the ultimate license choice still
+ * rests with them.
  *
  * Each [sha256] is pinned to the canonical artifact, so an import only succeeds
  * when the bytes match exactly (this is what stops the wrong model being
@@ -147,12 +148,84 @@ object ModelCatalog {
         estimatedPeakMemoryBytes = 400L * 1024 * 1024,
     )
 
+    // ------------------------------------------------------------------
+    // Face restoration (2.3.0)
+    //
+    // Blind face-restoration GPEN models. Each takes a single ALIGNED, SQUARE
+    // face crop at its native resolution (256 or 512) as NCHW RGB normalized to
+    // [-1, 1] (mean 0.5 / std 0.5) and outputs the restored face in the SAME
+    // [-1, 1] range (de-normalized by the face-restore processor, not the shared
+    // 0..1 upscale reader). scaleFactor stays 1 (same-size output). The photo's
+    // faces are detected on-device (ML Kit, bundled) and each is restored and
+    // feather-blended back in; non-face areas are untouched. Fixed input size, so
+    // offersQualityChoice = false — instead the UI exposes a blend-strength
+    // slider. GPEN is research-only (non-commercial), which AGallery's license
+    // allows.
+    // ------------------------------------------------------------------
+
+    /**
+     * GPEN-BFR 256 (Light) — the fast, low-memory face restorer; great on
+     * mid-range devices. Restores at 256² per face. Non-commercial (GPEN).
+     */
+    val GPEN_BFR_256: AiModelSpec = AiModelSpec(
+        id = AiModelId("gpen-bfr-256"),
+        feature = AiFeature.FACE_RESTORATION,
+        tier = ModelTier.LIGHT,
+        displayName = "GPEN-BFR 256",
+        approxSizeBytes = 75_800_000L,
+        expectedSizeBytes = 0L,
+        sha256 = "bad8bf0426873828df2dbf4e3b3d9ababba9da7965b8b72426569486f7ae5c25",
+        io = ModelIoSpec(
+            inputName = "",
+            outputName = "",
+            inputWidth = 256,
+            inputHeight = 256,
+            layout = TensorLayout.NCHW,
+            mean = listOf(0.5f, 0.5f, 0.5f),
+            std = listOf(0.5f, 0.5f, 0.5f),
+        ),
+        downloadUrl = "https://huggingface.co/andreasmlbngaol/a-gallery/resolve/main/gpen_bfr_256.onnx?download=true",
+        recommended = false,
+        offersQualityChoice = false,
+        estimatedPeakMemoryBytes = 600L * 1024 * 1024,
+    )
+
+    /**
+     * GPEN-BFR 512 (Balanced) — the recommended default face restorer; sharper,
+     * higher-fidelity results at 512² per face for a moderate memory cost.
+     * Non-commercial (GPEN).
+     */
+    val GPEN_BFR_512: AiModelSpec = AiModelSpec(
+        id = AiModelId("gpen-bfr-512"),
+        feature = AiFeature.FACE_RESTORATION,
+        tier = ModelTier.BALANCED,
+        displayName = "GPEN-BFR 512",
+        approxSizeBytes = 284_000_000L,
+        expectedSizeBytes = 0L,
+        sha256 = "bf80acb8e91ba8852e3f012505be2c3b6cd6b3eed5ec605e3db87863c4e74d4e",
+        io = ModelIoSpec(
+            inputName = "",
+            outputName = "",
+            inputWidth = 512,
+            inputHeight = 512,
+            layout = TensorLayout.NCHW,
+            mean = listOf(0.5f, 0.5f, 0.5f),
+            std = listOf(0.5f, 0.5f, 0.5f),
+        ),
+        downloadUrl = "https://huggingface.co/andreasmlbngaol/a-gallery/resolve/main/GPEN-BFR-512.onnx?download=true",
+        recommended = true,
+        offersQualityChoice = false,
+        estimatedPeakMemoryBytes = 1_600L * 1024 * 1024,
+    )
+
     /** Every known model, in display order (recommended first within a feature). */
     val ALL: List<AiModelSpec> = listOf(
         ISNET_GENERAL_USE,
         U2NETP,
         REAL_ESRGAN_X4PLUS,
         REAL_ESRGAN_GENERAL_X4V3,
+        GPEN_BFR_512,
+        GPEN_BFR_256,
     )
 
     /** Models that power the given [feature], recommended entry first. */
