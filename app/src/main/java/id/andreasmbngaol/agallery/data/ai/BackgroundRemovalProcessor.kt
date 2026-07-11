@@ -78,7 +78,8 @@ class BackgroundRemovalProcessor(
         modelPath: String,
         quality: RemovalQuality,
     ): String {
-        val cutout = inferenceEngine.acquireSession(modelPath).use { session ->
+        // ISNet/U2-Netp are blocked by linear-mode Resize on XNNPACK: keep on CPU.
+        val cutout = inferenceEngine.acquireSession(modelPath, allowXnnpack = false).use { session ->
             val output = runSegmentation(session, source, spec, quality)
             TensorImageUtils.applyMaskAsAlpha(source, output)
         }

@@ -66,6 +66,7 @@ import coil3.compose.AsyncImage
 import com.adamglin.PhosphorIcons
 import com.adamglin.phosphoricons.Bold
 import com.adamglin.phosphoricons.bold.ArrowLeft
+import com.adamglin.phosphoricons.bold.Info
 import com.adamglin.phosphoricons.bold.Image
 import com.adamglin.phosphoricons.bold.Sparkle
 import com.kyant.backdrop.Backdrop
@@ -217,21 +218,26 @@ fun BackgroundRemoverScreen(
                 )
             }
 
-            Text(
-                text = stringResource(R.string.bg_remover_source),
-                style = MaterialTheme.typography.labelLarge,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            AsyncImage(
-                model = state.sourceUri,
-                contentDescription = state.sourceDisplayName,
-                contentScale = ContentScale.Fit,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .aspectRatio(1f)
-                    .clip(RoundedCornerShape(16.dp))
-                    .background(MaterialTheme.colorScheme.surfaceContainerHigh),
-            )
+            // Hide the standalone "original" preview once a result exists; the
+            // hold-to-peek result below already exposes the original, so keeping
+            // it here would be a redundant duplicate (matches Enhance).
+            if (state.resultPath == null) {
+                Text(
+                    text = stringResource(R.string.bg_remover_source),
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                AsyncImage(
+                    model = state.sourceUri,
+                    contentDescription = state.sourceDisplayName,
+                    contentScale = ContentScale.Fit,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .aspectRatio(1f)
+                        .clip(RoundedCornerShape(16.dp))
+                        .background(MaterialTheme.colorScheme.surfaceContainerHigh),
+                )
+            }
 
             if (state.resultPath != null) {
                 Text(
@@ -277,11 +283,43 @@ fun BackgroundRemoverScreen(
                                 .background(MaterialTheme.colorScheme.surfaceContainerHigh),
                         )
                     }
+                    // Prominent overlay badge so the press-and-hold affordance is
+                    // actually discoverable (users were missing the plain caption).
+                    // It sits on the result and fades out while the user is holding.
+                    if (!showBefore) {
+                        Surface(
+                            modifier = Modifier
+                                .align(Alignment.BottomCenter)
+                                .padding(12.dp),
+                            shape = RoundedCornerShape(50),
+                            color = Color.Black.copy(alpha = 0.6f),
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp),
+                            ) {
+                                Icon(
+                                    imageVector = PhosphorIcons.Bold.Info,
+                                    contentDescription = null,
+                                    tint = Color.White,
+                                    modifier = Modifier.size(16.dp),
+                                )
+                                Spacer(Modifier.width(8.dp))
+                                Text(
+                                    text = stringResource(R.string.bg_remover_hold_badge),
+                                    style = MaterialTheme.typography.labelMedium,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = Color.White,
+                                )
+                            }
+                        }
+                    }
                 }
                 Text(
                     text = stringResource(R.string.bg_remover_hold_hint),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    style = MaterialTheme.typography.labelLarge,
+                    fontWeight = FontWeight.Medium,
+                    color = MaterialTheme.colorScheme.primary,
                 )
                 Text(
                     text = stringResource(R.string.bg_remover_saved_hint),

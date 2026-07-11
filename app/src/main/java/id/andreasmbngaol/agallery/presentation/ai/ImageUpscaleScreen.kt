@@ -211,21 +211,26 @@ fun ImageUpscaleScreen(
                 onSelect = { viewModel.selectMode(it) },
             )
 
-            Text(
-                text = stringResource(R.string.upscale_source),
-                style = MaterialTheme.typography.labelLarge,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            AsyncImage(
-                model = state.sourceUri,
-                contentDescription = state.sourceDisplayName,
-                contentScale = ContentScale.Fit,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .aspectRatio(1f)
-                    .clip(RoundedCornerShape(16.dp))
-                    .background(MaterialTheme.colorScheme.surfaceContainerHigh),
-            )
+            // Hide the standalone "original" preview once a result exists; the
+            // before/after slider below already shows the original, so keeping
+            // it here would just be a redundant duplicate (matches Enhance).
+            if (state.resultPath == null) {
+                Text(
+                    text = stringResource(R.string.upscale_source),
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                AsyncImage(
+                    model = state.sourceUri,
+                    contentDescription = state.sourceDisplayName,
+                    contentScale = ContentScale.Fit,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .aspectRatio(1f)
+                        .clip(RoundedCornerShape(16.dp))
+                        .background(MaterialTheme.colorScheme.surfaceContainerHigh),
+                )
+            }
 
             if (state.resultPath != null) {
                 Text(

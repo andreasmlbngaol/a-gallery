@@ -5,12 +5,23 @@ import android.util.Log
 import androidx.core.content.edit
 
 /**
- * Persists whether the XNNPACK execution provider is safe to use on THIS device,
- * and self-heals from the fact that a bad XNNPACK session build can hard-crash
- * natively (SIGSEGV) inside createSession — an event that CANNOT be caught with
- * try/catch from Kotlin.
+ * Tracks whether the XNNPACK execution provider is still safe to use on THIS
+ * device, and self-heals from the fact that a bad XNNPACK session build can
+ * hard-crash natively (SIGSEGV) inside createSession — an event that CANNOT be
+ * caught with try/catch from Kotlin.
  *
- * Strategy = "write-ahead crash guard":
+ * ## Per-model eligibility (2.4.1)
+ * XNNPACK is no longer a single global on/off. Whether a given run may attempt
+ * XNNPACK is decided PER MODEL by `AiModelSpec.xnnpackEligible`: only the
+ * Conv-dominated Real-ESRGAN upscalers opt in; every other model stays on the
+ * plain CPU provider (transformer-heavy SCUNet/GPEN gain nothing, and the
+ * background-removal models are blocked by a bilinear `Resize` node that XNNPACK
+ * cannot build). This class no longer decides eligibility — it only answers "is
+ * XNNPACK still allowed on this device at all?" ([mayUseXnnpack]) and owns the
+ * crash guard. Eligible models therefore attempt XNNPACK BY DEFAULT unless this
+ * device has permanently disabled it.
+ *
+ * ## Write-ahead crash guard
  *  1. Right before we ask ONNX Runtime to build an XNNPACK session, we set a
  *     `probePending` flag and flush it to disk SYNCHRONOUSLY (commit()).
  *  2. If the build succeeds, we clear the flag.
@@ -24,16 +35,17 @@ class AccelerationConfig(context: Context) {
     private val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
 
     /**
-     * Whether the XNNPACK EP may be used. **OFF by default**: our segmentation
-     * models contain a bilinear `Resize` node that XNNPACK cannot build, so it
-     * always fails over to CPU after wasting the build time. Can be toggled on
-     * per device, and self-disables after a native crash.
+     * Whether XNNPACK may still be attempted on this device. True by default;
+     * flipped to false PERMANENTLY by the crash guard ([recoverFromCrashIfNeeded]
+     * / [disableXnnpack]) or by a user hard-off. This is only a DEVICE-level gate:
+     * whether any individual run attempts XNNPACK is decided per model by
+     * `AiModelSpec.xnnpackEligible` and passed to the engine as `allowXnnpack`.
      */
-    fun isXnnpackEnabled(): Boolean = prefs.getBoolean(KEY_XNNPACK, false)
+    fun mayUseXnnpack(): Boolean = !prefs.getBoolean(KEY_DISABLED, false)
 
     /** Permanently disable XNNPACK on this device (crash guard / user setting). */
     fun disableXnnpack() {
-        prefs.edit(commit = true) { putBoolean(KEY_XNNPACK, false).putBoolean(KEY_PROBE, false) }
+        prefs.edit(commit = true) { putBoolean(KEY_DISABLED, true).putBoolean(KEY_PROBE, false) }
         Log.w(TAG, "XNNPACK disabled for this device")
     }
 
@@ -61,7 +73,7 @@ class AccelerationConfig(context: Context) {
 
     private companion object {
         const val PREFS = "ai_acceleration"
-        const val KEY_XNNPACK = "xnnpack_enabled"
+        const val KEY_DISABLED = "xnnpack_disabled"
         const val KEY_PROBE = "xnnpack_probe_pending"
         const val TAG = "AccelerationConfig"
     }

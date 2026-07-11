@@ -368,6 +368,7 @@
     <string name="bg_remover_save">Simpan ke galeri</string>
     <string name="bg_remover_saved_hint">Disimpan sebagai PNG baru; foto aslimu tetap aman.</string>
     <string name="bg_remover_hold_hint">Tekan dan tahan hasilnya buat ngintip aslinya.</string>
+    <string name="bg_remover_hold_badge">Tahan untuk lihat aslinya</string>
     <string name="bg_remover_model_in_use">Pakai %1$s</string>
     <string name="msg_bg_saved">Tersimpan sebagai %1$s</string>
     <string name="msg_bg_no_model">Belum ada model</string>

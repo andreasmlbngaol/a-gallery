@@ -103,7 +103,8 @@ class PhotoEnhanceProcessor(
         originalHeight: Int,
         onProgress: (completed: Int, total: Int) -> Unit = { _, _ -> },
     ): String {
-        val enhanced = inferenceEngine.acquireSession(modelPath).use { session ->
+        // SCUNet is transformer-heavy (~2% Conv): XNNPACK gives no gain, stay on CPU.
+        val enhanced = inferenceEngine.acquireSession(modelPath, allowXnnpack = false).use { session ->
             runTiled(session, source, spec, onProgress)
         }
         try {

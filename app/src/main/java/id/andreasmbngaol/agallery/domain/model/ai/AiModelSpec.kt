@@ -25,6 +25,11 @@ package id.andreasmbngaol.agallery.domain.model.ai
  * @property estimatedPeakMemoryBytes rough peak RAM a single run needs (weights
  *   plus native activations), used to advise device suitability before import;
  *   0 skips the check.
+ * @property xnnpackEligible whether this model may attempt the XNNPACK execution
+ *   provider. Only the Conv-dominated Real-ESRGAN upscalers set this true (their
+ *   `Resize` nodes are nearest-mode, which XNNPACK accepts); transformer-heavy
+ *   SCUNet/GPEN gain nothing and the background-removal models are blocked by a
+ *   bilinear `Resize`, so they stay on the CPU provider (see the 2.4.1 plan).
  */
 data class AiModelSpec(
     val id: AiModelId,
@@ -39,4 +44,5 @@ data class AiModelSpec(
     val recommended: Boolean,
     val offersQualityChoice: Boolean = false,
     val estimatedPeakMemoryBytes: Long = 0L,
+    val xnnpackEligible: Boolean = false,
 )

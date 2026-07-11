@@ -152,7 +152,8 @@ class FaceRestoreProcessor(
 
         val output = source.copy(Bitmap.Config.ARGB_8888, true)
         try {
-            inferenceEngine.acquireSession(modelPath).use { session ->
+            // GPEN is StyleGAN-based with heavy op fallback: keep it on the CPU provider.
+            inferenceEngine.acquireSession(modelPath, allowXnnpack = false).use { session ->
                 onProgress(0, faces.size)
                 faces.forEachIndexed { index, box ->
                     currentCoroutineContext().ensureActive()

@@ -358,6 +358,7 @@
     <string name="bg_remover_save">Save to gallery</string>
     <string name="bg_remover_saved_hint">Saved as a new PNG; your original photo stays untouched.</string>
     <string name="bg_remover_hold_hint">Press and hold the result to peek at the original.</string>
+    <string name="bg_remover_hold_badge">Hold to see the original</string>
     <string name="bg_remover_model_in_use">Using %1$s</string>
     <string name="msg_bg_saved">Saved as %1$s</string>
     <string name="msg_bg_no_model">No model installed</string>

@@ -89,7 +89,7 @@ class ImageUpscaleProcessor(
         originalHeight: Int,
         onProgress: (completed: Int, total: Int) -> Unit = { _, _ -> },
     ): String {
-        val upscaled = inferenceEngine.acquireSession(modelPath).use { session ->
+        val upscaled = inferenceEngine.acquireSession(modelPath, allowXnnpack = spec.xnnpackEligible).use { session ->
             runTiled(session, source, spec, onProgress)
         }
         // The models are RGB-only (3 channels), so the upscaled canvas is fully

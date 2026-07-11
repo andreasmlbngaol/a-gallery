@@ -118,6 +118,9 @@ object ModelCatalog {
         recommended = false,
         offersQualityChoice = false,
         estimatedPeakMemoryBytes = 250L * 1024 * 1024,
+        // Conv/activation-dominated with nearest-mode Resize -> XNNPACK-friendly.
+        // On-device: confirm PRelu lands on XNNPACK, else revert this to false (2.4.1 plan).
+        xnnpackEligible = true,
     )
 
     /**
@@ -146,6 +149,9 @@ object ModelCatalog {
         recommended = true,
         offersQualityChoice = false,
         estimatedPeakMemoryBytes = 400L * 1024 * 1024,
+        // Conv/activation-dominated (LeakyRelu/Clip) with nearest-mode Resize;
+        // the safest XNNPACK candidate of the catalog (2.4.1 plan).
+        xnnpackEligible = true,
     )
 
     // ------------------------------------------------------------------

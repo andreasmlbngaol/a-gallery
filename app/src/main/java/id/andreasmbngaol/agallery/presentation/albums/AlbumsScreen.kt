@@ -65,6 +65,7 @@ import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import coil3.compose.AsyncImage
@@ -463,6 +464,12 @@ private fun AlbumCardBody(album: Album) {
         fontWeight = FontWeight.Medium,
         color = MaterialTheme.colorScheme.onSurface,
         maxLines = 1,
+        // Keep the name on ONE line and truncate mid-word with an ellipsis
+        // ("AGallery Enh\u2026") instead of wrapping/dropping the last word.
+        // softWrap = false stops the line from breaking at the space so the
+        // ellipsis lands on the character that overflows, not the word boundary.
+        softWrap = false,
+        overflow = TextOverflow.Ellipsis,
         modifier = Modifier.padding(horizontal = 4.dp),
     )
     Text(

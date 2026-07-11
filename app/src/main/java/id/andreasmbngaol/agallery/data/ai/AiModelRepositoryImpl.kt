@@ -79,7 +79,7 @@ class AiModelRepositoryImpl(
 
         // 3) Validate it is actually a loadable ONNX model for inference.
         try {
-            inferenceEngine.createSession(temp.absolutePath).use { /* loads = valid */ }
+            inferenceEngine.createSession(temp.absolutePath, allowXnnpack = false).use { /* loads = valid */ }
         } catch (t: Throwable) {
             temp.delete()
             val message = t.message?.lowercase().orEmpty()

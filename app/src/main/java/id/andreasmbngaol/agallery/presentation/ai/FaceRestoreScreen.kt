@@ -221,50 +221,56 @@ fun FaceRestoreScreen(
                 onChange = { viewModel.setStrength(it) },
             )
 
-            Text(
-                text = stringResource(R.string.face_restore_source),
-                style = MaterialTheme.typography.labelLarge,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .aspectRatio(1f)
-                    .clip(RoundedCornerShape(16.dp))
-                    .background(MaterialTheme.colorScheme.surfaceContainerHigh),
-            ) {
-                AsyncImage(
-                    model = state.sourceUri,
-                    contentDescription = state.sourceDisplayName,
-                    contentScale = ContentScale.Fit,
-                    modifier = Modifier.fillMaxSize(),
-                )
-                if (state.detectedFaces.isNotEmpty() &&
-                    state.sourceWidth > 0 &&
-                    state.sourceHeight > 0
-                ) {
-                    FaceBoxesOverlay(
-                        faces = state.detectedFaces,
-                        imageWidth = state.sourceWidth,
-                        imageHeight = state.sourceHeight,
-                        color = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.fillMaxSize(),
-                    )
-                }
-            }
-            if (state.detectionDone) {
+            // Hide the standalone "original" preview (and face-detection boxes)
+            // once a result exists; the before/after slider below already shows
+            // the original, so keeping it here would be a redundant duplicate
+            // (matches Enhance).
+            if (state.resultPath == null) {
                 Text(
-                    text = if (state.detectedFaces.isEmpty()) {
-                        stringResource(R.string.face_restore_faces_none)
-                    } else {
-                        stringResource(
-                            R.string.face_restore_faces_detected,
-                            state.detectedFaces.size,
-                        )
-                    },
-                    style = MaterialTheme.typography.bodySmall,
+                    text = stringResource(R.string.face_restore_source),
+                    style = MaterialTheme.typography.labelLarge,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .aspectRatio(1f)
+                        .clip(RoundedCornerShape(16.dp))
+                        .background(MaterialTheme.colorScheme.surfaceContainerHigh),
+                ) {
+                    AsyncImage(
+                        model = state.sourceUri,
+                        contentDescription = state.sourceDisplayName,
+                        contentScale = ContentScale.Fit,
+                        modifier = Modifier.fillMaxSize(),
+                    )
+                    if (state.detectedFaces.isNotEmpty() &&
+                        state.sourceWidth > 0 &&
+                        state.sourceHeight > 0
+                    ) {
+                        FaceBoxesOverlay(
+                            faces = state.detectedFaces,
+                            imageWidth = state.sourceWidth,
+                            imageHeight = state.sourceHeight,
+                            color = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.fillMaxSize(),
+                        )
+                    }
+                }
+                if (state.detectionDone) {
+                    Text(
+                        text = if (state.detectedFaces.isEmpty()) {
+                            stringResource(R.string.face_restore_faces_none)
+                        } else {
+                            stringResource(
+                                R.string.face_restore_faces_detected,
+                                state.detectedFaces.size,
+                            )
+                        },
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
             }
 
             if (state.resultPath != null) {
