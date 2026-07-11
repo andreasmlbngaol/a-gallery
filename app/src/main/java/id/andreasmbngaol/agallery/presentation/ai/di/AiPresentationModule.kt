@@ -1,6 +1,7 @@
 package id.andreasmbngaol.agallery.presentation.ai.di
 
 import id.andreasmbngaol.agallery.presentation.ai.AiModelsViewModel
+import id.andreasmbngaol.agallery.presentation.ai.AutoEnhanceViewModel
 import id.andreasmbngaol.agallery.presentation.ai.BackgroundRemoverViewModel
 import id.andreasmbngaol.agallery.presentation.ai.FaceRestoreViewModel
 import id.andreasmbngaol.agallery.presentation.ai.ImageUpscaleViewModel
@@ -59,6 +60,17 @@ val aiPresentationModule = module {
             observeModelStatus = get(),
             getSettings = get(),
             enhancePhoto = get(),
+            saveResult = get(),
+            deviceBenchmark = get(),
+        )
+    }
+    viewModel { (sourceUri: String, sourceDisplayName: String) ->
+        AutoEnhanceViewModel(
+            sourceUri = sourceUri,
+            sourceDisplayName = sourceDisplayName,
+            observeModelStatus = get(),
+            getSettings = get(),
+            autoEnhance = get(),
             saveResult = get(),
             deviceBenchmark = get(),
         )

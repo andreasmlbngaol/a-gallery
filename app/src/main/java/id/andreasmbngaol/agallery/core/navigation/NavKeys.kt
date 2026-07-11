@@ -127,4 +127,17 @@ sealed interface Screen : NavKey {
         val mediaUri: String,
         val displayName: String,
     ) : Screen
+
+    /**
+     * Auto Enhance for a single image, opened from the photo viewer. Runs the
+     * one-tap Face Restore -> Enhance -> Upscale pipeline.
+     *
+     * @property mediaUri the source image uri to process.
+     * @property displayName the source file name, used to derive the saved name.
+     */
+    @Serializable
+    data class AutoEnhance(
+        val mediaUri: String,
+        val displayName: String,
+    ) : Screen
 }

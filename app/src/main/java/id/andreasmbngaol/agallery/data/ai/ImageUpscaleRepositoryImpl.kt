@@ -34,6 +34,7 @@ class ImageUpscaleRepositoryImpl(
         sourceUri: String,
         modelId: AiModelId,
         mode: UpscaleMode,
+        strength: Float,
         onProgress: (completed: Int, total: Int) -> Unit,
     ): UpscaleOutcome {
         val spec = ModelCatalog.byId(modelId)
@@ -54,6 +55,7 @@ class ImageUpscaleRepositoryImpl(
                     mode,
                     decoded.originalWidth,
                     decoded.originalHeight,
+                    strength,
                     onProgress,
                 )
                 UpscaleOutcome.Success(path)

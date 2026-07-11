@@ -105,6 +105,7 @@ fun PhotoViewerScreen(
     sortOrder: GallerySortOrder,
     onBack: () -> Unit,
     albumKey: String? = null,
+    onOpenAutoEnhance: (mediaUri: String, displayName: String) -> Unit = { _, _ -> },
     onOpenBackgroundRemover: (mediaUri: String, displayName: String) -> Unit = { _, _ -> },
     onOpenImageUpscale: (mediaUri: String, displayName: String) -> Unit = { _, _ -> },
     onOpenFaceRestore: (mediaUri: String, displayName: String) -> Unit = { _, _ -> },
@@ -394,6 +395,10 @@ fun PhotoViewerScreen(
 
             if (showAiSheet && !isVideo) {
                 AiSheet(
+                    onAutoEnhance = {
+                        showAiSheet = false
+                        onOpenAutoEnhance(item.uri, item.displayName)
+                    },
                     onEnhancePhoto = {
                         showAiSheet = false
                         onOpenPhotoEnhance(item.uri, item.displayName)

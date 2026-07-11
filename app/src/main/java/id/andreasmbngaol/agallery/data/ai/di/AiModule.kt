@@ -6,6 +6,7 @@ import id.andreasmbngaol.agallery.core.ai.InferenceEngine
 import id.andreasmbngaol.agallery.core.ai.ModelPaths
 import id.andreasmbngaol.agallery.core.ai.OnnxInferenceEngine
 import id.andreasmbngaol.agallery.data.ai.AiModelRepositoryImpl
+import id.andreasmbngaol.agallery.data.ai.AutoEnhanceRepositoryImpl
 import id.andreasmbngaol.agallery.data.ai.BackgroundRemovalProcessor
 import id.andreasmbngaol.agallery.data.ai.BackgroundRemovalRepositoryImpl
 import id.andreasmbngaol.agallery.data.ai.FaceRestoreProcessor
@@ -15,6 +16,7 @@ import id.andreasmbngaol.agallery.data.ai.ImageUpscaleRepositoryImpl
 import id.andreasmbngaol.agallery.data.ai.PhotoEnhanceProcessor
 import id.andreasmbngaol.agallery.data.ai.PhotoEnhanceRepositoryImpl
 import id.andreasmbngaol.agallery.domain.repository.AiModelRepository
+import id.andreasmbngaol.agallery.domain.repository.AutoEnhanceRepository
 import id.andreasmbngaol.agallery.domain.repository.BackgroundRemovalRepository
 import id.andreasmbngaol.agallery.domain.repository.FaceRestoreRepository
 import id.andreasmbngaol.agallery.domain.repository.ImageUpscaleRepository
@@ -50,5 +52,8 @@ val aiModule = module {
     }
     single<PhotoEnhanceRepository> {
         PhotoEnhanceRepositoryImpl(androidContext(), get(), get())
+    }
+    single<AutoEnhanceRepository> {
+        AutoEnhanceRepositoryImpl(androidContext())
     }
 }

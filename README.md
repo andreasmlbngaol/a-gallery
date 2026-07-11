@@ -21,7 +21,7 @@ while keeping you in full control of your media.
 - **Fully offline and private.** Nothing is uploaded — no cloud, no servers, no sync, no tracking.
 - **No account, no ads.** Open it and it just works: no sign-up, no login, no banners.
 - **You stay in control.** Move, rename, and delete your files directly, without the system interrupting you at every step.
-- **On-device AI.** AI tools like the background remover, photo upscaler, and face restore run entirely on your phone, using models you import yourself — still no network, ever.
+- **On-device AI.** AI tools like the background remover, photo upscaler, face restore, and one-tap Magic Enhance run entirely on your phone, using models you import yourself — still no network, ever.
 - **Smooth and modern.** A clean interface that stays out of your way, and adapts to your taste.
 
 ---
@@ -38,9 +38,10 @@ while keeping you in full control of your media.
 - **Format converter** — convert photos between JPG, PNG, WEBP, and HEIC.
 - **Background remover (on-device AI)** — cut out a photo's subject and export a transparent PNG, using an AI model you import yourself. Nothing leaves your device.
 - **Subject lift** — press and hold a photo to lift its subject out as a sticker you can drag, then copy or share it as a transparent cutout — all on-device.
-- **AI photo upscaler (on-device)** — enlarge and sharpen a photo with super-resolution, using an AI model you import yourself. Choose a quality level (Eco, Balanced, or Quality) that fits your phone, or use **Auto Upscale** to process a whole selection at once. Nothing leaves your device.
+- **AI photo upscaler (on-device)** — enlarge and sharpen a photo with super-resolution, using an AI model you import yourself. Choose a quality level (Eco, Balanced, or Quality) that fits your phone, use **Auto Upscale** to process a whole selection at once, or dial in a strength slider that blends the result to keep it looking natural. Nothing leaves your device.
 - **AI face restore (on-device)** — bring blurry or low-quality faces back to life, using an AI model you import yourself. Faces are found automatically and shown with a highlight, and a strength slider controls how much restoration to apply. Nothing leaves your device.
-- **AI photo enhance (on-device)** — clean up an entire photo, removing noise, compression artefacts, and mild blur while keeping its original resolution, using an AI model you import yourself. Pick a style (Sharper or Cleaner), tune the strength, and compare before/after with a slider. Nothing leaves your device.
+- **Denoise & Sharpen (on-device AI)** — clean up an entire photo, removing noise, compression artefacts, and mild blur while keeping its original resolution, using an AI model you import yourself. Pick a style (Sharper or Cleaner), tune the strength, and compare before/after with a slider. Nothing leaves your device.
+- **Magic Enhance (one-tap, on-device AI)** — fix a photo in a single tap: it runs Denoise & Sharpen, Upscale, and Face restore in sequence (face restore last, so the result stays natural). Each stage is optional and has its own strength; all three AI models must be installed first. Nothing leaves your device.
 - **QR tools** — generate a customizable QR code, and detect and read QR/barcodes right inside your photos.
 - **English & Bahasa Indonesia** — the app follows your system language.
 - **Make it yours** — tune the grid density and the overall look in Settings until it feels exactly right.

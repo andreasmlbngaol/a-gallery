@@ -17,6 +17,7 @@ import kotlinx.coroutines.ensureActive
 import java.io.File
 import kotlin.math.ceil
 import kotlin.math.min
+import kotlin.math.roundToInt
 import androidx.core.graphics.scale
 
 /**
@@ -87,6 +88,7 @@ class ImageUpscaleProcessor(
         mode: UpscaleMode,
         originalWidth: Int,
         originalHeight: Int,
+        strength: Float = 1f,
         onProgress: (completed: Int, total: Int) -> Unit = { _, _ -> },
     ): String {
         val upscaled = inferenceEngine.acquireSession(modelPath, allowXnnpack = spec.xnnpackEligible).use { session ->
@@ -99,11 +101,57 @@ class ImageUpscaleProcessor(
         // Size-preserving modes shrink the sharpened result back to the original
         // resolution; enlarging modes keep the model's full output.
         val result = resizeForMode(upscaled, mode, originalWidth, originalHeight)
+        // Real-ESRGAN has no native intensity control, so "strength" is applied
+        // here as an opacity blend of the AI result over a plain (bilinear)
+        // resize of the source at the SAME target size. strength=1 keeps the
+        // full super-resolution; lower values pull the aggressive, over-sharpened
+        // texture back toward a natural resize.
+        if (strength < 0.999f) blendTowardPlain(result, source, strength)
         return try {
             writePng(result).absolutePath
         } finally {
             if (result != upscaled) result.recycle()
             upscaled.recycle()
+        }
+    }
+
+    /**
+     * Blends the AI [target] toward a plain, non-AI reference so the upscale
+     * gets a real "strength" knob (the model itself has none). The reference is
+     * a bilinear resize of [source] to [target]'s size; each pixel becomes
+     * strength*AI + (1-strength)*plain on the RGB channels, keeping [target]'s
+     * alpha. Mutates [target] in place, row by row, to avoid a second full-size
+     * allocation. No-op-ish at strength≈1 (guarded by the caller).
+     */
+    private fun blendTowardPlain(target: Bitmap, source: Bitmap, strength: Float) {
+        val w = target.width
+        val h = target.height
+        if (w <= 0 || h <= 0) return
+        val a = strength.coerceIn(0f, 1f)
+        val inv = 1f - a
+        val plain = source.scale(w, h)
+        try {
+            val aiRow = IntArray(w)
+            val plainRow = IntArray(w)
+            for (y in 0 until h) {
+                target.getPixels(aiRow, 0, w, 0, y, w, 1)
+                plain.getPixels(plainRow, 0, w, 0, y, w, 1)
+                for (x in 0 until w) {
+                    val ai = aiRow[x]
+                    val pl = plainRow[x]
+                    val alpha = ai and 0xFF000000.toInt()
+                    val r = ((ai ushr 16 and 0xFF) * a + (pl ushr 16 and 0xFF) * inv)
+                        .roundToInt().coerceIn(0, 255)
+                    val g = ((ai ushr 8 and 0xFF) * a + (pl ushr 8 and 0xFF) * inv)
+                        .roundToInt().coerceIn(0, 255)
+                    val b = ((ai and 0xFF) * a + (pl and 0xFF) * inv)
+                        .roundToInt().coerceIn(0, 255)
+                    aiRow[x] = alpha or (r shl 16) or (g shl 8) or b
+                }
+                target.setPixels(aiRow, 0, w, 0, y, w, 1)
+            }
+        } finally {
+            if (plain != source) plain.recycle()
         }
     }
 

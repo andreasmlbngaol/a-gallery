@@ -12,6 +12,7 @@ import androidx.navigation3.runtime.NavEntry
 import androidx.navigation3.runtime.rememberNavBackStack
 import androidx.navigation3.ui.NavDisplay
 import id.andreasmbngaol.agallery.presentation.ai.AiModelsScreen
+import id.andreasmbngaol.agallery.presentation.ai.AutoEnhanceScreen
 import id.andreasmbngaol.agallery.presentation.ai.BackgroundRemoverScreen
 import id.andreasmbngaol.agallery.presentation.ai.FaceRestoreScreen
 import id.andreasmbngaol.agallery.presentation.ai.PhotoEnhanceScreen
@@ -88,6 +89,14 @@ fun AGalleryNavDisplay() {
                                 sortOrder = key.sortOrder,
                                 albumKey = key.albumKey,
                                 onBack = { backStack.removeLastOrNull() },
+                                onOpenAutoEnhance = { mediaUri, displayName ->
+                                    backStack.add(
+                                        Screen.AutoEnhance(
+                                            mediaUri = mediaUri,
+                                            displayName = displayName,
+                                        ),
+                                    )
+                                },
                                 onOpenBackgroundRemover = { mediaUri, displayName ->
                                     backStack.add(
                                         Screen.BackgroundRemover(
@@ -185,6 +194,15 @@ fun AGalleryNavDisplay() {
 
                         is Screen.FaceRestore -> NavEntry(key) {
                             FaceRestoreScreen(
+                                mediaUri = key.mediaUri,
+                                displayName = key.displayName,
+                                onBack = { backStack.removeLastOrNull() },
+                                onOpenAiModels = { backStack.add(Screen.AiModels) },
+                            )
+                        }
+
+                        is Screen.AutoEnhance -> NavEntry(key) {
+                            AutoEnhanceScreen(
                                 mediaUri = key.mediaUri,
                                 displayName = key.displayName,
                                 onBack = { backStack.removeLastOrNull() },

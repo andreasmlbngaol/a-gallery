@@ -61,6 +61,7 @@ class ImageUpscaleViewModel(
 
     private val selectedModelId = MutableStateFlow<AiModelId?>(null)
     private val selectedMode = MutableStateFlow(UpscaleMode.AUTO)
+    private val selectedStrength = MutableStateFlow(ImageUpscaleUiState.DEFAULT_STRENGTH)
     private val resultPath = MutableStateFlow<String?>(null)
     private val processing = MutableStateFlow(false)
     private val saving = MutableStateFlow(false)
@@ -90,7 +91,7 @@ class ImageUpscaleViewModel(
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000L), WorkState())
 
     private val selection: StateFlow<Selection> =
-        combine(selectedModelId, selectedMode) { id, mode -> Selection(id, mode) }
+        combine(selectedModelId, selectedMode, selectedStrength) { id, mode, strength -> Selection(id, mode, strength) }
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000L), Selection())
 
     val uiState: StateFlow<ImageUpscaleUiState> = combine(
@@ -108,6 +109,7 @@ class ImageUpscaleViewModel(
             installedModels = installed,
             selectedModelId = effectiveId,
             selectedMode = sel.mode,
+            strength = sel.strength,
             resultPath = result,
             processing = work.processing,
             saving = work.saving,
@@ -140,6 +142,14 @@ class ImageUpscaleViewModel(
         resultPath.value = null
     }
 
+    /** Set the blend strength (0..1) of AI over a plain resize; clears any stale preview. */
+    fun setStrength(value: Float) {
+        val clamped = value.coerceIn(0f, 1f)
+        if (selectedStrength.value == clamped) return
+        selectedStrength.value = clamped
+        resultPath.value = null
+    }
+
     /** Run upscaling with the effective model. No-op while busy. */
     fun upscale() {
         if (processing.value) return
@@ -150,6 +160,7 @@ class ImageUpscaleViewModel(
             return
         }
         val mode = selectedMode.value
+        val strength = selectedStrength.value
         processing.value = true
         val token = runToken.incrementAndGet()
         inferenceJob = viewModelScope.launch {
@@ -214,7 +225,7 @@ class ImageUpscaleViewModel(
                 }
 
                 val outcome = try {
-                    upscaleImage(sourceUri, modelId, mode) { completed, total ->
+                    upscaleImage(sourceUri, modelId, mode, strength) { completed, total ->
                         // Fired from the inference thread as each tile finishes.
                         // The first callback (completed == 0) marks the tile-loop
                         // start; every later callback stamps the moment a tile
@@ -303,6 +314,7 @@ class ImageUpscaleViewModel(
     private data class Selection(
         val modelId: AiModelId? = null,
         val mode: UpscaleMode = UpscaleMode.AUTO,
+        val strength: Float = ImageUpscaleUiState.DEFAULT_STRENGTH,
     )
 
     private data class ProcessingMeter(

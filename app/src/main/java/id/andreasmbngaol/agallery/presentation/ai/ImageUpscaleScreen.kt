@@ -34,6 +34,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearWavyProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Slider
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -56,6 +57,8 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import kotlin.math.abs
+import kotlin.math.roundToInt
 import coil3.compose.AsyncImage
 import com.adamglin.PhosphorIcons
 import com.adamglin.phosphoricons.Bold
@@ -211,6 +214,12 @@ fun ImageUpscaleScreen(
                 onSelect = { viewModel.selectMode(it) },
             )
 
+            StrengthSlider(
+                strength = state.strength,
+                enabled = !state.processing,
+                onChange = { viewModel.setStrength(it) },
+            )
+
             // Hide the standalone "original" preview once a result exists; the
             // before/after slider below already shows the original, so keeping
             // it here would just be a redundant duplicate (matches Enhance).
@@ -339,6 +348,90 @@ private fun ModelDropdown(
                 )
             }
         }
+    }
+}
+
+/**
+ * Blend-strength slider (0..1) for the upscaler. Real-ESRGAN has no native
+ * intensity control, so this dials how much of the AI super-resolution is mixed
+ * over a plain resize of the source: 100% is the model's full (aggressive)
+ * output, lower values pull it back toward a natural look. Lets the feature be
+ * tested on its own, separate from Auto Enhance.
+ */
+@Composable
+private fun StrengthSlider(
+    strength: Float,
+    enabled: Boolean,
+    onChange: (Float) -> Unit,
+) {
+    val recommended = ImageUpscaleUiState.RECOMMENDED_STRENGTH
+    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                text = stringResource(R.string.upscale_strength_title),
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Text(
+                text = "${(strength * 100).roundToInt()}%",
+                style = MaterialTheme.typography.labelLarge,
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.primary,
+            )
+        }
+        Slider(
+            value = strength,
+            onValueChange = onChange,
+            valueRange = 0f..1f,
+            enabled = enabled,
+            modifier = Modifier.fillMaxWidth(),
+        )
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+        ) {
+            Text(
+                text = stringResource(R.string.enhance_strength_natural),
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Text(
+                text = stringResource(R.string.enhance_strength_max),
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                text = stringResource(
+                    R.string.enhance_strength_recommended,
+                    (recommended * 100).roundToInt(),
+                ),
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.primary,
+            )
+            if (abs(strength - recommended) > 0.005f) {
+                TextButton(
+                    onClick = { onChange(recommended) },
+                    enabled = enabled,
+                ) {
+                    Text(stringResource(R.string.enhance_strength_use_recommended))
+                }
+            }
+        }
+        Text(
+            text = stringResource(R.string.upscale_strength_desc),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
     }
 }
 

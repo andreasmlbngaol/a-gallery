@@ -307,7 +307,7 @@
     <string name="ai_models_feature_bg">Hapus latar</string>
     <string name="ai_models_feature_upscale">Perbesar gambar</string>
     <string name="ai_models_feature_face">Pulihkan wajah</string>
-    <string name="ai_models_feature_enhance">Percantik foto</string>
+    <string name="ai_models_feature_enhance">Kurangi Noise</string>
     <string name="ai_model_status_ready">Terpasang</string>
     <string name="ai_model_status_not_installed">Belum terpasang</string>
     <string name="ai_model_recommended">Rekomendasi</string>
@@ -394,6 +394,8 @@
     <string name="upscale_progress_estimating">Memperkirakan\u2026</string>
     <string name="upscale_progress_finishing">Menyelesaikan\u2026</string>
     <string name="upscale_mode">Mode</string>
+    <string name="upscale_strength_title">Kekuatan</string>
+    <string name="upscale_strength_desc">Upscaler tidak punya kontrol intensitas asli, jadi ini mencampur hasil tajamnya di atas perbesaran biasa. 100% adalah keluaran penuh model; turunkan bila detail terlihat terlalu artifisial.</string>
     <string name="upscale_mode_auto">Otomatis</string>
     <string name="upscale_mode_auto_desc">Foto kecil diperbesar, foto besar dipertajam</string>
     <string name="upscale_mode_enlarge">Perbesar</string>
@@ -455,8 +457,8 @@
     <string name="msg_face_restore_cancelled">Pemulihan wajah dibatalkan</string>
 
     <!-- Photo Enhance (2.4.0) -->
-    <string name="action_enhance_photo">Percantik foto</string>
-    <string name="enhance_title">Percantik foto</string>
+    <string name="action_enhance_photo">Kurangi Noise</string>
+    <string name="enhance_title">Kurangi Noise</string>
     <string name="enhance_no_model_title">Belum ada model</string>
     <string name="enhance_no_model_desc">Impor dulu model percantik foto buat pakai fitur ini.</string>
     <string name="enhance_choose_model">Pilih gaya</string>
@@ -503,4 +505,47 @@
     <string name="ai_lift_model_none">Pasang dulu model penghapus latar di atas.</string>
     <string name="ai_lift_quality_title">Kualitas angkat</string>
     <string name="ai_lift_quality_desc">Hanya berpengaruh pada IS-Net. Makin tinggi makin tajam tapi lebih lambat — Eco paling cepat dan pas untuk kebanyakan HP.</string>
+
+    <!-- Sempurnakan Otomatis (2.5.0): satu ketuk Enhance -> Upscale -> Face Restore -->
+    <string name="action_auto_enhance">Sempurnakan Otomatis</string>
+    <string name="auto_enhance_title">Sempurnakan Otomatis</string>
+    <string name="auto_enhance_subtitle">Satu ketuk menjalankan Kurangi Noise, Perbesar, dan Pulihkan wajah secara berurutan. Matikan tahap yang tidak kamu perlukan.</string>
+    <string name="auto_enhance_gate_title">Pasang ketiga model dulu</string>
+    <string name="auto_enhance_gate_desc">Sempurnakan Otomatis merangkai Kurangi Noise, Perbesar, dan Pulihkan wajah, jadi ketiga model harus terpasang lebih dulu.</string>
+    <string name="auto_enhance_gate_button">Kelola model AI</string>
+    <string name="auto_enhance_model_ready">Terpasang</string>
+    <string name="auto_enhance_model_missing">Belum terpasang</string>
+    <string name="auto_enhance_stage_face">Pulihkan wajah</string>
+    <string name="auto_enhance_stage_enhance">Kurangi Noise</string>
+    <string name="auto_enhance_stage_upscale">Perbesar</string>
+    <string name="auto_enhance_stages_title">Tahapan</string>
+    <string name="auto_enhance_toggle_face_desc">Menajamkan dan memulihkan wajah yang terdeteksi.</string>
+    <string name="auto_enhance_toggle_enhance_desc">Membersihkan noise dan memulihkan detail seluruh foto.</string>
+    <string name="auto_enhance_toggle_upscale_desc">Memperbesar dan menajamkan hasilnya (Real-ESRGAN x4 v3).</string>
+    <string name="auto_enhance_face_strength_title">Kekuatan Pulihkan wajah</string>
+    <string name="auto_enhance_face_strength_desc">Seberapa kuat wajah hasil restorasi dicampur. Dibuat rendah secara default agar wajah tetap natural, bukan seperti buatan AI.</string>
+    <string name="auto_enhance_enhance_strength_title">Kekuatan Sempurnakan</string>
+    <string name="auto_enhance_enhance_strength_desc">Seberapa kuat denoise dan deblock dicampur. Aman dibuat tinggi karena efeknya halus.</string>
+    <string name="auto_enhance_upscale_strength_title">Kekuatan Perbesar</string>
+    <string name="auto_enhance_upscale_strength_desc">Upscaler tidak punya kontrol intensitas asli, jadi ini mencampur hasil tajamnya di atas perbesaran biasa. Turunkan bila detail terlihat terlalu artifisial.</string>
+    <string name="auto_enhance_source">Asli</string>
+    <string name="auto_enhance_steps_title">Tahapan</string>
+    <string name="auto_enhance_final_label">%1$s (akhir)</string>
+    <string name="auto_enhance_faces_skipped">Tidak ada wajah terdeteksi — Pulihkan wajah dilewati.</string>
+    <string name="auto_enhance_saved_hint">Disimpan sebagai PNG baru di Pictures/AGallery Auto Enhanced; foto aslimu tetap utuh.</string>
+    <string name="auto_enhance_run">Sempurnakan Otomatis</string>
+    <string name="auto_enhance_save">Simpan ke galeri</string>
+    <string name="auto_enhance_processing">Menyempurnakan…</string>
+    <string name="auto_enhance_processing_desc">Menjalankan tiap tahap di perangkat. Ini bisa memakan beberapa menit.</string>
+    <string name="auto_enhance_progress_step">Tahap %1$d dari %2$d · %3$s</string>
+    <string name="msg_auto_enhance_no_model">Pasang dulu model Pulihkan wajah, Sempurnakan, dan Perbesar</string>
+    <string name="msg_auto_enhance_source_unreadable">Gambar ini tidak bisa dibaca</string>
+    <string name="msg_auto_enhance_failed">Gagal menyempurnakan foto</string>
+    <string name="msg_auto_enhance_nothing">Aktifkan minimal satu tahap</string>
+    <string name="msg_auto_enhance_nothing_produced">Tidak ada yang bisa disempurnakan di foto ini</string>
+    <string name="msg_auto_enhance_saved">Disimpan sebagai %1$s</string>
+    <string name="msg_auto_enhance_save_failed">Gagal menyimpan gambar</string>
+    <string name="msg_auto_enhance_cancelled">Sempurnakan Otomatis dibatalkan</string>
+    <string name="msg_auto_enhance_insufficient_memory">%1$s terlalu berat untuk RAM perangkat ini. Matikan satu tahap lalu coba lagi.</string>
+
 </resources>

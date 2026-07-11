@@ -63,12 +63,12 @@ keyPassword=YOUR_KEY_PASSWORD
 Bump the version (see below), commit, then tag and push:
 
 ```shell
-git tag v2.4.0
-git push origin v2.4.0
+git tag v2.5.0
+git push origin v2.5.0
 ```
 
 The workflow runs, builds the signed APK, and creates a **GitHub Release**
-tagged `v2.4.0` with the APK attached and auto-generated release notes. You can
+tagged `v2.5.0` with the APK attached and auto-generated release notes. You can
 also trigger it manually from the **Actions** tab (`workflow_dispatch`).
 
 ---
@@ -77,7 +77,7 @@ also trigger it manually from the **Actions** tab (`workflow_dispatch`).
 
 AGallery follows **[Semantic Versioning](https://semver.org/)** (`MAJOR.MINOR.PATCH`).
 
-- **Current version: `2.4.0` shipped; a `2.4.1` performance patch (selective XNNPACK acceleration for the Upscaler) is planned next, then `2.5.0`.** The `1.x`
+- **Current version: `2.5.0` shipped.** The `1.x`
   offline-utilities era is complete and the on-device AI era is well underway (see
   the roadmap in `TECHNICAL-DESIGN.md`); `2.0.0` shipped the AI model framework +
   Background Remover, `2.1.0` added **Subject Lift** (long-press to lift a photo's
@@ -89,16 +89,19 @@ AGallery follows **[Semantic Versioning](https://semver.org/)** (`MAJOR.MINOR.PA
   **Face Restore** — on-device AI restoration of blurry / low-quality faces, using
   user-imported GPEN models with on-device ML Kit face detection, a per-face
   restore strength, and a bounding-box preview of the faces that will be processed.
-  **`2.4.0` (current)** adds **Photo Enhance** — on-device AI whole-image
-  denoise / sharpen / deblur that keeps the original resolution, using
-  user-imported SCUNet models offered as a Sharper/Cleaner **style choice**, with
-  an adjustable strength and a before/after compare slider.
-  These are the old "Image Enhancer" **split into separate AI capabilities**, each
-  shipped and validated on its own. Still ahead: **Auto Enhance** (`2.5.0`, a
-  one-tap pipeline that recombines face restore + enhance + upscale), and then the
-  non-AI **Image Compress** (`2.6.0`), **Smart Scanner** (`2.7.0`), **Old Photo
-  Restoration** (`2.8.0`), **OCR → PDF** (`2.9.0`), and **AI Semantic Search**
-  (`2.10.0`).
+  **`2.4.0`** added **Denoise & Sharpen** (originally shipped as "Photo Enhance")
+  — on-device AI whole-image denoise / sharpen / deblur that keeps the original
+  resolution, using user-imported SCUNet models offered as a Sharper/Cleaner
+  **style choice**, with an adjustable strength and a before/after compare slider;
+  **`2.4.1`** was a performance patch (selective XNNPACK acceleration for the
+  Real-ESRGAN upscalers only). These are the old "Image Enhancer" **split into
+  separate AI capabilities**, each shipped and validated on its own.
+  **`2.5.0` (current)** adds **Magic Enhance** — a one-tap pipeline that recombines
+  the three on a single photo, running **Denoise & Sharpen → Upscale → Face
+  Restore** (face last, so a restored face is never re-upscaled) with a per-stage
+  strength for each step. Still ahead: the non-AI **Image Compress** (`2.6.0`),
+  **Smart Scanner** (`2.7.0`), **Old Photo Restoration** (`2.8.0`), **OCR → PDF**
+  (`2.9.0`), and **AI Semantic Search** (`2.10.0`).
 - **`PATCH`** (`1.0.1`, `1.0.2`, …) — bug fixes and pure visual polish
   (padding, colors, corner radius, animation tweaks) that add **no new
   capability**.
@@ -113,6 +116,6 @@ new you can use or choose"* → MINOR.
 The version lives in `app/build.gradle.kts`:
 
 ```kotlin
-versionCode = 25       // bump by 1 for every published build
-versionName = "2.4.0"  // human-readable, matches the git tag (without the leading "v")
+versionCode = 27       // bump by 1 for every published build
+versionName = "2.5.0"  // human-readable, matches the git tag (without the leading "v")
 ```

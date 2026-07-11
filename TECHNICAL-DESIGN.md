@@ -46,7 +46,7 @@
 | `namespace` / `applicationId` | `id.andreasmbngaol.agallery` |
 | `minSdk` | **29 (Android 10)** |
 | `targetSdk` / `compileSdk` | 37 (compileSdk minor `37.1`) |
-| `versionCode` / `versionName` | `25` / `2.4.0` |
+| `versionCode` / `versionName` | `27` / `2.5.0` |
 | Language | Kotlin `2.4.0` (KSP `2.3.9`) |
 | UI | Jetpack Compose (BOM `2026.06.01`), Material 3 `1.5.0-alpha23` |
 | Build | AGP `9.2.1`, R8 (minify + shrink resources; **full mode disabled** so ML Kit consumer rules survive) |
@@ -162,7 +162,7 @@ below); the rest of the `2.x` line is planned.
 | `2.2.0` | **Image Upscaler** — on-device AI super-resolution (single photo + **Auto Upscale** batch); the old "Image Enhancer" is split so `2.2.0` ships upscaling only | ✅ Shipped |
 | `2.3.0` | **Face Restore** — on-device AI restoration of blurry / low-quality faces (single photo); the second AI capability split out of the old "Image Enhancer" | ✅ Shipped |
 | `2.4.0` | **Photo Enhance** — general AI denoise / sharpen / deblur for a whole photo (single photo), using user-imported **SCUNet** models offered as a Sharper/Cleaner style choice | ✅ Shipped |
-| `2.5.0` | **Auto Enhance** — one-tap pipeline that recombines face restore + enhance + upscale | ⏳ Planned |
+| `2.5.0` | **Magic Enhance** — one-tap pipeline that recombines enhance + upscale + face restore (single photo) | ✅ Shipped |
 | `2.6.0` | **Image Compress** — reduce a photo's file size (non-AI utility) | ⏳ Planned |
 | `2.7.0` | **Smart Scanner** module | ⏳ Planned |
 | `2.8.0` | **Old Photo Restoration** — AI restoration tuned for scanned / vintage prints (scratches, fading, heavy degradation) | ⏳ Planned |
@@ -177,7 +177,7 @@ below); the rest of the `2.x` line is planned.
 > **Background Remover** screens no longer let their top content slip under the
 > top bar.
 
-> **Patch `2.4.1` (planned).** Performance patch: **selective XNNPACK
+> **Patch `2.4.1` (✅ shipped).** Performance patch: **selective XNNPACK
 > acceleration for the Upscaler only.** A static ONNX graph scan of all eight
 > catalog models showed the two **Real-ESRGAN** upscaler models are
 > Conv/activation-dominated with `nearest`-mode `Resize` (XNNPACK-friendly),
@@ -187,10 +187,8 @@ below); the rest of the `2.x` line is planned.
 > `Resize` (the existing `xnn_create_resize_bilinear2d_nhwc_fp32` build
 > failure). So `2.4.1` enables XNNPACK **per-model** for the Real-ESRGAN
 > upscalers (keeping the write-ahead crash guard) and leaves everything else on
-> the CPU provider. Full analysis, design, and on-device verification steps are
-> in [`docs/plan-2.4.1-xnnpack-upscaler.md`](./docs/plan-2.4.1-xnnpack-upscaler.md).
-> The slow **Photo Enhance** is inherent to SCUNet's transformer architecture
-> and is explicitly **not** addressed by this patch.
+> the CPU provider. The slow **Photo Enhance** is inherent to SCUNet's
+> transformer architecture and is explicitly **not** addressed by this patch.
 
 > There is **no classic search**. Search arrives only as on-device semantic
 > search in `2.10.0`. Document the milestone reasoning in `docs/releasing.md`.
@@ -199,8 +197,8 @@ below); the rest of the `2.x` line is planned.
 > independent AI capabilities, each shipped and validated on its own:
 > **Image Upscaler** + *Auto Upscale* (`2.2.0`, shipped), **Face Restore**
 > (`2.3.0`, shipped), **Photo Enhance** (`2.4.0`, shipped — general
-> denoise / sharpen / deblur), and **Auto Enhance** (`2.5.0`, a one-tap
-> pipeline that recombines all three).
+> denoise / sharpen / deblur), and **Magic Enhance** (`2.5.0`, shipped — a one-tap
+> pipeline that recombines all three on a single photo).
 
 ---
 
@@ -233,8 +231,8 @@ operate on a photo that already exists?*
 | Image Upscaler | Yes (single) | Viewer | 2.2.0 |
 | Auto Upscale (batch) | Yes (multi-select) | Viewer + album multi-select | 2.2.0 |
 | Face Restore | Yes (single) | Viewer | 2.3.0 |
-| Photo Enhance | Yes (single) | Viewer | 2.4.0 |
-| Auto Enhance | Yes (single / batch) | Viewer | 2.5.0 |
+| Denoise & Sharpen (Photo Enhance) | Yes (single) | Viewer | 2.4.0 |
+| Magic Enhance | Yes (single) | Viewer | 2.5.0 |
 | Image Compress | Yes | Viewer (detail panel) | 2.6.0 |
 | Smart Scanner | Mixed (photo or capture) | Tools hub (+ viewer surfacing) | 2.7.0 |
 | Old Photo Restoration | Yes (single) | Viewer | 2.8.0 |
@@ -400,6 +398,9 @@ All depend on the AI model framework (Section 7).
   - **Auto Upscale (batch).** Upscale a **multi-selection / whole folder** in one
     go as a background (WorkManager) job with progress — "upscale all" without
     babysitting each photo.
+  - **Strength (added 2.5.0).** An optional strength slider blends the upscaled
+    result over a plain resize (recommended ≈ 40%), taming Real-ESRGAN's
+    over-sharpened, obviously-AI look; independent of the chosen mode/scale.
   - **Output.** Results are written as PNG into a dedicated `Pictures/AGallery
     Upscaled` folder and registered with MediaStore; originals are never touched.
 - **Face Restore** (2.3.0, ✅ shipped) — *Viewer.* On-device AI **face
@@ -447,11 +448,43 @@ All depend on the AI model framework (Section 7).
     (recommended ≈ 80%, with a one-tap "use recommended").
   - **Before/after compare.** A draggable slider reveals the original under the
     enhanced result so the effect is easy to judge before saving.
+  - **UI naming (2.5.0).** This single-photo feature is surfaced as **Denoise &
+    Sharpen** (id: *Kurangi Noise*) with its own icon, to keep it distinct from
+    the one-tap **Magic Enhance**; the recommended face-restore default was also
+    lowered to 30% for a more natural look across the AI features.
   - **Output.** Results are written as PNG into a dedicated `Pictures/AGallery
     Enhanced` folder and registered with MediaStore; originals are never touched.
-- **Auto Enhance** (2.5.0) — *Viewer.* A **one-tap pipeline** that recombines the
-  three AI capabilities — face restore + photo enhance + upscale — into a single
-  action, with sensible defaults and this device's suitability verdict as advice.
+- **Magic Enhance** (2.5.0, ✅ shipped) — *Viewer, single photo only.* A
+  **one-tap pipeline** that runs the three AI capabilities in a fixed order —
+  **Denoise & Sharpen → Upscale → Face Restore** — on one photo. Face Restore
+  runs **last** so a freshly restored face is never re-upscaled (which had
+  looked over-processed); this ordering tested markedly more natural. Details
+  as shipped:
+  - **One-tap default + per-stage toggles.** All three stages run by default;
+    each can be turned off. Face Restore auto-skips when no face is detected.
+    In the UI each stage's strength slider sits directly under its toggle and
+    animates in/out (`AnimatedVisibility`) with the toggle.
+  - **All models required.** The action is gated: all three models (Face
+    Restore, Enhance, Upscale) must be installed first, otherwise the run is
+    blocked with a shortcut to **Manage AI models**.
+  - **Per-stage strength (recommended defaults).** Each stage has its own
+    0–100% strength blend with a "use recommended" shortcut — **Face Restore
+    30%** (a lighter, more natural face), **Denoise & Sharpen 80%**, and
+    **Upscale 40%** (the blend tames Real-ESRGAN's otherwise aggressive,
+    obviously-AI look).
+  - **Upscale tier.** Uses **Real-ESRGAN General x4 v3** (the lighter/faster
+    General model), not x4plus.
+  - **Stepped results.** The result of each stage is shown as its own step so
+    the effect of each capability is visible, rather than a single before/after
+    compare slider.
+  - **Naming & icon.** Presented as **Magic Enhance** (id: *Sempurnakan
+    Otomatis*) with its own sparkle icon, sitting at the **bottom** of the AI
+    action sheet, to keep it clearly distinct from the standalone **Denoise &
+    Sharpen** (id: *Kurangi Noise*).
+  - **Output.** The final result is written as PNG into a dedicated
+    `Pictures/AGallery Auto Enhanced` folder and registered with MediaStore;
+    the original is never touched.
+  - **No batch.** Deliberately single-photo only for 2.5.0.
 - **Smart Scanner** (2.7.0) — *Tools hub (+ viewer surfacing).* An extensible
   on-device detector module; starts by surfacing QR detection, more detectors
   later.

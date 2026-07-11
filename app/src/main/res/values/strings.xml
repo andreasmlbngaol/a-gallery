@@ -297,7 +297,7 @@
     <string name="ai_models_feature_bg">Background removal</string>
     <string name="ai_models_feature_upscale">Image upscaling</string>
     <string name="ai_models_feature_face">Face restoration</string>
-    <string name="ai_models_feature_enhance">Photo enhancement</string>
+    <string name="ai_models_feature_enhance">Denoise &amp; Sharpen</string>
     <string name="ai_model_status_ready">Installed</string>
     <string name="ai_model_status_not_installed">Not installed</string>
     <string name="ai_model_recommended">Recommended</string>
@@ -399,6 +399,8 @@
     <string name="upscale_progress_estimating">Estimating\u2026</string>
     <string name="upscale_progress_finishing">Finishing\u2026</string>
     <string name="upscale_mode">Mode</string>
+    <string name="upscale_strength_title">Strength</string>
+    <string name="upscale_strength_desc">The upscaler has no real intensity control, so this blends its sharpened result over a plain resize. 100% is the model full output; lower it if detail looks too artificial.</string>
     <string name="upscale_mode_auto">Automatic</string>
     <string name="upscale_mode_auto_desc">Enlarge small photos, sharpen large ones</string>
     <string name="upscale_mode_enlarge">Enlarge</string>
@@ -460,8 +462,8 @@
     <string name="msg_face_restore_cancelled">Face restoration cancelled</string>
 
     <!-- Photo Enhance (2.4.0) -->
-    <string name="action_enhance_photo">Enhance photo</string>
-    <string name="enhance_title">Enhance photo</string>
+    <string name="action_enhance_photo">Denoise &amp; Sharpen</string>
+    <string name="enhance_title">Denoise &amp; Sharpen</string>
     <string name="enhance_no_model_title">No model installed</string>
     <string name="enhance_no_model_desc">Import a photo enhancement model to use this feature.</string>
     <string name="enhance_choose_model">Choose a style</string>
@@ -493,4 +495,47 @@
     <string name="msg_enhance_insufficient_memory">%1$s is too heavy for this device\'s RAM. Try a different model.</string>
     <string name="msg_enhance_save_failed">Couldn\'t save the image</string>
     <string name="msg_enhance_cancelled">Enhancement cancelled</string>
+
+    <!-- Magic Enhance (2.5.0): one-tap Enhance -> Upscale -> Face Restore -->
+    <string name="action_auto_enhance">Magic Enhance</string>
+    <string name="auto_enhance_title">Magic Enhance</string>
+    <string name="auto_enhance_subtitle">One tap runs Denoise &amp; Sharpen, Upscale, and Face restore in sequence. Turn off any stage you don\'t need.</string>
+    <string name="auto_enhance_gate_title">Install all three models</string>
+    <string name="auto_enhance_gate_desc">Magic Enhance chains Denoise &amp; Sharpen, Upscale, and Face restore, so all three models must be installed first.</string>
+    <string name="auto_enhance_gate_button">Manage AI models</string>
+    <string name="auto_enhance_model_ready">Installed</string>
+    <string name="auto_enhance_model_missing">Not installed</string>
+    <string name="auto_enhance_stage_face">Face restore</string>
+    <string name="auto_enhance_stage_enhance">Denoise &amp; Sharpen</string>
+    <string name="auto_enhance_stage_upscale">Upscale</string>
+    <string name="auto_enhance_stages_title">Stages</string>
+    <string name="auto_enhance_toggle_face_desc">Sharpen and restore detected faces.</string>
+    <string name="auto_enhance_toggle_enhance_desc">Clean up noise and restore detail across the whole photo.</string>
+    <string name="auto_enhance_toggle_upscale_desc">Enlarge and sharpen the result (Real-ESRGAN x4 v3).</string>
+    <string name="auto_enhance_face_strength_title">Face restore strength</string>
+    <string name="auto_enhance_face_strength_desc">How strongly the restored face is blended in. Kept low by default so faces look natural, not AI-generated.</string>
+    <string name="auto_enhance_enhance_strength_title">Enhance strength</string>
+    <string name="auto_enhance_enhance_strength_desc">How strongly denoise and deblock are blended in. Safe to keep high; the effect is subtle.</string>
+    <string name="auto_enhance_upscale_strength_title">Upscale strength</string>
+    <string name="auto_enhance_upscale_strength_desc">The upscaler has no real intensity control, so this blends its sharpened result over a plain resize. Lower it if detail looks too artificial.</string>
+    <string name="auto_enhance_source">Original</string>
+    <string name="auto_enhance_steps_title">Steps</string>
+    <string name="auto_enhance_final_label">%1$s (final)</string>
+    <string name="auto_enhance_faces_skipped">No faces detected — Face restore was skipped.</string>
+    <string name="auto_enhance_saved_hint">Saved as a new PNG in Pictures/AGallery Auto Enhanced; your original stays untouched.</string>
+    <string name="auto_enhance_run">Magic Enhance</string>
+    <string name="auto_enhance_save">Save to gallery</string>
+    <string name="auto_enhance_processing">Auto enhancing…</string>
+    <string name="auto_enhance_processing_desc">Running each stage on-device. This can take a few minutes.</string>
+    <string name="auto_enhance_progress_step">Step %1$d of %2$d · %3$s</string>
+    <string name="msg_auto_enhance_no_model">Install the Face restore, Enhance, and Upscale models first</string>
+    <string name="msg_auto_enhance_source_unreadable">This image can\'t be read</string>
+    <string name="msg_auto_enhance_failed">Couldn\'t auto enhance the photo</string>
+    <string name="msg_auto_enhance_nothing">Turn on at least one stage</string>
+    <string name="msg_auto_enhance_nothing_produced">Nothing to enhance in this photo</string>
+    <string name="msg_auto_enhance_saved">Saved as %1$s</string>
+    <string name="msg_auto_enhance_save_failed">Couldn\'t save the image</string>
+    <string name="msg_auto_enhance_cancelled">Magic Enhance cancelled</string>
+    <string name="msg_auto_enhance_insufficient_memory">%1$s is too heavy for this device\'s RAM. Turn off a stage and try again.</string>
+
 </resources>

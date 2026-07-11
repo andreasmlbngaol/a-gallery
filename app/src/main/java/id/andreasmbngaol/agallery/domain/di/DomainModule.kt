@@ -6,6 +6,7 @@ import id.andreasmbngaol.agallery.domain.usecase.editing.DeleteMediaUseCase
 import id.andreasmbngaol.agallery.domain.usecase.editing.MoveMediaToAlbumUseCase
 import id.andreasmbngaol.agallery.domain.usecase.editing.RemoveMetadataUseCase
 import id.andreasmbngaol.agallery.domain.usecase.editing.RenameMediaUseCase
+import id.andreasmbngaol.agallery.domain.usecase.ai.AutoEnhanceUseCase
 import id.andreasmbngaol.agallery.domain.usecase.ai.DeleteModelUseCase
 import id.andreasmbngaol.agallery.domain.usecase.ai.DetectFacesUseCase
 import id.andreasmbngaol.agallery.domain.usecase.ai.EnhancePhotoUseCase
@@ -15,6 +16,7 @@ import id.andreasmbngaol.agallery.domain.usecase.ai.ObserveModelStatusUseCase
 import id.andreasmbngaol.agallery.domain.usecase.ai.RemoveBackgroundUseCase
 import id.andreasmbngaol.agallery.domain.usecase.ai.ResolveModelPathUseCase
 import id.andreasmbngaol.agallery.domain.usecase.ai.RestoreFacesUseCase
+import id.andreasmbngaol.agallery.domain.usecase.ai.SaveAutoEnhanceResultUseCase
 import id.andreasmbngaol.agallery.domain.usecase.ai.SaveBackgroundResultUseCase
 import id.andreasmbngaol.agallery.domain.usecase.ai.SaveFaceRestoreResultUseCase
 import id.andreasmbngaol.agallery.domain.usecase.ai.SavePhotoEnhanceResultUseCase
@@ -96,6 +98,8 @@ val domainModule = module {
     factoryOf(::DetectFacesUseCase)
     factoryOf(::EnhancePhotoUseCase)
     factoryOf(::SavePhotoEnhanceResultUseCase)
+    factoryOf(::AutoEnhanceUseCase)
+    factoryOf(::SaveAutoEnhanceResultUseCase)
 
     // settings
     factoryOf(::GetSettingsUseCase)

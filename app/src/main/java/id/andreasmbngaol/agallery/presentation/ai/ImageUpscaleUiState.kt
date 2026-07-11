@@ -15,6 +15,7 @@ import id.andreasmbngaol.agallery.domain.model.settings.EdgeEffectMode
  * @property sourceUri the image being enhanced.
  * @property sourceDisplayName the original file name, used to derive the saved name.
  * @property installedModels installed upscale models the user can run, in display order.
+ * @property strength blend strength (0..1) of AI result over a plain resize (1 = full AI).
  * @property selectedModelId the model chosen to run, or null to use the default.
  * @property resultPath the enlarged preview PNG path once produced, else null.
  * @property processing whether inference is currently running.
@@ -34,6 +35,7 @@ data class ImageUpscaleUiState(
     val installedModels: List<AiModelSpec> = emptyList(),
     val selectedModelId: AiModelId? = null,
     val selectedMode: UpscaleMode = UpscaleMode.AUTO,
+    val strength: Float = DEFAULT_STRENGTH,
     val resultPath: String? = null,
     val processing: Boolean = false,
     val saving: Boolean = false,
@@ -48,4 +50,17 @@ data class ImageUpscaleUiState(
 ) {
     /** Whether at least one upscale model is installed and usable. */
     val hasModel: Boolean get() = installedModels.isNotEmpty()
+
+    companion object {
+        /**
+         * Default upscale blend. Real-ESRGAN is aggressive, so the AI result is
+         * mixed only partially over a plain resize; a light default keeps detail
+         * without the over-sharpened, plastic texture. Push to 100% for the
+         * model's full, unblended output.
+         */
+        const val DEFAULT_STRENGTH = 0.4f
+
+        /** Blend strength recommended in the UI (matches [DEFAULT_STRENGTH]). */
+        const val RECOMMENDED_STRENGTH = DEFAULT_STRENGTH
+    }
 }

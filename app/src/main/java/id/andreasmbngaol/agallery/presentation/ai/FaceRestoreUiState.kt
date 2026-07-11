@@ -59,13 +59,18 @@ data class FaceRestoreUiState(
     val hasModel: Boolean get() = installedModels.isNotEmpty()
 
     companion object {
-        /** Default blend strength: strong but still natural. */
-        const val DEFAULT_STRENGTH = 0.8f
+        /**
+         * Default blend strength. Kept deliberately low: on-device testing
+         * showed GPEN face restoration looks obviously "AI" / overprocessed at
+         * high blends, and ~30% is the sweet spot that restores detail while
+         * still reading as a natural face.
+         */
+        const val DEFAULT_STRENGTH = 0.3f
 
         /**
          * Blend strength recommended to the user in the UI. Matches
-         * [DEFAULT_STRENGTH]: strong enough to clearly restore detail while
-         * still looking natural on most photos.
+         * [DEFAULT_STRENGTH]: a light blend that sharpens the face without the
+         * plastic, over-restored look that higher values produce.
          */
         const val RECOMMENDED_STRENGTH = DEFAULT_STRENGTH
     }

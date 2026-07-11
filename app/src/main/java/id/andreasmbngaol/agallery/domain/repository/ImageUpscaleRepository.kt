@@ -13,13 +13,16 @@ import id.andreasmbngaol.agallery.domain.model.ai.UpscaleSaveOutcome
 interface ImageUpscaleRepository {
     /**
      * Upscales the image at [sourceUri] using the installed model [modelId],
-     * writing the enlarged result to a cache file for preview. Does not touch
-     * the gallery.
+     * writing the enlarged result to a cache file for preview. [strength] (0..1)
+     * blends the AI result over a plain resize of the source (1 = full AI,
+     * lower = more natural); defaults to full strength. Does not touch the
+     * gallery.
      */
     suspend fun upscale(
         sourceUri: String,
         modelId: AiModelId,
         mode: UpscaleMode,
+        strength: Float = 1f,
         onProgress: (completed: Int, total: Int) -> Unit = { _, _ -> },
     ): UpscaleOutcome
 

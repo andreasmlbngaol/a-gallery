@@ -104,7 +104,7 @@ a-gallery/
 │           ├─ trash/                  #   TrashScreen + ViewModel
 │           ├─ settings/               #   SettingsScreen + ViewModel
 │           ├─ tools/                  #   Tools hub + QR generator
-│           ├─ ai/                     #   AI models screen, import UX, Background Remover, Image Upscaler, Face Restore
+│           ├─ ai/                     #   AI models screen, import UX, Background Remover, Image Upscaler, Face Restore, Denoise & Sharpen, Magic Enhance
 │           └─ theme/                  #   Material 3 theme
 ├─ .github/workflows/release.yml       # CI: build & publish a signed release APK on tag
 ├─ gradle/libs.versions.toml           # Version catalog
@@ -129,6 +129,7 @@ a-gallery/
   `InferenceEngine` interface; `domain/model/ai` holds the pure-Kotlin model
   catalog, tier / suitability types, and a `DeviceBenchmark`-driven guard, while
   `data/ai` imports user-supplied `.onnx` files and runs the Background Remover,
-  the Image Upscaler (tiled super-resolution), and Face Restore (on-device ML Kit
-  face detection + per-face GPEN restoration). No models are bundled and nothing
-  is fetched over the network.
+  the Image Upscaler (tiled super-resolution), Face Restore (on-device ML Kit
+  face detection + per-face GPEN restoration), Denoise & Sharpen (whole-image
+  SCUNet), and the one-tap **Magic Enhance** pipeline that chains them. No
+  models are bundled and nothing is fetched over the network.
